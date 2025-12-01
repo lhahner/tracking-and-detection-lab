@@ -1,0 +1,13 @@
+{
+  "cssTheme": "GitHub Theme",
+  "interfaceFontFamily": "",
+  "textFontFamily": "Times New Roman",
+  "monospaceFontFamily": "",
+  "accentColor": "#0246cf",
+  "baseFontSizeAction": true,
+  "theme": "moonstone",
+  "enabledCssSnippets": [
+    "style"
+  ],
+  "baseFontSize": 16
+}
