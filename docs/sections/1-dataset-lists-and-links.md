@@ -3,5 +3,5 @@ Here are datasets that are open to use with their content as of setting, type of
 
 | Name       | Scene        | Sensor | Size  | Filetype | Year | Hyperlink                                                                                                        | Resolution | Frames |
 | ---------- | ------------ | ------ | ----- | -------- | ---- | ---------------------------------------------------------------------------------------------------------------- | ---------- | ------ |
-| KITTI City | German Urban | Kamera | 0.4GB | .png     | 2011 | https://s3.eu-central-1.amazonaws.com/avg-kitti/raw_data/2011_09_26_drive_0001/2011_09_26_drive_0001_extract.zip | 1392x512   | 114    |
+| KITTI City | German Urban | Kamera | 0.4GB | .webp    | 2011 | https://s3.eu-central-1.amazonaws.com/avg-kitti/raw_data/2011_09_26_drive_0001/2011_09_26_drive_0001_extract.zip | 1392x512   | 114    |
 |            |              |        |       |          |      |                                                                                                                  |            |        |

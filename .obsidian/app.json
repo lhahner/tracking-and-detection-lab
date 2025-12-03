@@ -3,6 +3,6 @@
   "tabSize": 5,
   "showLineNumber": false,
   "strictLineBreaks": true,
-  "readableLineLength": true,
+  "readableLineLength": false,
   "alwaysUpdateLinks": true
 }
