@@ -15,12 +15,15 @@
 - Visualisieren mit der man klar kommt schauen
 
 ### Meilensteine
-- Welchen Datensatz sollte ich verwenden? 
-- Literatur recherche zu "state of the art" detectoren & tracking? Liteartur review / Survey / Ranking
-- Metriken suchen
-- Detector und Tracker zum laufen kriegen (idealerweise unabhängig von einander)
-- Evaluations Schritt mit Detector Tracker kombinationen, welche Kombination funktioniert am besten.
-- Wenn die Metriken da sind in die Analyse reingehen und tatsächlich prüfen was besser ist.
+- **Research / Analysis**:
+	- Welchen Datensatz sollte ich verwenden? 
+	- Literatur recherche zu "state of the art" detectoren & tracking? Liteartur review / Survey / Ranking
+	- Metriken suchen
+- **Development**:
+	- Detector und Tracker zum laufen kriegen (idealerweise unabhängig von einander)
+	- Evaluations Schritt mit Detector Tracker kombinationen, welche Kombination funktioniert am besten.
+- **Testing / evaluation:**
+	- Wenn die Metriken da sind in die Analyse reingehen und tatsächlich prüfen was besser ist.
 - Deadline Ende des Semester (?)
 
 Nächster Termin 15.12. wieder 15 Uhr
