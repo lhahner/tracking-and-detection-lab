@@ -17,4 +17,6 @@ This list answers the question, about which pre-trained detection system exist, 
 | EfficientDet | Python        | MS COCO                            | Tensorflow | 2019 | https://github.com/xuannianz/EfficientDet                                                                                       | https://arxiv.org/abs/1911.09070 |
 | iTPN         | Python        | ImageNet                           | ?          | 2024 | https://github.com/sunsmarterjie/iTPN                                                                                           | https://arxiv.org/pdf/2211.12735 |
 | ResNet       | Python/C++    | ImageNet                           | Pytorch    | 2015 | ?                                                                                                                               | https://arxiv.org/pdf/1512.03385 |
+| PointNet     |               |                                    |            |      |                                                                                                                                 |                                  |
+| VoxelNet     |               |                                    |            |      |                                                                                                                                 |                                  |
 
