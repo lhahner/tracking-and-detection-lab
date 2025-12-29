@@ -37,18 +37,15 @@ class Application:
         parser.add_argument("--iou_threshold", help="Minimum IOU for match.", type=float, default=0.3)
         args = parser.parse_args()
         return args
- 
+    
 if __name__ == "__main__":
  # all train
-  app = Application(0.0, 
-                     0, 
-                     np.random.rand(32, 3)
-                     )
+  app = Application(0.0, 0, np.random.rand(32, 3))
   args = app.parse_args()
   display = args.display
   phase = args.phase
     
-  if(display): # Initially used to demonstrate the performance on the MOT15 Data set.
+  if(display): 
     if not os.path.exists('mot_benchmark'):
       print('\n\tERROR: mot_benchmark link not found!\n\n    Create a symbolic link to the MOT benchmark\n    (https://motchallenge.net/data/2D_MOT_2015/#download). E.g.:\n\n    $ ln -s /path/to/MOT2015_challenge/2DMOT2015 mot_benchmark\n\n')
       exit()
@@ -58,15 +55,24 @@ if __name__ == "__main__":
 
   if not os.path.exists('output'):
     os.makedirs('output')
+    
   pattern = os.path.join(args.seq_path, phase, '*', 'det', 'det.txt') # path/filename matching
+  
   for seq_dets_fn in glob.glob(pattern):
     mot_tracker = Sort(max_age=args.max_age, 
                        min_hits=args.min_hits,
-                       iou_threshold=args.iou_threshold) # create instance of the SORT tracker
-    seq_dets = np.loadtxt(seq_dets_fn, delimiter=',') # TODO what do the det.txt files provide?
+                       iou_threshold=args.iou_threshold)
+     
+    seq_dets = np.loadtxt(seq_dets_fn, delimiter=',') 
+    # frame_id,-1,xmin,ymin,w,h,confidence,-1,-1,-1
+    # frame_id : number of current frame in frame sequence.
+    # xmin,ymin,w,h: bounding box of one object
+    # confidence:score of this detection.
+    # -1:ignore.You don't need to care this.
     seq = seq_dets_fn[pattern.find('*'):].split(os.path.sep)[0]
     
     with open(os.path.join('output', '%s.txt'%(seq)),'w') as out_file:
+        
       print("Processing %s."%(seq))
       for frame in range(int(seq_dets[:,0].max())):
         frame += 1 #detection and frame numbers begin at 1
