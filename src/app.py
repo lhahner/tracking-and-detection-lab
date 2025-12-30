@@ -11,9 +11,11 @@ from skimage import io
 import glob
 import time
 import argparse
+import os
 
 from tracker.SORT.sort import Sort
 from tracker.SORT.kalmanBoxTracker import KalmanBoxTracker
+from detector.yolo.yolo import YoloDetector
 
 class Application:
     def __init__(self, total_time, total_frames, colours):
@@ -21,20 +23,54 @@ class Application:
         self.total_time = total_time
         self.total_frames = total_frames
         self.colours = colours
-
+        self.implemented_detectors = self.read_implemented_detectors() # TODO read from folders
+    
+    def get_implemented_detectors(self):
+        return self.implemented_detectors
+    
+    def read_implemented_detectors(self):
+        if not os.path.exists('data'):
+            raise ValueError('No data Folder found.')
+        det_folders = os.listdir('data')
+        return det_folders
+    
+    def run_detector_by_argument(self, arg_detector, arg_dataset):
+        if (arg_detector == 'frcnn'):
+                return None
+        if (arg_detector == 'yolo'):
+            detector = YoloDetector(
+                os.path.join('mot_benchmark', 'train', arg_dataset, 'img1'),
+                os.path.join('data', arg_detector, arg_dataset, 'det'),
+                os.path.join('detector', arg_detector, 'model', 'yolo11n.pt') # maybe check that the .pt file is read
+            )
+            detector.detect()
+    
     def parse_args(self):
-        """Parse input arguments."""
-        parser = argparse.ArgumentParser(description='SORT demo')
-        parser.add_argument('--display', dest='display', help='Display online tracker output (slow) [False]',action='store_true')
-        parser.add_argument("--seq_path", help="Path to detections.", type=str, default='data')
-        parser.add_argument("--phase", help="Subdirectory in seq_path.", type=str, default='train')
+        parser = argparse.ArgumentParser(description='SORT Benchmark')
+        parser.add_argument('--display', dest='display', 
+                            help='Display online tracker output (slow) [False]',
+                            action='store_true')
+        parser.add_argument("--seq_path", 
+                            help="Path to detections.", 
+                            type=str, default='data')
+        parser.add_argument("--phase", 
+                            help="Subdirectory in seq_path.", 
+                            type=str, default='train')
         parser.add_argument("--max_age", 
-                        help="Maximum number of frames to keep alive a track without associated detections.", 
-                        type=int, default=1)
+                            help="Maximum number of frames to keep alive a track without associated detections.", 
+                            type=int, default=1)
+        parser.add_argument("--detector", 
+                            help="Specify which detection system you want to use, the directory which contains the detection inside the data folder should have the same name.", 
+                            type=str, default='frcnn')
+        parser.add_argument("--dataset",
+                            help="Specify which dataset to use, the name should be equal to where the dataset is present",
+                            type=str, default='*')
         parser.add_argument("--min_hits", 
-                        help="Minimum number of associated detections before track is initialised.", 
-                        type=int, default=3)
-        parser.add_argument("--iou_threshold", help="Minimum IOU for match.", type=float, default=0.3)
+                            help="Minimum number of associated detections before track is initialised.", 
+                            type=int, default=3)
+        parser.add_argument("--iou_threshold", 
+                            help="Minimum IOU for match.", 
+                            type=float, default=0.3)
         args = parser.parse_args()
         return args
     
@@ -44,7 +80,24 @@ if __name__ == "__main__":
   args = app.parse_args()
   display = args.display
   phase = args.phase
-    
+  detector = args.detector
+  dataset = args.dataset
+  path_detection = []
+  
+  if (detector and not dataset):
+      raise ValueError('Please specify a dataset to use for detection')
+ 
+  if (dataset):
+      if dataset not in os.listdir('mot_benchmark/train/'):
+          raise ValueError(f'dataset {dataset} is not in input folder, please create a folder named {dataset}')
+ 
+  if (detector):
+     if detector not in app.get_implemented_detectors():
+         print(f"detector {detector} not implemented detector {app.get_implemented_detectors()}")
+     else:
+        for implemented_detector in app.get_implemented_detectors():
+            app.run_detector_by_argument(implemented_detector, dataset)
+        
   if(display): 
     if not os.path.exists('mot_benchmark'):
       print('\n\tERROR: mot_benchmark link not found!\n\n    Create a symbolic link to the MOT benchmark\n    (https://motchallenge.net/data/2D_MOT_2015/#download). E.g.:\n\n    $ ln -s /path/to/MOT2015_challenge/2DMOT2015 mot_benchmark\n\n')
@@ -55,8 +108,8 @@ if __name__ == "__main__":
 
   if not os.path.exists('output'):
     os.makedirs('output')
-    
-  pattern = os.path.join(args.seq_path, phase, '*', 'det', 'det.txt') # path/filename matching
+ 
+  pattern = os.path.join('data', detector, dataset, 'det', 'det.txt') # path/filename matching
   
   for seq_dets_fn in glob.glob(pattern):
     mot_tracker = Sort(max_age=args.max_age, 
@@ -64,11 +117,6 @@ if __name__ == "__main__":
                        iou_threshold=args.iou_threshold)
      
     seq_dets = np.loadtxt(seq_dets_fn, delimiter=',') 
-    # frame_id,-1,xmin,ymin,w,h,confidence,-1,-1,-1
-    # frame_id : number of current frame in frame sequence.
-    # xmin,ymin,w,h: bounding box of one object
-    # confidence:score of this detection.
-    # -1:ignore.You don't need to care this.
     seq = seq_dets_fn[pattern.find('*'):].split(os.path.sep)[0]
     
     with open(os.path.join('output', '%s.txt'%(seq)),'w') as out_file:

@@ -18,6 +18,16 @@ class YoloDetector(Detector):
         """
         concat_frames, frames = self.read_data()
         frame_index = 1
+        with open(os.path.join(self.output_path, 'det.txt'), 'r') as file_obj:
+            first_char = file_obj.read(1)
+            if first_char:
+                print(f"file {os.path.join(self.output_path, 'det.txt')} not empty, don't rewrite")
+                for line in file_obj:
+                    self.detections.append(line)
+                return self.detections
+            else:
+                print(f"file empty running detection on given dataset.")
+        
         for frame, concat_frame in zip(frames, concat_frames):
             detection_results = self.model(concat_frame)
             for detection_result in detection_results:
