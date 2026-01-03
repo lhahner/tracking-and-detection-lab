@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "docs/sections/tracking-list-and-links.md",
+                "file": "docs/sections/review-paper-list-and-links.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "tracking-list-and-links"
+              "title": "review-paper-list-and-links"
             }
           }
         ]
@@ -166,9 +166,10 @@
   },
   "active": "2aefdc00304e50d9",
   "lastOpenFiles": [
+    "docs/sections/tracking-list-and-links.md",
+    "docs/sections/review-paper-list-and-links.md",
     "docs/sections/detector-list-and-links.md",
     "docs/sections/dataset-list-and-links.md",
-    "docs/sections/tracking-list-and-links.md",
     "src/sort/output/PETS09-S2L1.txt",
     "src/sort/output/TUD-Campus.txt",
     "src/sort/output/ADL-Rundle-8.txt",
