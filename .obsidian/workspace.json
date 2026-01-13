@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "docs/sections/review-paper-list-and-links.md",
+                "file": "docs/sections/detector-list-and-links.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "review-paper-list-and-links"
+              "title": "detector-list-and-links"
             }
           }
         ]
@@ -78,7 +78,7 @@
       }
     ],
     "direction": "horizontal",
-    "width": 405.5024719238281
+    "width": 258.5
   },
   "right": {
     "id": "24861a7bc7075b05",
@@ -166,17 +166,21 @@
   },
   "active": "2aefdc00304e50d9",
   "lastOpenFiles": [
-    "docs/sections/tracking-list-and-links.md",
+    "src/detector/yolo/__pycache__/yolo.cpython-39.pyc",
+    "src/detector/yolo/__pycache__/__init__.cpython-39.pyc",
+    "src/detector/yolo/__pycache__",
+    "src/detector/__pycache__/detector.cpython-39.pyc",
+    "src/detector/__pycache__/__init__.cpython-39.pyc",
+    "src/detector/__pycache__",
+    "src/tracker/SORT/__pycache__/sort.cpython-39.pyc",
+    "src/tracker/SORT/__pycache__/kalmanBoxTracker.cpython-39.pyc",
+    "src/tracker/SORT/__pycache__/__init__.cpython-39.pyc",
+    "src/tracker/SORT/__pycache__",
+    "src/tracker/__pycache__/__init__.cpython-39.pyc",
     "docs/sections/review-paper-list-and-links.md",
+    "docs/sections/tracking-list-and-links.md",
     "docs/sections/detector-list-and-links.md",
     "docs/sections/dataset-list-and-links.md",
-    "src/sort/output/PETS09-S2L1.txt",
-    "src/sort/output/TUD-Campus.txt",
-    "src/sort/output/ADL-Rundle-8.txt",
-    "src/sort/output/ETH-Pedcross2.txt",
-    "src/sort/output/KITTI-17.txt",
-    "src/sort/output/TUD-Stadtmitte.txt",
-    "src/sort/output",
     "data/MOT15/test/KITTI-19/img1/001059.jpg",
     "data/MOT15/test/KITTI-19/img1/001058.jpg",
     "data/MOT15/test/KITTI-19/img1/001057.jpg",
@@ -187,9 +191,6 @@
     "data/MOT15/test/KITTI-19/img1/001052.jpg",
     "data/MOT15/test/KITTI-19/img1/001051.jpg",
     "data/MOT15/test/KITTI-19/img1/001050.jpg",
-    "data/MOT15/test/Venice-1/det/det.txt",
-    "data/MOT15/test/TUD-Crossing/det/det.txt",
-    "data/MOT15/test/PETS09-S2L2/det/det.txt",
     "src/sort/README.md",
     "docs/sections/detection-by-tracking-list-and-links.md",
     "TOPICS.md",
@@ -211,7 +212,6 @@
     "sections/distributed-memory-programming-with-MPI.md",
     "sections/parallel-hardware.md",
     "sections/performance-evaluation.md",
-    "sections/one-sided-communication-and-GPGPU-introduction.md",
     "Untitled.canvas"
   ]
 }
