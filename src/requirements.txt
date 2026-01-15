@@ -4,3 +4,5 @@ lap==0.4.0
 numpy
 skimage
 numpy==1.23.5
+transformers # huggingface
+# detectron2 python -m pip install 'git+https://github.com/facebookresearch/detectron2.git'
