@@ -16,6 +16,7 @@ import os
 from tracker.SORT.sort import Sort
 from tracker.SORT.kalmanBoxTracker import KalmanBoxTracker
 from detector.yolo.yolo import YoloDetector
+from detector.pointpillars.pointpillars import PointpillarsDetector
 
 class Application:
     def __init__(self, total_time, total_frames, colours):
@@ -26,17 +27,34 @@ class Application:
         self.implemented_detectors = self.read_implemented_detectors() # TODO read from folders
     
     def get_implemented_detectors(self):
+        """
+        basic getter function to retrieve the 
+        global list of all implemented detection
+        systems.
+        """
         return self.implemented_detectors
     
     def read_implemented_detectors(self):
+        """
+        All implemented detection systems 
+        are located at the detector package
+        thus the following build every detection
+        system known for the current project.
+        """
         if not os.path.exists('data'):
             raise ValueError('No data Folder found.')
         det_folders = os.listdir('data')
         return det_folders
     
     def run_detector_by_argument(self, arg_detector, arg_dataset):
+        """
+        Depending on the argument read by the argument
+        parse a different detection system is choosen
+        and loaded. A detection system should be choosen
+        based on the data used.
+        """
         if (arg_detector == 'frcnn'):
-                return None
+            return None
         if (arg_detector == 'yolo'):
             detector = YoloDetector(
                 os.path.join('mot_benchmark', 'train', arg_dataset, 'img1'),
@@ -44,8 +62,18 @@ class Application:
                 os.path.join('detector', arg_detector, 'model', 'yolo11n.pt') # maybe check that the .pt file is read
             )
             detector.detect()
+        if (arg_detector == 'pointpillars'):
+            detector = PointpillarsDetector(
+                os.path.join('mot_benchmark', 'train', arg_dataset, 'kitti_000008.bin'), # TODO
+                os.path.join('data', arg_detector, arg_dataset, 'det')
+            )
+            detector.detect()
     
     def parse_args(self):
+        """
+        Core argument parser that show all options
+        available for the program.
+        """
         parser = argparse.ArgumentParser(description='SORT Benchmark')
         parser.add_argument('--display', dest='display', 
                             help='Display online tracker output (slow) [False]',

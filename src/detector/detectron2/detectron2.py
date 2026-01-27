@@ -8,6 +8,7 @@ setup_logger()
 import numpy as np
 import os, json, cv2, random
 from google.colab.patches import cv2_imshow
+from detector.detector import Detector
 
 # import some common detectron2 utilities
 from detectron2 import model_zoo
@@ -16,7 +17,7 @@ from detectron2.config import get_cfg
 from detectron2.utils.visualizer import Visualizer
 from detectron2.data import MetadataCatalog, DatasetCatalog
 
-class Detectron2:
+class Detectron2Detector(Detector):
     def __init__(self, input_path, output_path, threshold):
         self.input_path = input_path
         self.output_path = output_path

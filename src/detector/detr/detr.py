@@ -1,13 +1,13 @@
 from transformer import DetrForObjectDetection
+from detector.detector import Detector
 
-class Detr:
+class DetrDetector(Detector):
     def __init__(self, input_path, output_path, threshold):
         self.input_path = input_path
         self.output_path = output_path
         self.image_processor = AutoImageProcessor.from_pretrained("facebook/detr-resnet-50")
         self.model = DetrForObjectDetection.from_pretrained("facebook/detr-resnet-50")
         self.threshold = threshold
-        
         
     def detect(self):
         """
