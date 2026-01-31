@@ -64,8 +64,10 @@ class Application:
             detector.detect()
         if (arg_detector == 'pointpillars'):
             detector = PointpillarsDetector(
-                os.path.join('mot_benchmark', 'train', arg_dataset, 'kitti_000008.bin'), # TODO
-                os.path.join('data', arg_detector, arg_dataset, 'det')
+                os.path.join('mot_benchmark', 'train', arg_dataset, 'img1/'), # TODO
+                os.path.join('data', arg_detector, arg_dataset, 'det/'),
+                os.path.join('detector', arg_detector, 'model', 'pointpillars_hv_secfpn_8xb6-160e_kitti-3d-car.py'),
+                os.path.join('detector', arg_detector, 'model', 'hv_pointpillars_secfpn_6x8_160e_kitti-3d-car_20220331_134606-d42d15ed.pth')
             )
             detector.detect()
     
