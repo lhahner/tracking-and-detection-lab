@@ -62,7 +62,7 @@ class PointpillarsDetector(Detector):
         for (x, y, z, w, l, h, r), c in zip(xyzlwhr, conf):
             # If you want ints for x,y like your example, round them.
             # Keep w,h and conf as floats.
-            line = f"{frame_index},-1,{x:.3f},{y:.3f},{z:.3f},{w:.3f},{l:.3f},{h:.6f},{r:.3f}-1,-1,-1\n"
+            line = f"{frame_index},-1,{x:.3f},{y:.3f},{z:.3f},{w:.3f},{l:.3f},{h:.6f},{r:.3f},-1,-1,-1\n"
             lines.append(line)
         
         return lines

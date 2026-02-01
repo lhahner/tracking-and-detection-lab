@@ -124,9 +124,13 @@ if __name__ == "__main__":
   if (detector):
      if detector not in app.get_implemented_detectors():
          print(f"detector {detector} not implemented detector {app.get_implemented_detectors()}")
-     else:
-        for implemented_detector in app.get_implemented_detectors():
+     elif args.detector is None:
+         print(f"detector no specified running for all.")
+         for implemented_detector in app.get_implemented_detectors():
             app.run_detector_by_argument(implemented_detector, dataset)
+     else:
+        print(f"running for {detector}.")
+        app.run_detector_by_argument(detector, dataset)
         
   if(display): 
     if not os.path.exists('mot_benchmark'):
