@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "docs/sections/review-paper-list-and-links.md",
+                "file": "docs/sections/detector-list-and-links.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "review-paper-list-and-links"
+              "title": "detector-list-and-links"
             }
           }
         ]
@@ -167,6 +167,7 @@
   "active": "2aefdc00304e50d9",
   "lastOpenFiles": [
     "docs/sections/detector-list-and-links.md",
+    "docs/sections/review-paper-list-and-links.md",
     "docs/report/main.synctex(busy)",
     "src/detector/detectron2/detectron2.py",
     "src/detector/detectron2/detectorn2.py",
@@ -177,7 +178,6 @@
     "src/detector/fpn/rcnn.py",
     "src/detector/fpn/__init__.py",
     "src/detector/fpn",
-    "docs/sections/review-paper-list-and-links.md",
     "docs/sections/tracking-list-and-links.md",
     "docs/sections/dataset-list-and-links.md",
     "data/MOT15/test/KITTI-19/img1/001059.jpg",

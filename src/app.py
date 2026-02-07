@@ -7,6 +7,8 @@ matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from skimage import io
+from util.datatype import Datatype
+from util.coordinate_converter import CoordinateConverter
 
 import glob
 import time
@@ -25,6 +27,7 @@ class Application:
         self.total_frames = total_frames
         self.colours = colours
         self.implemented_detectors = self.read_implemented_detectors() # TODO read from folders
+        self.datatype = Datatype.RGB #default
     
     def get_implemented_detectors(self):
         """
@@ -63,6 +66,7 @@ class Application:
             )
             detector.detect()
         if (arg_detector == 'pointpillars'):
+            self.datatype = Datatype.LIDAR
             detector = PointpillarsDetector(
                 os.path.join('mot_benchmark', 'train', arg_dataset, 'img1/'), # TODO
                 os.path.join('data', arg_detector, arg_dataset, 'det/'),
@@ -156,10 +160,18 @@ if __name__ == "__main__":
     with open(os.path.join('output', '%s.txt'%(seq)),'w') as out_file:
         
       print("Processing %s."%(seq))
+      converter = CoordinateConverter()
       for frame in range(int(seq_dets[:,0].max())):
-        frame += 1 #detection and frame numbers begin at 1
-        dets = seq_dets[seq_dets[:, 0]==frame, 2:7]
-        dets[:, 2:4] += dets[:, 0:2] #convert to [x1,y1,w,h] to [x1,y1,x2,y2]
+        frame += 1
+        # TODO in dets.txt confidence is missing and the transformation is not that simple
+        if app.datatype is Datatype.LIDAR:
+            dets = converter.convert3DLIDARDetectionToBEV(seq_dets, frame)
+        
+        elif app.datatype is Datatype.RGB:
+            dets = converter.convert2DDetectionToBox(seq_dets, frame)
+        
+        else:
+            raise ValueError("Detection datatype not detected.")    
         app.total_frames += 1
 
         if(display):
