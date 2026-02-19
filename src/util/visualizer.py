@@ -1,23 +1,61 @@
+import os
 import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+from skimage import io
+import numpy as np
+from util.datatype import Datatype
 
-class Visulaizer:
-    def __init__(self):
-        pass
+class Visualizer:
+    def __init__(self, datatype):
+        self.datatype = datatype
+        self.fig = None
+        self.axis_one = None
+            
+    def visualize_data(self, phase, seq, filetype, frame):
+        filename = f"{frame:06d}.{filetype}"
+        path = os.path.join('mot_benchmark', phase, seq, 'img1', filename)
+        if self.datatype is Datatype.RGB: 
+            # TODO Run the normal display approach
+            im = io.imread(path)
+            ax1.imshow(im)
+            plt.title(seq + ' Tracked Targets')
+            
+        if self.datatype is Datatype.LIDAR:   
+            # TODO Run the LIDAR visualizer 
+            bev = self.lidar_bin_to_bev(path)
+            im = self.axis_one.imshow(bev, origin='lower')
+            plt.title(seq + ' Tracked Targets')
     
-    def setup_panel(self, phase, seq, filetype):
+    def visualize_boxes(self, bounding_box, colours):
+        d = np.asarray(bounding_box, dtype=np.int32)
+        if d.ndim == 1:
+            d = d.reshape(1, -1)
+        for row in d:
+            if row.size < 5:
+                continue
+            x1, y1, x2, y2, track_id = row[:5]
+            self.axis_one.add_patch(patches.Rectangle(
+                (x1, y1), x2 - x1, y2 - y1,
+                fill=False, lw=3, ec=colours[track_id % 32, :]
+                )
+            )
+    
+    def visualize_and_draw(self):
+        self.fig.canvas.flush_events()
+        plt.draw()
+        self.axis_one.cla()
+
+    def setup_panel(self):
+        """
+        Setting the panel on which we want to display
+        our read dead with the given rectangles
+        """
         plt.ion()
-        fig = plt.figure()
-        ax1 = fig.add_subplot(111, aspect='equal')
-        fn = os.path.join('mot_benchmark', phase, seq, 'img1', '%06d.{filetype}'%(frame))
-        im = io.imread(fn)
-        ax1.imshow(im)
-        plt.title(seq + ' Tracked Targets')
-    
-    def display_track_lidar(self, track, ax):
-        d = track.astype(np.int32)
-        ax.add_patch(patches.Rectangle((d[0],d[1]),d[2]-d[0],d[3]-d[1],fill=False,lw=3,ec=app.colours[d[4]%32,:]))
+        self.fig = plt.figure()
+        self.axis_one = self.fig.add_subplot(111, aspect='equal')
     
     def lidar_bin_to_bev(
+      self,
       bin_path,
       x_range=(0.0, 70.4),  # forward
       y_range=(-40.0, 40.0),  # left/right

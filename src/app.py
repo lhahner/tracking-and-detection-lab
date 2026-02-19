@@ -9,6 +9,7 @@ import matplotlib.patches as patches
 from skimage import io
 from util.datatype import Datatype
 from util.coordinate_converter import CoordinateConverter
+from util.visualizer import Visualizer
 
 import glob
 import time
@@ -27,7 +28,7 @@ class Application:
         self.total_frames = total_frames
         self.colours = colours
         self.implemented_detectors = self.read_implemented_detectors() # TODO read from folders
-        self.datatype = Datatype.RGB #default
+        self.datatype = Datatype.RGB # Changes depending on used detector
     
     def get_implemented_detectors(self):
         """
@@ -109,8 +110,10 @@ class Application:
         return args
     
 if __name__ == "__main__":
- # all train
+  # Cross cutting concerns injections
   app = Application(0.0, 0, np.random.rand(32, 3))
+  
+  # Argument handling
   args = app.parse_args()
   display = args.display
   phase = args.phase
@@ -128,6 +131,7 @@ if __name__ == "__main__":
   if (detector):
      if detector not in app.get_implemented_detectors():
          print(f"detector {detector} not implemented detector {app.get_implemented_detectors()}")
+     
      elif args.detector is None:
          print(f"detector no specified running for all.")
          for implemented_detector in app.get_implemented_detectors():
@@ -136,13 +140,12 @@ if __name__ == "__main__":
         print(f"running for {detector}.")
         app.run_detector_by_argument(detector, dataset)
         
+  visualizer = Visualizer(app.datatype)
   if(display): 
     if not os.path.exists('mot_benchmark'):
       print('\n\tERROR: mot_benchmark link not found!\n\n    Create a symbolic link to the MOT benchmark\n    (https://motchallenge.net/data/2D_MOT_2015/#download). E.g.:\n\n    $ ln -s /path/to/MOT2015_challenge/2DMOT2015 mot_benchmark\n\n')
       exit()
-    plt.ion()
-    fig = plt.figure()
-    ax1 = fig.add_subplot(111, aspect='equal')
+    visualizer.setup_panel()
 
   if not os.path.exists('output'):
     os.makedirs('output')
@@ -155,7 +158,7 @@ if __name__ == "__main__":
                        iou_threshold=args.iou_threshold)
      
     seq_dets = np.loadtxt(seq_dets_fn, delimiter=',') 
-    seq = seq_dets_fn[pattern.find('*'):].split(os.path.sep)[0]
+    seq = os.path.basename(os.path.dirname(os.path.dirname(seq_dets_fn)))
     
     with open(os.path.join('output', '%s.txt'%(seq)),'w') as out_file:
         
@@ -175,10 +178,14 @@ if __name__ == "__main__":
         app.total_frames += 1
 
         if(display):
-          fn = os.path.join('mot_benchmark', phase, seq, 'img1', '%06d.jpg'%(frame))
-          im =io.imread(fn)
-          ax1.imshow(im)
-          plt.title(seq + ' Tracked Targets')
+            if app.datatype is Datatype.LIDAR:
+                filetype = "bin"
+            elif app.datatype is Datatype.RGB:
+                # MOT benchmark RGB frames are typically jpg (sometimes png)
+                filetype = "jpg"
+            else:
+                raise ValueError("Detection datatype not detected.")
+            visualizer.visualize_data(phase, seq, filetype, frame)
 
         start_time = time.time()
         trackers = mot_tracker.update(dets)
@@ -188,15 +195,17 @@ if __name__ == "__main__":
         for d in trackers:
           print('%d,%d,%.2f,%.2f,%.2f,%.2f,1,-1,-1,-1'%(frame,d[4],d[0],d[1],d[2]-d[0],d[3]-d[1]),file=out_file)
           if(display):
-            d = d.astype(np.int32)
-            ax1.add_patch(patches.Rectangle((d[0],d[1]),d[2]-d[0],d[3]-d[1],fill=False,lw=3,ec=app.colours[d[4]%32,:]))
+              visualizer.visualize_boxes(d, app.colours)
 
         if(display):
-          fig.canvas.flush_events()
-          plt.draw()
-          ax1.cla()
+          visualizer.visualize_and_draw()
+          print("Visualized Box")
 
-  print("Total Tracking took: %.3f seconds for %d frames or %.1f FPS" % (app.total_time, app.total_frames, app.total_frames / app.total_time))
+  if app.total_time > 0:
+    fps = app.total_frames / app.total_time
+    print("Total Tracking took: %.3f seconds for %d frames or %.1f FPS" % (app.total_time, app.total_frames, fps))
+  else:
+    print("Total Tracking took: %.3f seconds for %d frames (FPS unavailable: no processing time recorded)" % (app.total_time, app.total_frames))
 
   if(display):
     print("Note: to get real runtime results run without the option: --display")

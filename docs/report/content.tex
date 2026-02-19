@@ -1,0 +1,73 @@
+\section{Introduction}
+\iffalse 
+The introduction is the most important part of a thesis. Its general structure is similar to the Abstract but with about one paragraph per section as listed again below.
+\begin{enumerate}
+	\item  A general statement introducing the broad research area of the particular topic being investigated.
+	\item  An explanation of the specific problem (difficulty, obstacle, challenge) to be solved.
+	\item  A review of existing or standard solutions to this problem and their limitations.
+	\item  An outline of the proposed new solution.
+	\item  A summary of how the solution was evaluated and what the outcomes of the evaluation were.
+\end{enumerate}
+Furthermore, the introduction should have a contributions section, that summarizes, possibly as a list, what the thesis and the work described in the thesis has contributed.
+Finally, the introduction should end with an outline of the remaining thesis.
+
+\ac{HPC} refers to the usage of powerful compute systems to solve non-trivial problems.
+
+\subsection{Citation and figure example}
+%
+\begin{figure}[th]
+\centering
+\includegraphics[width=0.7\textwidth]{Electron}
+\caption[An Electron]{An electron (artist's impression).}
+\label{fig:Electron}
+\end{figure}
+
+\subsection{Table and listing example}
+\Cref{tab:treatments} shows an example for a table in \LaTeX.
+
+\begin{table}[th]
+	\caption{The effects of treatments X and Y on the four groups studied.}
+	\label{tab:treatments}
+	\centering
+	\begin{NiceTabular}{lrr}
+		\CodeBefore
+		\rowcolors{2}{gray!10}{white}
+		\Body
+		\textbf{Groups} & \textbf{Treatment X} & \textbf{Treatment Y} \\
+		1 & 0.20 & 0.80\\
+		2 & 0.17 & 0.70\\
+		3 & 0.24 & 0.75\\
+		4 & 0.68 & 0.30\\
+	\end{NiceTabular}
+\end{table}
+
+
+[If you show results in tables, always ensure all of them are aligned to the right and have the same precision.]
+
+\Cref{lst:hello} shows an example of a listing, a good way to display code in \LaTeX.
+
+\begin{listing}[th]
+	\begin{minted}{Go}
+package main
+import "fmt"
+func main() {
+	fmt.Println("Hello, world!")
+}
+	\end{minted}
+\caption{"Hello, world!" in Go}
+\label{lst:hello}
+\end{listing}
+\fi
+
+\section{Related Work}
+\input{./sections/related-work.tex}
+
+\section{Benchmark comparision of various detection systems}
+\input{./sections/benchmark-comparision-of-various-detection-systems.tex}
+
+\section{Results and Analysis}
+\input{./sections/results-and-analysis.tex}
+
+\section{Discussion}
+
+\lipsum[2]

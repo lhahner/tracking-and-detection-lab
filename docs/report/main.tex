@@ -1,32 +1,181 @@
-\documentclass[conference]{IEEEtran}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Thesis Template
+% LaTeX Template
+% Version 1.5.1 (2024-02-20)
+%
+% This template was adapted by:
+% Lars Quentin (lars.quentin@stud.uni-goettingen.de) and
+% Jonathan Decker (jonathan.decker@uni-goettingen.de)
+% Adapted from the informatics master and bachelor thesis template
+% offered by the University Göttingen
+% https://www.uni-goettingen.de/de/626775.html
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\include{./packages/packs.tex}
+% --- document configuration ---
+
+\newcommand{\thesistitle}{A comparision of various deep learning based detection systems for multi-object tracking}
+\newcommand{\firstsupervisor}{Lukas Steinegger}
+\newcommand{\authorname}{Lennart Hahner}
+\newcommand{\university}{Georg-August-Universität Göttingen}
+\newcommand{\department}{Institute of Computer Science}
+\newcommand{\thesistype}{Project Thesis} % Bachelor's Thesis or Master's Thesis
+\newcommand{\course}{Applied Computer Science}
+\newcommand{\matrikelnumber}{16853416}
+\newcommand{\keywords}{[Put keywords here]} % Set keywords that describe your report
+\newcommand{\documentlanguage}{en-US} % Required for PDF/A
+\newcommand{\submissiondate}{\today}
+
+% --- PDF/A compliance ---
+% Taken from the template provided by the Institute of Informatics, University of Goettingen
+\pdfminorversion=7
+\begin{filecontents*}{\jobname.xmpdata}
+	\Title{\thesistitle}
+	\Author{\authorname}
+	\Language{\documentlanguage}
+	\Subject{The abstract, or short description}
+	\Keywords{\keywords}
+\end{filecontents*}
+
+\documentclass[12pt, a4paper, hidelinks]{article}
+
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage[english]{babel}
+\usepackage[nottoc]{tocbibind}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[backend=biber,style=ieee]{biblatex}
+\addbibresource{ref.bib} % The filename of the bibliography
+\usepackage[left=2.5cm,right=2.5cm,top=2.5cm,bottom=2.5cm]{geometry}
+\usepackage{float}
+\usepackage{acronym}
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\usepackage[language=english]{lipsum}
+\usepackage{array, tabularx, booktabs} % For better tables
+\usepackage{longtable}
+\usepackage{minted}
+\usemintedstyle{tango}
+\setminted{linenos, autogobble, bgcolor=gray!5}
+\usepackage{titlesec}
+\usepackage{amssymb}
+\setlength{\marginparwidth}{2cm}
+\usepackage{todonotes}
+\usepackage{marvosym} % icons
+\usepackage{nicematrix}
+\usepackage[autostyle=true]{csquotes}
+\usepackage{colorprofiles}
+\usepackage[a-2b, mathxmp]{pdfx}[2018/12/22]
+\usepackage{hyperref}
+\hypersetup{pdfencoding=unicode}
+\hypersetup{pdfstartview=}
+\usepackage{cleveref}
+
+\newcommand{\ccheckmark}{\mbox{\ooalign{$\checkmark$\cr\hidewidth$\square$\hidewidth\cr}}}
+\newcommand{\ccheckbox}{\mbox{$\square$}}
+
+\newcommand{\addemptypage}{\newpage\null\thispagestyle{empty}\newpage}
+
+\titleformat{\section}[hang]{\huge\bfseries}{\thesection\hspace{20pt}}{0pt}{\huge\bfseries}
+\graphicspath{{figures/}{./}{assets/}}
+
 
 \begin{document}
 
-\title{A review of modern multi-object tracking systems in consideration of the detection system}
-\maketitle
+\fancyhead{}
+\fancyhead[R]{\footnotesize \thesistitle}
+\fancyfoot{}
+\fancyfoot[R]{\thepage}
+\fancyfoot[L]{Section \thesection}
+\fancyfoot[C]{\authorname}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0.4pt}
 
-\pagebreak 
+\pagestyle{empty}
+\hypersetup{pageanchor=false} %Avoid issue with invisible numbering style
+\input{titlepage}
 
-\section{Introduction}
-\include{./sections/intro.tex}
-...
+% --- abstract ---
 
-\section{Related Work}
-\input{./sections/related-work.tex}
+\newpage
+\pagenumbering{roman}
+\setcounter{page}{1}
 
-\section{Development of detection systems in the past years}
+\section*{Abstract}
+\input{abstract}
 
-\section{Development of tracking systems in the past years}
+\newpage
 
-\section{Implementation of the Tracking Benchmark Program}
+\vfill
 
-\section{Review of Benchmark results}
+% Fill out the statement by setting \ccheckbox for points that do not apply and \ccheckmark for points that do apply
 
-\section{Conclusion}
+\subsection*{Declaration on the use of ChatGPT and comparable tools\\ in the context of examinations}
+\noindent In this work I have used ChatGPT or another AI as follows:
+\begin{itemize}
+	\item[\ccheckmark] Not at all
+	\item[\ccheckbox] During brainstorming
+	\item[\ccheckbox] When creating the outline
+	\item[\ccheckbox] To write individual passages, altogether to the extent of 0\% of the entire text % Set the percentage if this point applies
+	\item[\ccheckbox] For the development of software source texts
+	\item[\ccheckbox] For optimizing or restructuring software source texts
+	\item[\ccheckbox] For proofreading or optimizing
+	\item[\ccheckbox] Further, namely: - % List here things that you used AI-systems for with regard to this document
+\end{itemize}
+I hereby declare that I have stated all uses completely.\\
+Missing or incorrect information will be considered as an attempt to cheat.
 
-\section{References}
+\vfill 	
 
+\newpage
+\pagestyle{plain}
+% --- table of contents ---
+% Comment out the lists you are not using
+\clearpage
+\phantomsection\pdfbookmark{\contentsname}{toc}
+\tableofcontents
 
-\end {document}
+\newpage
+\clearpage\phantomsection
+\listoftables
+\newpage
+\clearpage
+\phantomsection
+\listoffigures
+\newpage
+\clearpage
+\phantomsection
+\listoflistings \addcontentsline{toc}{section}{List of Listings}
+
+% if you have abbreviations
+\input{abbreviations}
+
+\thispagestyle{plain}
+\newpage
+
+% --- content ---
+
+\hypersetup{pageanchor=true}
+\pagenumbering{arabic}
+\setcounter{page}{1}
+\pagestyle{fancy}
+
+\input{content}
+
+% --- references ---
+
+\newpage
+\printbibliography[heading=bibintoc]
+
+% --- your appendix ---
+\appendix
+\break
+
+\pagenumbering{arabic}
+\renewcommand*{\thepage}{A\arabic{page}}
+
+\newpage
+\input{appendix}
+
+\end{document}
