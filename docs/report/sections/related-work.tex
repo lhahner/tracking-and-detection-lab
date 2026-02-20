@@ -2,14 +2,42 @@
 % ------------------ Only Detection Systems -------------------- %
 
 % Comprehensive review of recent developments in visual object detection based on deep learning
-
 % What does the paper contain?
 Edozie et. al \cite{edozie} provides a review across the past developments of object detection techniques in the past 26 years. Besides describing the evolution of deep learning based object detection systems they also compare them to the classical non-deep-learning based object detection methods and algorithms.
+
 % Why is this interesting in this report?
 They provide a wide overview of datasets, methods and research that was important in the past 26 years. Beside providing classical object detection methods they also present an overview of modern deep learning based object detector which should be summarized here to give an impression of the state of the art.
 
 % What review is provided
 Object detection systems are separated in One-Stage and Two-Stage object detectors. Where the two-stage detector first generates proposals of the detection and then encodes them to make class predictions. Otherwise the first-stage detector doesn't consider region proposals, they simply rely on the locations with the most objects and either classify them as an object or background. Through this simplification One-Stage detectors are generally faster than two-stage detectors.
+In table \ref{} you will find a list of modern two-stage detectors and their implementend advancment based on their disadvantage as presented by \cite{edozie}.
+
+\begin{table}[th]
+	\caption{Two-stage detection systems and their advancemnets}
+	\label{tab:treatments}
+	\centering
+	\begin{NiceTabular}{llp{11cm}}
+		\CodeBefore
+		\rowcolors{2}{gray!10}{white}
+		\Body
+		\textbf{Year} & \textbf{Method} & \textbf{Advancement} \\
+		2011 & R-CNN & Selective search for region proposal extracted and input to a Convolutional Neural Network. \\
+		2015 & SPPNet & Applies Spatial Pyramid Pooling to have many pooling layers for different scales \\
+		2015 & Fast R-CNN & Use Region of Interest pooling layer to share region proposals of convolutions \\
+		2016 & Faster R-CNN & Incooperate a Regional Proposal Network eliminating the need of seperate region proposal algorithms. \\
+		2017 & FPN & Combines shallow and deep
+		layer features to enable detection of objects at various scales. \\
+		2017 & Mask R-CNN & Adding
+		a mask network branch for RoI segment prediction, enabling simultaneous object detection
+		and instance segmentation \\
+		2018 & PANet & Adds an extra upward PANet above
+		the FPN. \\
+		2019 & TridenTNet  &  employs
+		a quick inference technique with just one main branch. \\
+		2020 & SpineNet & Scale-permuted intermediate characteristics and cross-scale
+		connections. 
+	\end{NiceTabular}
+\end{table}
 
 
 % From classical techniques to convolution-based models: A review of object detection algorithms
