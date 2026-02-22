@@ -9,41 +9,22 @@ Edozie et. al \cite{edozie} provides a review across the past developments of ob
 They provide a wide overview of datasets, methods and research that was important in the past 26 years. Beside providing classical object detection methods they also present an overview of modern deep learning based object detector which should be summarized here to give an impression of the state of the art.
 
 % What review is provided
-Object detection systems are separated in One-Stage and Two-Stage object detectors. Where the two-stage detector first generates proposals of the detection and then encodes them to make class predictions. Otherwise the first-stage detector doesn't consider region proposals, they simply rely on the locations with the most objects and either classify them as an object or background. Through this simplification One-Stage detectors are generally faster than two-stage detectors.
-In table \ref{} you will find a list of modern two-stage detectors and their implementend advancment based on their disadvantage as presented by \cite{edozie}.
+In their work they present different ways to categorize object detection systems.
+One way object detection systems are separated in One-Stage and Two-Stage object detectors. Where the two-stage detector first generates proposals of the detection and then encodes them to make class predictions. Otherwise the first-stage detector doesn't consider region proposals, they simply rely on the locations with the most objects and either classify them as an object or background. Through this simplification One-Stage detectors are generally faster than two-stage detectors.
 
-\begin{table}[th]
-	\caption{Two-stage detection systems and their advancemnets}
-	\label{tab:treatments}
+This categorization approach leaves out other architectures like transformer-based models like DETR \cite{} and Multi-path CNNs like PAN \cite{}. Instead they summarize the different detection architectures by the categories of tradional detectors which include non deep learning methods, conventional deep learning methods that only inlcude two-stage detection systems, Hybrid\/Briding which provides a category for Multi-path detection systems and advanced deep learning which is a category for one-stage detectors and transformer based models.
+To present some methods figures \ref{} an overview of different detectors and their category in consideration of their year of development provided by \cite{edozie}.
+
+\begin{figure}[H]
 	\centering
-	\begin{NiceTabular}{llp{11cm}}
-		\CodeBefore
-		\rowcolors{2}{gray!10}{white}
-		\Body
-		\textbf{Year} & \textbf{Method} & \textbf{Advancement} \\
-		2011 & R-CNN & Selective search for region proposal extracted and input to a Convolutional Neural Network. \\
-		2015 & SPPNet & Applies Spatial Pyramid Pooling to have many pooling layers for different scales \\
-		2015 & Fast R-CNN & Use Region of Interest pooling layer to share region proposals of convolutions \\
-		2016 & Faster R-CNN & Incooperate a Regional Proposal Network eliminating the need of seperate region proposal algorithms. \\
-		2017 & FPN & Combines shallow and deep
-		layer features to enable detection of objects at various scales. \\
-		2017 & Mask R-CNN & Adding
-		a mask network branch for RoI segment prediction, enabling simultaneous object detection
-		and instance segmentation \\
-		2018 & PANet & Adds an extra upward PANet above
-		the FPN. \\
-		2019 & TridenTNet  &  employs
-		a quick inference technique with just one main branch. \\
-		2020 & SpineNet & Scale-permuted intermediate characteristics and cross-scale
-		connections. 
-	\end{NiceTabular}
-\end{table}
-
+	\includegraphics[width=\textwidth,height=1.0\textheight,keepaspectratio]{time-table-detector}
+	\caption[Every detection system in time]{The graphic summarizes the recent years developments in detection systems: R-CNN \cite{}, SPPNet \cite{}, Fast R-CNN \cite{}, Faster R-CNN \cite{}, FPN \cite{}, Mask R-CNN \cite{}, DetectorNet \cite{}, PANet \cite{}, TridenNet \cite{}, SpineNet \cite{}, SSD \cite{}, SqueezeDet \cite{}, EfficientDet \cite{}, DETR \cite{}}
+	\label{fig:timetable-detection}
+\end{figure}
 
 % From classical techniques to convolution-based models: A review of object detection algorithms
-Neha et al. \cite{1} provides an overview of detection systems using deep learning and classical approaches. They provide a summary of datasets, metrics and methods relevant in this domain. Further they provide a list of strengths and weaknesses of the different deep-learning based detection systems and also provide benchmark results on various detection systems, e.g.: R-CNN, Yolo etc.
+Neha et al. \cite{1} provides an overview of detection systems using deep learning and classical approaches. They provide a summary of datasets, metrics and methods relevant in this domain. Further they provide a list of strengths and weaknesses of the different deep-learning based detection systems and also provide benchmark results on various detection systems, e.g.: R-CNN, Yolo etc. % Maybe a paragraph like, other researches like xyz also provide an overview of various detection systems.
 
-% A review on object detection since 2005
 
 \subsection{Integration of detection systems in tracking systems}
 
