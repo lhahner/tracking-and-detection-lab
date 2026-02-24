@@ -1,38 +1,35 @@
 \subsection{Overview of modern detection systems}
 % ------------------ Only Detection Systems -------------------- %
 
-% Comprehensive review of recent developments in visual object detection based on deep learning
-% What does the paper contain?
-Edozie et. al \cite{edozie} provides a review across the past developments of object detection techniques in the past 26 years. Besides describing the evolution of deep learning based object detection systems they also compare them to the classical non-deep-learning based object detection methods and algorithms.
+Edozie et al. \cite{edozie} provide a comprehensive review of the development of object detection techniques over the past 26 years. In addition to describing the evolution of deep learning–based object detection systems, they compare these approaches with classical object detection methods that do not rely on deep learning.
 
-% Why is this interesting in this report?
-They provide a wide overview of datasets, methods and research that was important in the past 26 years. Beside providing classical object detection methods they also present an overview of modern deep learning based object detector which should be summarized here to give an impression of the state of the art.
+Their survey presents a broad overview of relevant datasets, methods, and research contributions over this period. In addition to classical detection methods, they also review modern deep learning–based object detectors, providing a clear overview of the current state of the art.
 
-% What review is provided
-In their work they present different ways to categorize object detection systems.
-One way object detection systems are separated in One-Stage and Two-Stage object detectors. Where the two-stage detector first generates proposals of the detection and then encodes them to make class predictions. Otherwise the first-stage detector doesn't consider region proposals, they simply rely on the locations with the most objects and either classify them as an object or background. Through this simplification One-Stage detectors are generally faster than two-stage detectors.
+In their work, they propose several ways to categorize object detection systems. One common categorization distinguishes between one-stage and two-stage detectors. Two-stage detectors first generate region proposals and subsequently classify these proposals into object categories. In contrast, one-stage detectors do not explicitly generate region proposals but instead directly predict object classes and bounding boxes in a single step. Due to this simplified processing pipeline, one-stage detectors generally achieve higher inference speeds than two-stage detectors.
 
-This categorization approach leaves out other architectures like transformer-based models like DETR \cite{} and Multi-path CNNs like PAN \cite{}. Instead they summarize the different detection architectures by the categories of tradional detectors which include non deep learning methods, conventional deep learning methods that only inlcude two-stage detection systems, Hybrid\/Briding which provides a category for Multi-path detection systems and advanced deep learning which is a category for one-stage detectors and transformer based models.
-To present some methods figures \ref{} an overview of different detectors and their category in consideration of their year of development provided by \cite{edozie}.
+However, this categorization does not explicitly account for newer architectures such as transformer-based models, e.g., DETR \cite{}, or multi-path convolutional neural networks such as PANet \cite{}. Therefore, the authors additionally classify detection architectures into four categories: traditional detectors, which include non–deep-learning-based methods; conventional deep learning detectors, primarily consisting of two-stage detection systems; hybrid or bridging methods, which include multi-path detection systems; and advanced deep learning methods, which include one-stage detectors and transformer-based models. Figure \ref{fig:timetable-detection} illustrates an overview of different object detectors, their respective categories, and their year of development, as presented in \cite{edozie}.
 
 \begin{figure}[H]
 	\centering
 	\includegraphics[width=\textwidth,height=1.0\textheight,keepaspectratio]{time-table-detector}
-	\caption[Every detection system in time]{The graphic summarizes the recent years developments in detection systems: R-CNN \cite{}, SPPNet \cite{}, Fast R-CNN \cite{}, Faster R-CNN \cite{}, FPN \cite{}, Mask R-CNN \cite{}, DetectorNet \cite{}, PANet \cite{}, TridenNet \cite{}, SpineNet \cite{}, SSD \cite{}, SqueezeDet \cite{}, EfficientDet \cite{}, DETR \cite{}}
+	\caption[Object detection systems over time]{This graphic summarizes the development of object detection systems over recent years, including R-CNN \cite{}, SPPNet \cite{}, Fast R-CNN \cite{}, Faster R-CNN \cite{}, FPN \cite{}, Mask R-CNN \cite{}, DetectoRS \cite{}, PANet \cite{}, TridentNet \cite{}, SpineNet \cite{}, SSD \cite{}, SqueezeDet \cite{}, EfficientDet \cite{}, and DETR \cite{}.}
 	\label{fig:timetable-detection}
 \end{figure}
 
-% From classical techniques to convolution-based models: A review of object detection algorithms
-Neha et al. \cite{1} provides an overview of detection systems using deep learning and classical approaches. They provide a summary of datasets, metrics and methods relevant in this domain. Further they provide a list of strengths and weaknesses of the different deep-learning based detection systems and also provide benchmark results on various detection systems, e.g.: R-CNN, Yolo etc. % Maybe a paragraph like, other researches like xyz also provide an overview of various detection systems.
+Other frameworks, such as open-vocabulary detection and 3D object detection, are not included in the figure but are discussed and categorized in \cite{edozie}.
 
+Similarly, Zou et al. \cite{zou} present a comprehensive survey of object detection methods. They also distinguish between one-stage and two-stage detectors and provide additional insights into modern transformer-based detection architectures. Furthermore, they compare different detection methods, as illustrated in Figure \ref{fig:timetable-detection}, based on their historical development, architectural design, and performance. Performance is evaluated using the mean Average Precision (mAP) metric on benchmark datasets such as VOC07 and MS COCO. Their results show that modern detection systems achieve mAP values exceeding 70\%.
+
+Neha et al. \cite{neha} provide an additional overview of object detection systems based on both classical and deep learning approaches. They summarize relevant datasets, evaluation metrics, and detection algorithms, and discuss the strengths and limitations of various deep learning–based detectors. Furthermore, they present benchmark results for representative detection models such as R-CNN and YOLO.
 
 \subsection{Integration of detection systems in tracking systems}
 
 % ------------------ Detection and Tracking Systems --------------------- %
 
-% A Review of Multi-Object Tracking in Recent Times
+Li et al. \cite{li} provide a comprehensive overview of modern multi-object tracking (MOT) systems and their integration with object detection methods. They categorize MOT approaches into three main groups: detection-based methods, single-object tracking–based methods, and segmentation-based methods. Detection-based methods first detect objects using an object detector and subsequently associate these detections across frames using motion and appearance features. In contrast, single-object tracking–based methods use individual object trackers to follow multiple objects across frames. Segmentation-based methods, on the other hand, track objects using pixel-level segmentation instead of bounding boxes, enabling more precise object localization.
 
-% Deep Learning-Based Multi-Object Tracking: A Comprehensive Survey from Foundations to State-of-the-Art
+The authors emphasize that the performance of multi-object tracking systems strongly depends on the accuracy of the underlying object detector. Modern tracking systems commonly use detectors such as YOLO, CenterNet, and DETR. Their survey also compares multiple tracking methods and shows that modern approaches, such as ByteTrack and BoT-SORT, achieve MOTA values exceeding 80\% on the MOT17 dataset. Both ByteTrack and BoT-SORT rely on YOLO-based object detection models.
 
-% Multi-object tracking review: retrospective and emerging trend
+Adžemović \cite{adzemovic} presents a similar categorization of tracking methods and introduces an additional paradigm referred to as end-to-end tracking, in which detection and tracking are learned jointly within a single neural network. This category includes transformer-based tracking methods such as TrackFormer and MOTR, which jointly learn object detection and association. The survey highlights the performance advantages of end-to-end tracking systems, particularly MOTRv2 \cite{}, which achieves state-of-the-art tracking performance. In contrast, ByteTrack achieves the best MOTA performance among tracking-by-detection methods.
 
+Bashar et al. \cite{bashar} also identify tracking-by-detection as the dominant paradigm in modern multi-object tracking systems, where objects are first detected and then associated across frames. Recent approaches increasingly employ transformer-based architectures, such as TrackFormer and TransTrack, which improve tracking performance by modeling temporal relationships between frames. Additionally, graph neural networks, motion models, and Siamese networks are used to enhance object association and identity preservation. The survey reports that modern deep learning–based tracking methods achieve MOTA values of up to 78.3\% on benchmark datasets such as MOT17 and MOT20, demonstrating significant improvements in tracking performance.
