@@ -1,4 +1,27 @@
-\subsection{Benchmark Environment}
-\subsection{Object detector implementations}
-\subsection{Detector-Tracker integrations}
-\subsection{Evaluation}
+\subsection{Datasets}
+The choice of dataset is important to correctly reflect the actual performance of different permutations of detection and tracking systems. Especially newer datasets that include night-time scenes, non-urban environments, or highly occluded images can provide useful insights into performance improvements over time. Furthermore, this section highlights the evolution of various dataset collections and challenges.
+
+\subsubsection{MOT15 Dataset collection}
+Different permutations of tracking and detection systems were evaluated on the MOT15 dataset \cite{MOTChallenge2015}. The MOT15 challenge is a dataset framework that contains 5503 training frames and 5783 testing frames, divided into a total of 22 sequences. The dataset includes both 3D and 2D sequences; however, for the current benchmark, only the 2D sequences are considered. 
+
+Furthermore, the dataset provides a diverse set of scenes and categorizes the data according to camera movement (static or moving), viewpoint height, and weather conditions. The ground truth annotations are primarily generated through manual human labeling, supported by annotation tools such as the VATIC annotation tool. Some sequences originate from existing datasets, such as the ETH \cite{} dataset and the KITTI \cite{} dataset, which provide their own annotated data. In Figure \ref{fig:groundtruth}, exemplary ground truth annotations are presented.
+
+% https://arxiv.org/pdf/1504.01942
+\begin{figure}[th]
+	\centering
+	\includegraphics[width=0.7\textwidth]{groundtruth-mot15}
+	\caption[]{Example scene from the Venice-2 sequence, which is included in the MOT15 dataset. The frames show the point of view (POV) of a static camera in the inner city of Venice. The bounding boxes represent the ground truth annotations provided by the MOT15 challenge.}
+	\label{fig:groundtruth}
+\end{figure}
+
+This figure shows one of the targets used in the benchmark. Most sequences, such as KITTI-17, TUD-Crossing, and ETH-Crossing, depict urban environments. The dataset mainly consists of scenes in which multiple pedestrians are visible. As a result, occlusion is common due to overlapping pedestrians. Many sequences originate from datasets such as ETH-Bahnhof, ETH-Sunnyday, and ETH-Pedcross2.
+
+As previously mentioned, the dataset is divided into two parts: the training set and the testing set. While the training and testing sets contain data from similar environments, they are recorded at different times. For example, the KITTI-17 sequence is from 2017 and is located in the training set, while the KITTI-19 sequence is from 2019 and is located in the testing set. This structure makes it possible to train and evaluate detection and tracking models under similar but temporally distinct conditions. Since this report focuses on pre-trained models, the evaluation is independent of whether the training or testing dataset is used.
+
+\subsubsection{MOT20 Dataset collection}
+Since the MOT15 dataset primarily includes daytime scenes, an additional dataset from a newer MOTChallenge benchmark is considered. The MOT20 dataset \cite{dendorfer2020mot20benchmarkmultiobject} includes scenes recorded at night and in more crowded environments. This provides additional challenges for detection and tracking systems and allows evaluation under more difficult real-world conditions.
+
+% Which multi-object-tracking systems were used?
+\subsection{Detection systems}
+\subsection{Multi-object-tracking systems}
+%\subsection{Implementation details}

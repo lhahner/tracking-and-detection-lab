@@ -4,15 +4,17 @@
 \contentsline {section}{List of Listings}{vi}{section*.4}%
 \contentsline {section}{List of Abbreviations}{vii}{section*.4}%
 \contentsline {section}{\numberline {1}Introduction}{1}{section.1}%
-\contentsline {section}{\numberline {2}Related Work}{1}{section.2}%
+\contentsline {section}{\numberline {2}Related work}{1}{section.2}%
 \contentsline {subsection}{\numberline {2.1}Overview of modern detection systems}{1}{subsection.2.1}%
-\contentsline {subsection}{\numberline {2.2}Integration of detection systems in tracking systems}{3}{subsection.2.2}%
-\contentsline {section}{\numberline {3}Benchmark comparision of various detection systems}{3}{section.3}%
-\contentsline {subsection}{\numberline {3.1}Benchmark Environment}{3}{subsection.3.1}%
-\contentsline {subsection}{\numberline {3.2}Object detector implementations}{3}{subsection.3.2}%
-\contentsline {subsection}{\numberline {3.3}Detector-Tracker integrations}{3}{subsection.3.3}%
-\contentsline {subsection}{\numberline {3.4}Evaluation}{3}{subsection.3.4}%
-\contentsline {section}{\numberline {4}Results and Analysis}{3}{section.4}%
-\contentsline {section}{\numberline {5}Discussion}{3}{section.5}%
-\contentsline {section}{References}{4}{section.5}%
+\contentsline {subsection}{\numberline {2.2}Integration of detection systems in tracking systems}{2}{subsection.2.2}%
+\contentsline {section}{\numberline {3}Experimental setting}{3}{section.3}%
+\contentsline {subsection}{\numberline {3.1}Datasets}{3}{subsection.3.1}%
+\contentsline {subsubsection}{\numberline {3.1.1}MOT15 Dataset collection}{3}{subsubsection.3.1.1}%
+\contentsline {subsubsection}{\numberline {3.1.2}MOT20 Dataset collection}{4}{subsubsection.3.1.2}%
+\contentsline {subsection}{\numberline {3.2}Detection systems}{4}{subsection.3.2}%
+\contentsline {subsection}{\numberline {3.3}Multi-object-tracking systems}{4}{subsection.3.3}%
+\contentsline {section}{\numberline {4}Benchmark results}{5}{section.4}%
+\contentsline {subsection}{\numberline {4.1}Metrics}{5}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}Analysis}{5}{subsection.4.2}%
+\contentsline {section}{\numberline {5}Discussion}{6}{section.5}%
 \contentsline {section}{\numberline {A}Additional Materials}{A1}{appendix.A}%
