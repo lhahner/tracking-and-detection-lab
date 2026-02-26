@@ -19,7 +19,6 @@ import os
 from tracker.SORT.sort import Sort
 from tracker.SORT.kalmanBoxTracker import KalmanBoxTracker
 from detector.yolo.yolo import YoloDetector
-from detector.pointpillars.pointpillars import PointpillarsDetector
 
 class Application:
     def __init__(self, total_time, total_frames, colours):
@@ -27,6 +26,7 @@ class Application:
         self.total_time = total_time
         self.total_frames = total_frames
         self.colours = colours
+        self.project_root = os.path.dirname(os.path.abspath(__file__))
         self.implemented_detectors = self.read_implemented_detectors() # TODO read from folders
         self.datatype = Datatype.RGB # Changes depending on used detector
     
@@ -45,9 +45,13 @@ class Application:
         thus the following build every detection
         system known for the current project.
         """
-        if not os.path.exists('data'):
-            raise ValueError('No data Folder found.')
-        det_folders = os.listdir('data')
+        detector_dir = os.path.join(self.project_root, 'detector')
+        if not os.path.isdir(detector_dir):
+            raise ValueError(f'No detector folder found at {detector_dir}.')
+        det_folders = [
+            folder for folder in os.listdir(detector_dir)
+            if os.path.isdir(os.path.join(detector_dir, folder)) and not folder.startswith(('.', '_'))
+        ]
         return det_folders
     
     def run_detector_by_argument(self, arg_detector, arg_dataset):
@@ -64,15 +68,6 @@ class Application:
                 os.path.join('mot_benchmark', 'train', arg_dataset, 'img1'),
                 os.path.join('data', arg_detector, arg_dataset, 'det'),
                 os.path.join('detector', arg_detector, 'model', 'yolo11n.pt') # maybe check that the .pt file is read
-            )
-            detector.detect()
-        if (arg_detector == 'pointpillars'):
-            self.datatype = Datatype.LIDAR
-            detector = PointpillarsDetector(
-                os.path.join('mot_benchmark', 'train', arg_dataset, 'img1/'), # TODO
-                os.path.join('data', arg_detector, arg_dataset, 'det/'),
-                os.path.join('detector', arg_detector, 'model', 'pointpillars_hv_secfpn_8xb6-160e_kitti-3d-car.py'),
-                os.path.join('detector', arg_detector, 'model', 'hv_pointpillars_secfpn_6x8_160e_kitti-3d-car_20220331_134606-d42d15ed.pth')
             )
             detector.detect()
     
