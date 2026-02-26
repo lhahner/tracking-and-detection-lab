@@ -10,7 +10,7 @@ Furthermore, the dataset provides a diverse set of scenes and categorizes the da
 \begin{figure}[th]
 	\centering
 	\includegraphics[width=0.7\textwidth]{groundtruth-mot15}
-	\caption[]{Example scene from the Venice-2 sequence, which is included in the MOT15 dataset. The frames show the point of view (POV) of a static camera in the inner city of Venice. The bounding boxes represent the ground truth annotations provided by the MOT15 challenge.}
+	\caption[]{Example scene from the Venice-2 sequence, which is included in the MOT15 dataset. The frames show the point of view (POV) of a static camera in the inner city of Venice. The bounding boxes represent the ground truth annotations provided by the MOT15 challenge. \cite{MOTChallenge2015}}
 	\label{fig:groundtruth}
 \end{figure}
 
@@ -19,7 +19,20 @@ This figure shows one of the targets used in the benchmark. Most sequences, such
 As previously mentioned, the dataset is divided into two parts: the training set and the testing set. While the training and testing sets contain data from similar environments, they are recorded at different times. For example, the KITTI-17 sequence is from 2017 and is located in the training set, while the KITTI-19 sequence is from 2019 and is located in the testing set. This structure makes it possible to train and evaluate detection and tracking models under similar but temporally distinct conditions. Since this report focuses on pre-trained models, the evaluation is independent of whether the training or testing dataset is used.
 
 \subsubsection{MOT20 Dataset collection}
-Since the MOT15 dataset primarily includes daytime scenes, an additional dataset from a newer MOTChallenge benchmark is considered. The MOT20 dataset \cite{dendorfer2020mot20benchmarkmultiobject} includes scenes recorded at night and in more crowded environments. This provides additional challenges for detection and tracking systems and allows evaluation under more difficult real-world conditions.
+Since the MOT15 dataset primarily includes daytime scenes with moderate crowd density, an additional dataset from a newer MOTChallenge benchmark is considered. The MOT20 dataset \cite{dendorfer2020mot20benchmarkmultiobject} includes scenes recorded during both daytime and nighttime, and in significantly more crowded environments. This provides additional challenges for detection and tracking systems and allows evaluation under more difficult and realistic real-world conditions.
+
+The MOT20 dataset consists of a total of 8 sequences, split into 4 training and 4 testing sequences. The training set contains 8,931 frames, while the test set contains 4,479 frames. Compared to the MOT15 challenge, the pedestrian density per image has increased substantially, reaching peak densities of up to 246 pedestrians per frame. Furthermore, the dataset contains approximately three times more bounding box annotations than the MOT17 dataset, significantly increasing the complexity of the tracking task. This increase in annotation density and scene complexity is visible in the ground truth example shown in Figure~\ref{fig:groundtruth20}.
+
+\begin{figure}[th]
+	\centering
+	\includegraphics[width=0.7\textwidth]{groundtruth-mot20}
+	\caption[]{Example scene from the MOT20 dataset. The frames show the point of view of a static camera in a crowded indoor public environment. The bounding boxes represent the ground truth pedestrian annotations provided by the MOT20 challenge. The high number of overlapping annotations illustrates the increased scene complexity and crowd density. \cite{dendorfer2020mot20benchmarkmultiobject}}
+	\label{fig:groundtruth20}
+\end{figure}
+
+The high pedestrian density introduces additional challenges for MOT systems, as frequent occlusions between individuals occur. This makes it more difficult to maintain correct identity assignment and to associate object tracks consistently across multiple frames. As illustrated in Figure~\ref{fig:groundtruth20}, the dataset includes both indoor and outdoor scenes, recorded from elevated static camera viewpoints. These scenes contain a wide range of environmental conditions, including daytime and nighttime recordings, varying illumination conditions, and different crowd dynamics.
+
+Additionally, all sequences are recorded in high resolution, typically up to 1920$\times$1080 pixels, allowing precise spatial localization of pedestrians. The dataset provides manually annotated ground truth bounding boxes, including unique object identities and visibility information. This enables a detailed evaluation of tracking performance, particularly in challenging scenarios with partial and full occlusions.
 
 % Which multi-object-tracking systems were used?
 \subsection{Detection systems}
