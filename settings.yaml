@@ -1,0 +1,43 @@
+project:
+  name: tracking-and-detection-lab
+  seed: 0
+
+paths:
+  mot_root: "/home/lennart/Dokumente/gau/advanced-research-training-applied-system-development/track-lab/data/MOT15/train/KITTI-17/img1"         # absolute or relative to this file
+  output_root: "./output"
+  detections_root: "./data"
+  models_root: "./detector"
+  detection_path: "/media/lennart/LaCie/gau/advanced-research-training-applied-system-development/tracking-and-detection-lab/data/yolo/KITTI-17/det"
+
+runtime:
+  display: true 
+  dataset: "KITTI-17"                      
+  detector: "yolo"                  
+  tracker: "sort"
+  datatype: "jpg"
+
+detectors:
+  yolo:
+    enabled: true
+    model_path: "yolo/model/yolo11n.pt"   
+    conf_threshold: 0.25
+    iou_threshold: 0.45
+    classes: []                            
+  detr:
+    enabled: false
+    checkpoint: "detr/model/checkpoint.pth"
+  detectron2:
+    enabled: false
+    config_file: "detectron2/config.yaml"
+    weights: "detectron2/model/model_final.pth"
+
+trackers:
+  sort:
+    max_age: 1
+    min_hits: 3
+    iou_threshold: 0.3
+
+io:
+  detection_filename: "det.txt"
+  tracking_filename_pattern: "{sequence}.txt"
+  overwrite_outputs: true

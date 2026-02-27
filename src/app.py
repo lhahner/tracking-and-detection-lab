@@ -10,7 +10,7 @@ from skimage import io
 from util.datatype import Datatype
 from util.coordinate_converter import CoordinateConverter
 from util.visualizer import Visualizer
-
+from util.settings_loader import SettingsLoader
 import glob
 import time
 import argparse
@@ -54,22 +54,23 @@ class Application:
         ]
         return det_folders
     
-    def run_detector_by_argument(self, arg_detector, arg_dataset):
+    def run_detector_by_argument(self, detector_name, dataset_path, detection_path, model_path):
         """
         Depending on the argument read by the argument
         parse a different detection system is choosen
         and loaded. A detection system should be choosen
         based on the data used.
         """
-        if (arg_detector == 'frcnn'):
+        detector = None
+        if (detector_name == 'frcnn'):
             return None
-        if (arg_detector == 'yolo'):
+        if (detector_name == 'yolo'):
             detector = YoloDetector(
-                os.path.join('mot_benchmark', 'train', arg_dataset, 'img1'),
-                os.path.join('data', arg_detector, arg_dataset, 'det'),
-                os.path.join('detector', arg_detector, 'model', 'yolo11n.pt') # maybe check that the .pt file is read
+                input_path=dataset_path, 
+                output_path=detection_path, 
+                model_path=model_path
             )
-            detector.detect()
+        detector.detect()
     
     def parse_args(self):
         """
@@ -105,48 +106,26 @@ class Application:
         return args
     
 if __name__ == "__main__":
-  # Cross cutting concerns injections
   app = Application(0.0, 0, np.random.rand(32, 3))
   
-  # Argument handling
   args = app.parse_args()
-  display = args.display
   phase = args.phase
-  detector = args.detector
-  dataset = args.dataset
   path_detection = []
   
-  if (detector and not dataset):
-      raise ValueError('Please specify a dataset to use for detection')
- 
-  if (dataset):
-      if dataset not in os.listdir('mot_benchmark/train/'):
-          raise ValueError(f'dataset {dataset} is not in input folder, please create a folder named {dataset}')
- 
-  if (detector):
-     if detector not in app.get_implemented_detectors():
-         print(f"detector {detector} not implemented detector {app.get_implemented_detectors()}")
-     
-     elif args.detector is None:
-         print(f"detector no specified running for all.")
-         for implemented_detector in app.get_implemented_detectors():
-            app.run_detector_by_argument(implemented_detector, dataset)
-     else:
-        print(f"running for {detector}.")
-        app.run_detector_by_argument(detector, dataset)
+  settings = SettingsLoader.load("settings.yaml")
+  
+  app.run_detector_by_argument(
+      settings.runtime.detector, 
+      dataset_path=settings.paths.mot_root, 
+      detection_path=settings.paths.detection_path, 
+      model_path=settings.paths.models_root
+    )
         
   visualizer = Visualizer(app.datatype)
-  if(display): 
-    if not os.path.exists('mot_benchmark'):
-      print('\n\tERROR: mot_benchmark link not found!\n\n    Create a symbolic link to the MOT benchmark\n    (https://motchallenge.net/data/2D_MOT_2015/#download). E.g.:\n\n    $ ln -s /path/to/MOT2015_challenge/2DMOT2015 mot_benchmark\n\n')
-      exit()
+  if(settings.runtime.display): 
     visualizer.setup_panel()
 
-  if not os.path.exists('output'):
-    os.makedirs('output')
- 
-  pattern = os.path.join('data', detector, dataset, 'det', 'det.txt') # path/filename matching
-  
+  pattern = os.path.join(settings.paths.detection_path, "det.txt")
   for seq_dets_fn in glob.glob(pattern):
     mot_tracker = Sort(max_age=args.max_age, 
                        min_hits=args.min_hits,
@@ -155,7 +134,7 @@ if __name__ == "__main__":
     seq_dets = np.loadtxt(seq_dets_fn, delimiter=',') 
     seq = os.path.basename(os.path.dirname(os.path.dirname(seq_dets_fn)))
     
-    with open(os.path.join('output', '%s.txt'%(seq)),'w') as out_file:
+    with open(os.path.join('src/output', '%s.txt'%(seq)),'w') as out_file:
         
       print("Processing %s."%(seq))
       converter = CoordinateConverter()
@@ -172,15 +151,11 @@ if __name__ == "__main__":
             raise ValueError("Detection datatype not detected.")    
         app.total_frames += 1
 
-        if(display):
-            if app.datatype is Datatype.LIDAR:
-                filetype = "bin"
-            elif app.datatype is Datatype.RGB:
-                # MOT benchmark RGB frames are typically jpg (sometimes png)
-                filetype = "jpg"
-            else:
-                raise ValueError("Detection datatype not detected.")
-            visualizer.visualize_data(phase, seq, filetype, frame)
+        if(settings.runtime.display):
+           visualizer.visualize_data(
+               dir_path=settings.paths.mot_root, 
+               filetype=settings.runtime.datatype, 
+               frame=frame)
 
         start_time = time.time()
         trackers = mot_tracker.update(dets)
@@ -189,10 +164,10 @@ if __name__ == "__main__":
 
         for d in trackers:
           print('%d,%d,%.2f,%.2f,%.2f,%.2f,1,-1,-1,-1'%(frame,d[4],d[0],d[1],d[2]-d[0],d[3]-d[1]),file=out_file)
-          if(display):
+          if(settings.runtime.display):
               visualizer.visualize_boxes(d, app.colours)
 
-        if(display):
+        if(settings.runtime.display):
           visualizer.visualize_and_draw()
           print("Visualized Box")
 

@@ -84,7 +84,7 @@ class YoloDetector(Detector):
            if file_name.endswith((".png", ".jpg", ".jpeg")):
                frames.append(file_name)
         frames.sort()
-        sorted_frames_concat = [self.input_path + frame for frame in frames]
+        sorted_frames_concat = [str(self.input_path) + frame for frame in frames]
         return sorted_frames_concat, frames
        
     def get_model(self):

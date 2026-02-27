@@ -11,21 +11,13 @@ class Visualizer:
         self.fig = None
         self.axis_one = None
             
-    def visualize_data(self, phase, seq, filetype, frame):
+    def visualize_data(self, dir_path, frame, filetype):
         filename = f"{frame:06d}.{filetype}"
-        path = os.path.join('mot_benchmark', phase, seq, 'img1', filename)
-        if self.datatype is Datatype.RGB: 
-            # TODO Run the normal display approach
-            im = io.imread(path)
-            ax1.imshow(im)
-            plt.title(seq + ' Tracked Targets')
+        path = os.path.join(dir_path, filename)
+        im = io.imread(path)
+        self.axis_one.imshow(im)
+        plt.title('Tracked Targets')
             
-        if self.datatype is Datatype.LIDAR:   
-            # TODO Run the LIDAR visualizer 
-            bev = self.lidar_bin_to_bev(path)
-            im = self.axis_one.imshow(bev, origin='lower')
-            plt.title(seq + ' Tracked Targets')
-    
     def visualize_boxes(self, bounding_box, colours):
         d = np.asarray(bounding_box, dtype=np.int32)
         if d.ndim == 1:
