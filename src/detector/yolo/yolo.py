@@ -47,14 +47,15 @@ class YoloDetector(Detector):
         if frame_index is None:
             raise ValueError("The given frame object is None")
         
-        xywh = results.boxes.xywh.cpu().numpy()   # (N,4)
+        xyxy = results.boxes.xyxy.cpu().numpy()   # (N,4) -> x1,y1,x2,y2 in original image space
         conf = results.boxes.conf.cpu().numpy()   # (N,)
         
         lines = []
-        for (x, y, w, h), c in zip(xywh, conf):
-            # If you want ints for x,y like your example, round them.
-            # Keep w,h and conf as floats.
-            line = f"{frame_index},-1,{x:.0f},{y:.0f},{w:.3f},{h:.3f},{c:.6f},-1,-1,-1\n"
+        for (x1, y1, x2, y2), c in zip(xyxy, conf):
+            # MOT format expects top-left x,y plus width,height.
+            w = x2 - x1
+            h = y2 - y1
+            line = f"{frame_index},-1,{x1:.0f},{y1:.0f},{w:.3f},{h:.3f},{c:.6f},-1,-1,-1\n"
             lines.append(line)
         
         return lines 

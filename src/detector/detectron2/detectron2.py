@@ -7,7 +7,7 @@ setup_logger()
 # import some common libraries
 import numpy as np
 import os, json, cv2, random
-from google.colab.patches import cv2_imshow
+import torch
 from detector.detector import Detector
 
 # import some common detectron2 utilities
@@ -21,10 +21,12 @@ class Detectron2Detector(Detector):
     def __init__(self, input_path, output_path, threshold):
         self.input_path = input_path
         self.output_path = output_path
+        self.detections = []
         cfg = get_cfg()
         cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"))
         cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = threshold # set threshold for this model
         cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml")
+        cfg.MODEL.DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
         self.model = DefaultPredictor(cfg)
     
     def detect(self):
@@ -34,24 +36,28 @@ class Detectron2Detector(Detector):
         Returns a map of detections, where the index is the frame and the
         value is the corresponding bounding-box and confidence score.
         """
-        concat_frames, frames = self.read_data()
+        concat_frames, _ = self.read_data()
         frame_index = 1
-        with open(os.path.join(self.output_path, 'det.txt'), 'r') as file_obj:
+        output_file = os.path.join(self.output_path, "det.txt")
+        with open(output_file, 'a+', encoding='utf-8') as file_obj:
+            file_obj.seek(0)
             first_char = file_obj.read(1)
             if first_char:
-                print(f"file {os.path.join(self.output_path, 'det.txt')} not empty, don't rewrite")
+                print(f"file {output_file} not empty, don't rewrite")
                 for line in file_obj:
                     self.detections.append(line)
                 return self.detections
             else:
                 print(f"file empty running detection on given dataset.")
         
-        for frame, concat_frame in zip(frames, concat_frames):
-            detection_results = predictor(concat_frame)["instances"]
-            
-            for detection_result in detection_results:
-                self.detections.append(self.format_detections(frame_index, detection_result))
-                self.write_output(self.format_detections(frame_index, detection_result)) 
+        for concat_frame in concat_frames:
+            image = cv2.imread(concat_frame)
+            if image is None:
+                raise ValueError(f"Unable to read image from path: {concat_frame}")
+            detection_results = self.model(image)["instances"].to("cpu")
+            lines = self.format_detections(frame_index, detection_results)
+            self.detections.append(lines)
+            self.write_output(lines)
             frame_index += 1
         return self.detections
     
@@ -66,14 +72,14 @@ class Detectron2Detector(Detector):
         if frame_index is None:
             raise ValueError("The given frame object is None")
         
-        xywh = results.pred_classes  # (N,4)
-        conf = results.scores  # (N,)
+        xyxy = results.pred_boxes.tensor.numpy()  # (N,4): x1,y1,x2,y2
+        conf = results.scores.numpy()  # (N,)
         
         lines = []
-        for (x, y, w, h), c in zip(xywh, conf):
-            # If you want ints for x,y like your example, round them.
-            # Keep w,h and conf as floats.
-            line = f"{frame_index},-1,{x:.0f},{y:.0f},{w:.3f},{h:.3f},{c:.6f},-1,-1,-1\n"
+        for (x1, y1, x2, y2), c in zip(xyxy, conf):
+            w = x2 - x1
+            h = y2 - y1
+            line = f"{frame_index},-1,{x1:.0f},{y1:.0f},{w:.3f},{h:.3f},{c:.6f},-1,-1,-1\n"
             lines.append(line)
         
         return lines
@@ -87,7 +93,7 @@ class Detectron2Detector(Detector):
         if not os.path.exists(out_dir):
             raise ValueError(f"Output directory does not exist: {out_dir}")
 
-        with open(self.output_path, "a", encoding="utf-8") as f:
+        with open(os.path.join(self.output_path, "det.txt"), "a", encoding="utf-8") as f:
             f.writelines(lines)
     
     def read_data(self):
@@ -103,7 +109,7 @@ class Detectron2Detector(Detector):
            if file_name.endswith((".png", ".jpg", ".jpeg")):
                frames.append(file_name)
         frames.sort()
-        sorted_frames_concat = [self.input_path + frame for frame in frames]
+        sorted_frames_concat = [os.path.join(self.input_path, frame) for frame in frames]
         return sorted_frames_concat, frames
        
     def get_model(self):

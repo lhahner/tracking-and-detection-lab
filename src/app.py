@@ -16,9 +16,14 @@ import time
 import argparse
 import os
 
+# Tracking systems
 from tracker.SORT.sort import Sort
 from tracker.SORT.kalmanBoxTracker import KalmanBoxTracker
+
+# Detection systems
 from detector.yolo.yolo import YoloDetector
+from detector.detr.detr import DetrDetector
+from detector.detectron2.detectron2 import Detectron2Detector
 
 class Application:
     def __init__(self, total_time, total_frames, colours):
@@ -64,12 +69,23 @@ class Application:
         detector = None
         if (detector_name == 'frcnn'):
             return None
+        if (detector_name == 'detr'):
+            detector = DetrDetector(
+                input_path=dataset_path,
+                output_path=detection_path,
+            )
         if (detector_name == 'yolo'):
             detector = YoloDetector(
                 input_path=dataset_path, 
                 output_path=detection_path, 
                 model_path=model_path
             )
+        if (detector_name == 'detectron2'):
+            detector = Detectron2Detector(
+                input_path=dataset_path, 
+                output_path=detection_path, 
+                threshold=0.9    
+            ) 
         detector.detect()
     
     def parse_args(self):
@@ -134,21 +150,13 @@ if __name__ == "__main__":
     seq_dets = np.loadtxt(seq_dets_fn, delimiter=',') 
     seq = os.path.basename(os.path.dirname(os.path.dirname(seq_dets_fn)))
     
-    with open(os.path.join('src/output', '%s.txt'%(seq)),'w') as out_file:
+    with open(os.path.join('output', '%s.txt'%(seq)),'w') as out_file:
         
       print("Processing %s."%(seq))
       converter = CoordinateConverter()
       for frame in range(int(seq_dets[:,0].max())):
         frame += 1
-        # TODO in dets.txt confidence is missing and the transformation is not that simple
-        if app.datatype is Datatype.LIDAR:
-            dets = converter.convert3DLIDARDetectionToBEV(seq_dets, frame)
-        
-        elif app.datatype is Datatype.RGB:
-            dets = converter.convert2DDetectionToBox(seq_dets, frame)
-        
-        else:
-            raise ValueError("Detection datatype not detected.")    
+        dets = converter.convert2DDetectionToBox(seq_dets, frame)
         app.total_frames += 1
 
         if(settings.runtime.display):

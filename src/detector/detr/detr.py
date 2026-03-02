@@ -1,13 +1,17 @@
-from transformer import DetrForObjectDetection
+from transformers import AutoImageProcessor, DetrForObjectDetection
 from detector.detector import Detector
+import os
+import torch
+from PIL import Image
 
 class DetrDetector(Detector):
-    def __init__(self, input_path, output_path, threshold):
+    def __init__(self, input_path, output_path, threshold=0.9):
         self.input_path = input_path
         self.output_path = output_path
+        self.threshold = threshold
         self.image_processor = AutoImageProcessor.from_pretrained("facebook/detr-resnet-50")
         self.model = DetrForObjectDetection.from_pretrained("facebook/detr-resnet-50")
-        self.threshold = threshold
+        self.detections = []
         
     def detect(self):
         """
@@ -16,26 +20,30 @@ class DetrDetector(Detector):
         Returns a map of detections, where the index is the frame and the
         value is the corresponding bounding-box and confidence score.
         """
-        concat_frames, frames = self.read_data()
+        concat_frames, _ = self.read_data()
         frame_index = 1
-        with open(os.path.join(self.output_path, 'det.txt'), 'r') as file_obj:
+        output_file = os.path.join(self.output_path, "det.txt")
+        with open(output_file, 'r') as file_obj:
             first_char = file_obj.read(1)
             if first_char:
-                print(f"file {os.path.join(self.output_path, 'det.txt')} not empty, don't rewrite")
+                print(f"file {output_file} not empty, don't rewrite")
                 for line in file_obj:
                     self.detections.append(line)
                 return self.detections
             else:
                 print(f"file empty running detection on given dataset.")
         
-        for frame, concat_frame in zip(frames, concat_frames):
-            inputs = self.image_processor(images=concat_frame, return_tensors="pt")
+        for concat_frame in concat_frames:
+            image = Image.open(concat_frame).convert("RGB")
+            inputs = self.image_processor(images=image, return_tensors="pt")
             outputs = self.model(**inputs)
             target_sizes = torch.tensor([image.size[::-1]])
-            detection_results = self.image_processor.pos_process_object_detection(outputs, threshold=0.9, target_sizes=target_sizes)[0]
-            for detection_result in detection_results:
-                self.detections.append(self.format_detections(frame_index, detection_result))
-                self.write_output(self.format_detections(frame_index, detection_result)) 
+            detection_results = self.image_processor.post_process_object_detection(
+                outputs=outputs, threshold=self.threshold, target_sizes=target_sizes
+            )[0]
+            lines = self.format_detections(frame_index, detection_results)
+            self.detections.append(lines)
+            self.write_output(lines)
             frame_index += 1
         return self.detections
     
@@ -50,14 +58,14 @@ class DetrDetector(Detector):
         if frame_index is None:
             raise ValueError("The given frame object is None")
         
-        xywh = results["boxes"]  # (N,4)
-        conf = results["score"]  # (N,)
+        xyxy = results["boxes"].detach().cpu().numpy()  # (N,4) x1,y1,x2,y2
+        conf = results["scores"].detach().cpu().numpy()  # (N,)
         
         lines = []
-        for (x, y, w, h), c in zip(xywh, conf):
-            # If you want ints for x,y like your example, round them.
-            # Keep w,h and conf as floats.
-            line = f"{frame_index},-1,{x:.0f},{y:.0f},{w:.3f},{h:.3f},{c:.6f},-1,-1,-1\n"
+        for (x1, y1, x2, y2), c in zip(xyxy, conf):
+            w = x2 - x1
+            h = y2 - y1
+            line = f"{frame_index},-1,{x1:.0f},{y1:.0f},{w:.3f},{h:.3f},{c:.6f},-1,-1,-1\n"
             lines.append(line)
         
         return lines
@@ -71,7 +79,7 @@ class DetrDetector(Detector):
         if not os.path.exists(out_dir):
             raise ValueError(f"Output directory does not exist: {out_dir}")
 
-        with open(self.output_path, "a", encoding="utf-8") as f:
+        with open(os.path.join(self.output_path, "det.txt"), "a", encoding="utf-8") as f:
             f.writelines(lines)
     
     def read_data(self):
@@ -87,7 +95,7 @@ class DetrDetector(Detector):
            if file_name.endswith((".png", ".jpg", ".jpeg")):
                frames.append(file_name)
         frames.sort()
-        sorted_frames_concat = [self.input_path + frame for frame in frames]
+        sorted_frames_concat = [os.path.join(str(self.input_path), frame) for frame in frames]
         return sorted_frames_concat, frames
        
     def get_model(self):
