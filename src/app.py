@@ -7,14 +7,18 @@ matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from skimage import io
+
 from util.datatype import Datatype
 from util.coordinate_converter import CoordinateConverter
 from util.visualizer import Visualizer
 from util.settings_loader import SettingsLoader
+from util.evaluation import Evaluation
+
 import glob
 import time
 import argparse
 import os
+from pathlib import Path
 
 # Tracking systems
 from tracker.SORT.sort import Sort
@@ -129,6 +133,7 @@ if __name__ == "__main__":
   path_detection = []
   
   settings = SettingsLoader.load("settings.yaml")
+  evaluation_runner = Evaluation(iou_threshold=0.5)
   
   app.run_detector_by_argument(
       settings.runtime.detector, 
@@ -150,7 +155,11 @@ if __name__ == "__main__":
     seq_dets = np.loadtxt(seq_dets_fn, delimiter=',') 
     seq = os.path.basename(os.path.dirname(os.path.dirname(seq_dets_fn)))
     
-    with open(os.path.join('output', '%s.txt'%(seq)),'w') as out_file:
+    sequence_output_path = Path(settings.paths.output_root) / f"{seq}.txt"
+    sequence_output_path.parent.mkdir(parents=True, exist_ok=True)
+    sequence_ground_truth_path = Path(settings.paths.ground_truth_path)
+
+    with open(sequence_output_path,'w') as out_file:
         
       print("Processing %s."%(seq))
       converter = CoordinateConverter()
@@ -177,13 +186,21 @@ if __name__ == "__main__":
 
         if(settings.runtime.display):
           visualizer.visualize_and_draw()
-          print("Visualized Box")
 
+    if settings.runtime.benchmark:
+      if sequence_ground_truth_path.exists():
+        evaluation_summary = evaluation_runner.evaluate_sequence(
+            ground_truth_file_path=sequence_ground_truth_path,
+            predicted_tracking_file_path=sequence_output_path,
+            sequence_name=seq)
+        print(evaluation_summary)
+      else:
+        print(f"Ground truth file not found for {seq}: {sequence_ground_truth_path}")
+        
   if app.total_time > 0:
     fps = app.total_frames / app.total_time
     print("Total Tracking took: %.3f seconds for %d frames or %.1f FPS" % (app.total_time, app.total_frames, fps))
+  
   else:
     print("Total Tracking took: %.3f seconds for %d frames (FPS unavailable: no processing time recorded)" % (app.total_time, app.total_frames))
-
-  if(display):
-    print("Note: to get real runtime results run without the option: --display")
+  

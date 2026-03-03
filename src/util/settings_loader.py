@@ -12,6 +12,8 @@ class PathsConfig:
     detections_root: Path
     models_root: Path
     detection_path: str
+    ground_truth_path: str | None
+    tracking_path: str | None
 
 @dataclass(frozen=True)
 class RuntimeConfig:
@@ -20,6 +22,7 @@ class RuntimeConfig:
     detector: str
     tracker: str
     datatype: str
+    benchmark: bool
 
 @dataclass(frozen=True)
 class Settings:
@@ -30,7 +33,6 @@ class Settings:
     raw: dict[str, Any]  
 
 class SettingsLoader:
-
     @staticmethod
     def load(path):
         cfg_path = Path(path).resolve()
@@ -47,7 +49,9 @@ class SettingsLoader:
             output_root=SettingsLoader.resolve(base, paths.get("output_root", "./output")),
             detections_root=SettingsLoader.resolve(base, paths.get("detections_root", "./data")),
             models_root=SettingsLoader.resolve(base, paths.get("models_root", "./detector")),
-            detection_path=paths.get("detection_path", "data/*/*/det/det.txt")
+            detection_path=paths.get("detection_path", "data/*/*/det/det.txt"),
+            ground_truth_path=paths.get("ground_truth_path"),
+            tracking_path=paths.get("tracking_path")
         )
 
         settings = Settings(
@@ -59,7 +63,8 @@ class SettingsLoader:
                 dataset=runtime.get("dataset", "*"),
                 detector=runtime.get("detector", "yolo"),
                 tracker=runtime.get("tracker", "sort"),
-                datatype=runtime.get("datatype")
+                datatype=runtime.get("datatype"),
+                benchmark=bool(runtime.get("benchmark", False))
               ),
             raw=data,
           )

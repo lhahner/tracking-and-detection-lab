@@ -3,6 +3,7 @@ scikit-image==0.17.2
 lap==0.4.0
 numpy
 numpy==1.23.5
+motmetrics
 transformers # huggingface
 #pytorch 
 #pytorch 

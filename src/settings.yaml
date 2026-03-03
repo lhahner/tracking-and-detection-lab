@@ -3,18 +3,21 @@ project:
   seed: 0
 
 paths:
-  mot_root: "/home/lennart/Dokumente/gau/advanced-research-training-applied-system-development/track-lab/data/MOT15/train/KITTI-17/img1"         # absolute or relative to this file
+  mot_root: "/home/lennart/Dokumente/gau/advanced-research-training-applied-system-development/track-lab/data/MOT15/train/KITTI-17/img1" # absolute or relative to this file
   output_root: "./output"
   detections_root: "./data"
   models_root: "./detector"
   detection_path: "/home/lennart/Dokumente/gau/advanced-research-training-applied-system-development/track-lab/src/data/detr/KITTI-17/det/"
-
+  ground_truth_path: "/home/lennart/Dokumente/gau/advanced-research-training-applied-system-development/track-lab/data/MOT15/train/KITTI-17/gt/gt.txt"
+  tracking_path: "/home/lennart/Dokumente/gau/advanced-research-training-applied-system-development/track-lab/src/output/KITTI-17.txt"
+  
 runtime:
-  display: true 
+  display: false 
   dataset: "KITTI-17"                      
   detector: "detectron2"                  
   tracker: "sort"
   datatype: "jpg"
+  benchmark: true
 
 detectors:
   yolo:
