@@ -7,15 +7,15 @@ paths:
   output_root: "./output"
   detections_root: "./data"
   models_root: "./detector"
-  detection_path: "/home/lennart/Dokumente/gau/advanced-research-training-applied-system-development/track-lab/src/data/detr/KITTI-17/det/"
+  detection_path: "/home/lennart/Dokumente/gau/advanced-research-training-applied-system-development/track-lab/src/data/detectron2/KITTI-17/det/"
   ground_truth_path: "/home/lennart/Dokumente/gau/advanced-research-training-applied-system-development/track-lab/data/MOT15/train/KITTI-17/gt/gt.txt"
   tracking_path: "/home/lennart/Dokumente/gau/advanced-research-training-applied-system-development/track-lab/src/output/KITTI-17.txt"
   
 runtime:
-  display: false 
+  display: true 
   dataset: "KITTI-17"                      
   detector: "detectron2"                  
-  tracker: "sort"
+  tracker: "deepsort"
   datatype: "jpg"
   benchmark: true
 
@@ -36,6 +36,10 @@ detectors:
 
 trackers:
   sort:
+    max_age: 1
+    min_hits: 3
+    iou_threshold: 0.3
+  deepsort:
     max_age: 1
     min_hits: 3
     iou_threshold: 0.3

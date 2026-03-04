@@ -23,6 +23,8 @@ from pathlib import Path
 # Tracking systems
 from tracker.SORT.sort import Sort
 from tracker.SORT.kalmanBoxTracker import KalmanBoxTracker
+from tracker.DeepSORT.deepSort import DeepSort as DeepSortTracker
+from tracker.DeepSORT.deepSort import DeepSort as DeepSortTracker
 
 # Detection systems
 from detector.yolo.yolo import YoloDetector
@@ -148,9 +150,17 @@ if __name__ == "__main__":
 
   pattern = os.path.join(settings.paths.detection_path, "det.txt")
   for seq_dets_fn in glob.glob(pattern):
-    mot_tracker = Sort(max_age=args.max_age, 
-                       min_hits=args.min_hits,
-                       iou_threshold=args.iou_threshold)
+    if settings.runtime.tracker.lower() == "deepsort":
+      mot_tracker = DeepSortTracker(
+          max_age=args.max_age,
+          min_hits=args.min_hits,
+          iou_threshold=args.iou_threshold,
+          bgr=False,  # skimage.io.imread returns RGB
+      )
+    else:
+      mot_tracker = Sort(max_age=args.max_age, 
+                         min_hits=args.min_hits,
+                         iou_threshold=args.iou_threshold)
      
     seq_dets = np.loadtxt(seq_dets_fn, delimiter=',') 
     seq = os.path.basename(os.path.dirname(os.path.dirname(seq_dets_fn)))
@@ -175,7 +185,15 @@ if __name__ == "__main__":
                frame=frame)
 
         start_time = time.time()
-        trackers = mot_tracker.update(dets)
+        if settings.runtime.tracker.lower() == "deepsort":
+          frame_path = os.path.join(
+              settings.paths.mot_root,
+              f"{frame:06d}.{settings.runtime.datatype}"
+          )
+          frame_img = io.imread(frame_path)
+          trackers = mot_tracker.update(dets, frame=frame_img)
+        else:
+          trackers = mot_tracker.update(dets)
         cycle_time = time.time() - start_time
         app.total_time += cycle_time
 
