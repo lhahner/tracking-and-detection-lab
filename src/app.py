@@ -212,6 +212,13 @@ if __name__ == "__main__":
             predicted_tracking_file_path=sequence_output_path,
             sequence_name=seq)
         print(evaluation_summary)
+        benchmark_file_path = evaluation_runner.presist_evaluation(
+            evaluation_summary=evaluation_summary,
+            dataset=seq,
+            detector_name=settings.runtime.detector,
+            tracking_name=settings.runtime.tracker,
+        )
+        print(f"Saved benchmark summary to {benchmark_file_path}")
       else:
         print(f"Ground truth file not found for {seq}: {sequence_ground_truth_path}")
         

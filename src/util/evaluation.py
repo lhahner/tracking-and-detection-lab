@@ -1,6 +1,7 @@
 from pathlib import Path
 import numpy as np
 import motmetrics as mm
+import datetime
 
 class Evaluation:
     def __init__(self, iou_threshold=0.5):
@@ -72,3 +73,30 @@ class Evaluation:
                                             metrics, 
                                             name=sequence_name
                                             )
+    
+    def presist_evaluation(self, evaluation_summary, dataset, detector_name, tracking_name):
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        safe_dataset = str(dataset).replace("/", "_")
+        safe_detector = str(detector_name).replace("/", "_")
+        safe_tracker = str(tracking_name).replace("/", "_")
+
+        benchmark_dir = Path(__file__).resolve().parents[2] / "data" / "benchmark"
+        benchmark_dir.mkdir(parents=True, exist_ok=True)
+
+        benchmark_filename = f"{timestamp}-{safe_dataset}-{safe_detector}-{safe_tracker}.txt"
+        benchmark_file_path = benchmark_dir / benchmark_filename
+
+        with open(benchmark_file_path, "w", encoding="utf-8") as benchmark_file:
+            benchmark_file.write(f"timestamp: {timestamp}\n")
+            benchmark_file.write(f"dataset: {dataset}\n")
+            benchmark_file.write(f"detector: {detector_name}\n")
+            benchmark_file.write(f"tracker: {tracking_name}\n")
+            benchmark_file.write("\n")
+
+            if hasattr(evaluation_summary, "to_string"):
+                benchmark_file.write(evaluation_summary.to_string(max_rows=None, max_cols=None))
+            else:
+                benchmark_file.write(str(evaluation_summary))
+            benchmark_file.write("\n")
+
+        return benchmark_file_path

@@ -1,0 +1,7 @@
+timestamp: 2026-03-07_17-35-52
+dataset: KITTI-17
+detector: detectron2
+tracker: deepsort
+
+              idf1       idp       idr   recall  precision  num_unique_objects  mostly_tracked  partially_tracked  mostly_lost  num_false_positives  num_misses  num_switches  num_fragmentations      mota      motp  num_transfer  num_ascend  num_migrate
+KITTI-17  0.667616  0.649584  0.686676  0.74817   0.707756                   9               3                  6            0                  211         172            10                   9  0.424597  0.211317             4           6            0

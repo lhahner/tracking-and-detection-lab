@@ -1,0 +1,7 @@
+timestamp: 2026-03-07_17-25-21
+dataset: KITTI-17
+detector: yolo
+tracker: sort
+
+             idf1       idp       idr    recall  precision  num_unique_objects  mostly_tracked  partially_tracked  mostly_lost  num_false_positives  num_misses  num_switches  num_fragmentations      mota      motp  num_transfer  num_ascend  num_migrate
+KITTI-17  0.42139  0.781746  0.288433  0.352855   0.956349                   9               0                  6            3                   11         442            10                  16  0.322108  0.246773             0          10            0

@@ -1,11 +1,13 @@
 from detector.detector import Detector
 from ultralytics import YOLO
 import os
+from pathlib import Path
 
 class YoloDetector(Detector):
     def __init__(self, input_path, output_path, model_path):
         self.input_path = input_path
         self.output_path = output_path
+        self.output_file = Path(output_path) / "det.txt"
         self.model = YOLO(model_path)
         self.detections = []
      
@@ -18,10 +20,12 @@ class YoloDetector(Detector):
         """
         concat_frames, frames = self.read_data()
         frame_index = 1
-        with open(os.path.join(self.output_path, 'det.txt'), 'r') as file_obj:
+        self.output_file.parent.mkdir(parents=True, exist_ok=True)
+        self.output_file.touch(exist_ok=True)
+        with open(self.output_file, "r", encoding="utf-8") as file_obj:
             first_char = file_obj.read(1)
             if first_char:
-                print(f"file {os.path.join(self.output_path, 'det.txt')} not empty, don't rewrite")
+                print(f"file {self.output_file} not empty, don't rewrite")
                 for line in file_obj:
                     self.detections.append(line)
                 return self.detections
@@ -31,8 +35,9 @@ class YoloDetector(Detector):
         for frame, concat_frame in zip(frames, concat_frames):
             detection_results = self.model(concat_frame)
             for detection_result in detection_results:
-                self.detections.append(self.format_detections(frame_index, detection_result))
-                self.write_output(self.format_detections(frame_index, detection_result)) 
+                formatted = self.format_detections(frame_index, detection_result)
+                self.detections.append(formatted)
+                self.write_output(formatted)
             frame_index += 1
         return self.detections
         
@@ -49,9 +54,12 @@ class YoloDetector(Detector):
         
         xyxy = results.boxes.xyxy.cpu().numpy()   # (N,4) -> x1,y1,x2,y2 in original image space
         conf = results.boxes.conf.cpu().numpy()   # (N,)
+        cls = results.boxes.cls.cpu().numpy()     # (N,) COCO class ids, person=0
         
         lines = []
-        for (x1, y1, x2, y2), c in zip(xyxy, conf):
+        for (x1, y1, x2, y2), c, class_id in zip(xyxy, conf, cls):
+            if int(class_id) != 0:
+                continue
             # MOT format expects top-left x,y plus width,height.
             w = x2 - x1
             h = y2 - y1
@@ -65,11 +73,10 @@ class YoloDetector(Detector):
         Append multiple lines to the output file.
         `self.output_path` should be a FILE path, e.g. ".../det.txt"
         """
-        out_dir = os.path.dirname(self.output_path) or "."
-        if not os.path.exists(out_dir):
-            raise ValueError(f"Output directory does not exist: {out_dir}")
+        if not self.output_file.parent.exists():
+            raise ValueError(f"Output directory does not exist: {self.output_file.parent}")
 
-        with open(self.output_path, "a", encoding="utf-8") as f:
+        with open(self.output_file, "a", encoding="utf-8") as f:
             f.writelines(lines)
     
     def read_data(self):
@@ -85,7 +92,7 @@ class YoloDetector(Detector):
            if file_name.endswith((".png", ".jpg", ".jpeg")):
                frames.append(file_name)
         frames.sort()
-        sorted_frames_concat = [str(self.input_path) + frame for frame in frames]
+        sorted_frames_concat = [os.path.join(str(self.input_path), frame) for frame in frames]
         return sorted_frames_concat, frames
        
     def get_model(self):
