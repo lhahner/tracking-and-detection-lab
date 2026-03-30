@@ -5,10 +5,16 @@ import open3d as o3d
 
 
 def load_kitti_bin(bin_path: str) -> np.ndarray:
-    """
-    Loads a LiDAR .bin file in the common KITTI format:
-    float32 points with [x, y, z, intensity].
-    Returns Nx4 array.
+    """Load a KITTI LiDAR binary file into an array.
+
+    Args:
+        bin_path: Path to a `.bin` file storing `x, y, z, intensity` values.
+
+    Returns:
+        numpy.ndarray: Point cloud array with shape `(N, 4)`.
+
+    Raises:
+        ValueError: If the file content is not divisible into XYZI tuples.
     """
     points = np.fromfile(bin_path, dtype=np.float32)
     if points.size % 4 != 0:
@@ -20,6 +26,13 @@ def load_kitti_bin(bin_path: str) -> np.ndarray:
 
 
 def visualize(points_xyz: np.ndarray, intensity: np.ndarray = None, axis_size: float = 2.0):
+    """Render a point cloud with Open3D.
+
+    Args:
+        points_xyz: Point coordinates with shape `(N, 3)`.
+        intensity: Optional intensity values used for grayscale coloring.
+        axis_size: Size of the coordinate frame displayed in the scene.
+    """
     pcd = o3d.geometry.PointCloud(o3d.utility.Vector3dVector(points_xyz))
 
     # Colorize by intensity if available
@@ -42,6 +55,7 @@ def visualize(points_xyz: np.ndarray, intensity: np.ndarray = None, axis_size: f
 
 
 def main():
+    """Parse CLI arguments, load a point cloud, and visualize it."""
     parser = argparse.ArgumentParser(description="Visualize LiDAR .bin point cloud (XYZI float32)")
     parser.add_argument("bin_file", type=str, help="Path to LiDAR .bin file")
 
@@ -69,4 +83,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

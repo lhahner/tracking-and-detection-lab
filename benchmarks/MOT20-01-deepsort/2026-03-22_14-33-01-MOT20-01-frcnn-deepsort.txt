@@ -1,0 +1,7 @@
+timestamp: 2026-03-22_14-33-01
+dataset: MOT20-01
+detector: frcnn
+tracker: deepsort
+
+              idf1       idp       idr   recall  precision  num_unique_objects  mostly_tracked  partially_tracked  mostly_lost  num_false_positives  num_misses  num_switches  num_fragmentations     mota     motp  num_transfer  num_ascend  num_migrate
+MOT20-01  0.306613  0.537105  0.214545  0.38153   0.955147                  74              13                 31           30                  356       12289           286                 300  0.34922  0.23316            18         271            3

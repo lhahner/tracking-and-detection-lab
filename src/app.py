@@ -29,10 +29,20 @@ from tracker.DeepSORT.deepSort import DeepSort as DeepSortTracker
 # Detection systems
 from detector.yolo.yolo import YoloDetector
 from detector.detr.detr import DetrDetector
-from detector.detectron2.detectron2 import Detectron2Detector
+from detector.maskfrcnn.maskfrcnn import MaskFasterRCNNDetector
+from detector.frcnn.frcnn import FasterRCNNDetector
 
 class Application:
+    """Coordinate detector execution, tracking, visualization, and evaluation."""
+
     def __init__(self, total_time, total_frames, colours):
+        """Initialize the application state used during detection and tracking.
+
+        Args:
+            total_time: Accumulated processing time across all frames.
+            total_frames: Number of processed frames.
+            colours: Color table used to render tracked objects.
+        """
         self.seed = np.random.seed(0)
         self.total_time = total_time
         self.total_frames = total_frames
@@ -42,19 +52,21 @@ class Application:
         self.datatype = Datatype.RGB # Changes depending on used detector
     
     def get_implemented_detectors(self):
-        """
-        basic getter function to retrieve the 
-        global list of all implemented detection
-        systems.
+        """Return the detector package names available in the project.
+
+        Returns:
+            list[str]: Names of implemented detector directories.
         """
         return self.implemented_detectors
     
     def read_implemented_detectors(self):
-        """
-        All implemented detection systems 
-        are located at the detector package
-        thus the following build every detection
-        system known for the current project.
+        """Discover implemented detectors from the local detector package.
+
+        Returns:
+            list[str]: Detector directory names found under `src/detector`.
+
+        Raises:
+            ValueError: If the detector directory does not exist.
         """
         detector_dir = os.path.join(self.project_root, 'detector')
         if not os.path.isdir(detector_dir):
@@ -66,15 +78,21 @@ class Application:
         return det_folders
     
     def run_detector_by_argument(self, detector_name, dataset_path, detection_path, model_path):
-        """
-        Depending on the argument read by the argument
-        parse a different detection system is choosen
-        and loaded. A detection system should be choosen
-        based on the data used.
+        """Instantiate and run the configured detector implementation.
+
+        Args:
+            detector_name: Short name of the detector to execute.
+            dataset_path: Directory that contains the input frames.
+            detection_path: Directory where `det.txt` should be written.
+            model_path: Path to the detector model weights if required.
         """
         detector = None
         if (detector_name == 'frcnn'):
-            return None
+            detector = FasterRCNNDetector(
+                input_path=dataset_path,
+                output_path=detection_path,
+                threshold=0.9
+            )
         if (detector_name == 'detr'):
             detector = DetrDetector(
                 input_path=dataset_path,
@@ -87,7 +105,7 @@ class Application:
                 model_path=model_path
             )
         if (detector_name == 'detectron2'):
-            detector = Detectron2Detector(
+            detector = MaskFasterRCNNDetector(
                 input_path=dataset_path, 
                 output_path=detection_path, 
                 threshold=0.9    
@@ -95,9 +113,10 @@ class Application:
         detector.detect()
     
     def parse_args(self):
-        """
-        Core argument parser that show all options
-        available for the program.
+        """Parse command-line arguments for the tracking benchmark.
+
+        Returns:
+            argparse.Namespace: Parsed runtime arguments.
         """
         parser = argparse.ArgumentParser(description='SORT Benchmark')
         parser.add_argument('--display', dest='display', 
@@ -201,10 +220,10 @@ if __name__ == "__main__":
           print('%d,%d,%.2f,%.2f,%.2f,%.2f,1,-1,-1,-1'%(frame,d[4],d[0],d[1],d[2]-d[0],d[3]-d[1]),file=out_file)
           if(settings.runtime.display):
               visualizer.visualize_boxes(d, app.colours)
-
+        
         if(settings.runtime.display):
           visualizer.visualize_and_draw()
-
+    
     if settings.runtime.benchmark:
       if sequence_ground_truth_path.exists():
         evaluation_summary = evaluation_runner.evaluate_sequence(

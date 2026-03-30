@@ -1,0 +1,7 @@
+timestamp: 2026-03-22_07-29-19
+dataset: MOT20-01
+detector: detectron2
+tracker: deepsort
+
+              idf1       idp       idr    recall  precision  num_unique_objects  mostly_tracked  partially_tracked  mostly_lost  num_false_positives  num_misses  num_switches  num_fragmentations      mota      motp  num_transfer  num_ascend  num_migrate
+MOT20-01  0.269754  0.554217  0.178259  0.308556   0.959318                  74              11                 23           40                  260       13739           222                 231  0.284298  0.216344            19         208            5

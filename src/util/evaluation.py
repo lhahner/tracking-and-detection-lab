@@ -4,15 +4,29 @@ import motmetrics as mm
 import datetime
 
 class Evaluation:
+    """Compute and persist MOT-style tracking benchmark metrics."""
+
     def __init__(self, iou_threshold=0.5):
+        """Create an evaluation helper for MOT-style tracking metrics.
+
+        Args:
+            iou_threshold: Minimum IoU required for a valid match.
+        """
         self.iou_threshold = iou_threshold
         self.metrics_handler = mm.metrics.create()
 
-    def read_mot_file(self, file_path, filter_ground_truth_by_confidence=False):
-        """
-        Filters the given ground truth values by frame and 
-        returns an object that includes the frame, 
-        the object_id and bounding box.
+    def read_mot_file(self, file_path, filter_ground_truth_by_confidence=False, allowed_class_ids=None):
+        """Read a MOT-format file and group detections by frame.
+
+        Args:
+            file_path: Path to a MOT-format text file.
+            filter_ground_truth_by_confidence: Whether to discard rows with
+                non-positive confidence values.
+            allowed_class_ids: Optional set of class IDs to keep.
+
+        Returns:
+            dict[int, list[tuple[int, list[float]]]]: Mapping of frame number to
+            object IDs and bounding boxes in `xywh` format.
         """
         mot_rows = np.loadtxt(Path(file_path), delimiter=",")
         
@@ -25,6 +39,12 @@ class Evaluation:
        
             if filter_ground_truth_by_confidence and len(mot_row) > 6 and mot_row[6] <= 0:
                 continue
+
+            if allowed_class_ids is not None and len(mot_row) > 7:
+                class_id = int(mot_row[7])
+                # MOT15-style files often store -1 placeholders instead of a semantic class.
+                if class_id >= 0 and class_id not in allowed_class_ids:
+                    continue
            
             frame_number = int(mot_row[0]); object_id = int(mot_row[1])
             bounding_box_xywh = [mot_row[2], mot_row[3], mot_row[4], mot_row[5]]
@@ -32,18 +52,51 @@ class Evaluation:
             
         return detections_per_frame
 
+    def should_filter_ground_truth_to_pedestrians(self, sequence_name):
+        """Determine whether a sequence should keep only pedestrian labels.
+
+        Args:
+            sequence_name: Sequence identifier used to infer dataset type.
+
+        Returns:
+            bool: `True` when the sequence belongs to a pedestrian benchmark.
+        """
+        pedestrian_sequences = (
+            "KITTI-",
+            "MOT",
+            "ETH-",
+            "TUD-",
+            "PETS",
+            "ADL-",
+            "VENICE-",
+        )
+        normalized_name = str(sequence_name).upper()
+        return normalized_name.startswith(pedestrian_sequences)
+
     def evaluate_sequence(self, ground_truth_file_path, 
                           predicted_tracking_file_path, 
                           sequence_name="sequence", 
                           metrics=None):
-        """
-        Run the given string of mot-metrics on the prediction compared
-        with the given groundtruth, will return a list of scores.
+        """Evaluate one predicted tracking file against ground truth.
+
+        Args:
+            ground_truth_file_path: Path to the ground-truth MOT file.
+            predicted_tracking_file_path: Path to the predicted tracking file.
+            sequence_name: Name used in the resulting metrics table.
+            metrics: Metrics to compute. Defaults to common MOT metrics.
+
+        Returns:
+            pandas.DataFrame: MOT metrics summary for the evaluated sequence.
         """
         if metrics is None:
             metrics = ["idf1", "mota", "motp", "precision", "recall"]
 
-        ground_truth_by_frame = self.read_mot_file(ground_truth_file_path, filter_ground_truth_by_confidence=True)
+        allowed_ground_truth_class_ids = {1} if self.should_filter_ground_truth_to_pedestrians(sequence_name) else None
+        ground_truth_by_frame = self.read_mot_file(
+            ground_truth_file_path,
+            filter_ground_truth_by_confidence=True,
+            allowed_class_ids=allowed_ground_truth_class_ids,
+        )
         predicted_tracks_by_frame = self.read_mot_file(predicted_tracking_file_path, filter_ground_truth_by_confidence=False)
         
         mot_accumulator = mm.MOTAccumulator(auto_id=False) # MotMetric setup
@@ -75,6 +128,17 @@ class Evaluation:
                                             )
     
     def presist_evaluation(self, evaluation_summary, dataset, detector_name, tracking_name):
+        """Persist an evaluation summary to a timestamped benchmark file.
+
+        Args:
+            evaluation_summary: Evaluation result object or string summary.
+            dataset: Dataset name included in the output filename and content.
+            detector_name: Detector name included in the output metadata.
+            tracking_name: Tracker name included in the output metadata.
+
+        Returns:
+            Path: Path to the written benchmark file.
+        """
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         safe_dataset = str(dataset).replace("/", "_")
         safe_detector = str(detector_name).replace("/", "_")

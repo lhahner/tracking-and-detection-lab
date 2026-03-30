@@ -4,7 +4,16 @@ import os
 from pathlib import Path
 
 class YoloDetector(Detector):
+    """Run YOLO-based person detection and export MOT-format detections."""
+
     def __init__(self, input_path, output_path, model_path):
+        """Initialize the YOLO detector.
+
+        Args:
+            input_path: Directory containing input image frames.
+            output_path: Directory where `det.txt` will be written.
+            model_path: Path to the YOLO model weights.
+        """
         self.input_path = input_path
         self.output_path = output_path
         self.output_file = Path(output_path) / "det.txt"
@@ -12,11 +21,11 @@ class YoloDetector(Detector):
         self.detections = []
      
     def detect(self):
-        """
-        Detect objects using YOLO model loaded.
-        
-        Returns a map of detections, where the index is the frame and the
-        value is the corresponding bounding-box and confidence score.
+        """Run YOLO inference on every frame and persist MOT detections.
+
+        Returns:
+            list[list[str]] | list[str]: Collected detection lines, either read
+            from an existing output file or generated during inference.
         """
         concat_frames, frames = self.read_data()
         frame_index = 1
@@ -42,10 +51,17 @@ class YoloDetector(Detector):
         return self.detections
         
     def format_detections(self, frame_index, results):
-        """
-        Format the detections from Yolo in the required format so
-        that the tracking system is able to handle it.
-        We require the following string: <frame-id>,-1,x,y,w,h,confidence,-1,-1,-1
+        """Convert YOLO detections into MOT challenge text lines.
+
+        Args:
+            frame_index: One-based frame index.
+            results: Ultralytics result object for a single frame.
+
+        Returns:
+            list[str]: MOT-format detection lines for person detections only.
+
+        Raises:
+            ValueError: If `results` or `frame_index` is missing.
         """
         if results is None:
             raise ValueError("The given results object is None.")
@@ -69,9 +85,13 @@ class YoloDetector(Detector):
         return lines 
     
     def write_output(self, lines):
-        """
-        Append multiple lines to the output file.
-        `self.output_path` should be a FILE path, e.g. ".../det.txt"
+        """Append detection lines to the detector output file.
+
+        Args:
+            lines: MOT-format lines to append.
+
+        Raises:
+            ValueError: If the output directory does not exist.
         """
         if not self.output_file.parent.exists():
             raise ValueError(f"Output directory does not exist: {self.output_file.parent}")
@@ -80,9 +100,14 @@ class YoloDetector(Detector):
             f.writelines(lines)
     
     def read_data(self):
-        """
-        Read data (frames) from file-system and return them
-        as Iteralable object where I can access each frame in detect.
+        """Read and sort image frame paths from the input directory.
+
+        Returns:
+            tuple[list[str], list[str]]: Absolute frame paths and corresponding
+            frame filenames.
+
+        Raises:
+            ValueError: If the input directory does not exist.
         """
         if not os.path.exists(self.input_path):
            raise ValueError(f"The given input directory {self.input_path} does not exits")
@@ -96,6 +121,7 @@ class YoloDetector(Detector):
         return sorted_frames_concat, frames
        
     def get_model(self):
+        """Return the loaded YOLO model instance."""
         return self.model
         
            

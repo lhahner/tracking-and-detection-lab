@@ -9,6 +9,8 @@ except ImportError:  # pragma: no cover
 
 
 class DeepSort:
+    """Wrap `deep_sort_realtime` with the project's expected interface."""
+
     def __init__(
         self,
         max_age: int = 30,
@@ -23,6 +25,21 @@ class DeepSort:
         today=None,
         gating_only_position: bool = False,
     ) -> None:
+        """Initialize the DeepSORT tracker wrapper.
+
+        Args:
+            max_age: Maximum number of missed frames before deleting a track.
+            min_hits: Minimum hits required before confirming a track.
+            iou_threshold: IoU threshold used by the tracker association logic.
+            nn_budget: Maximum appearance embedding budget per track.
+            embedder: Appearance embedder backend name.
+            half: Whether to use half precision for embeddings.
+            bgr: Whether input frames are in BGR color order.
+            embedder_gpu: Whether to run the embedder on GPU.
+            polygon: Whether detections are polygon-based.
+            today: Optional date value forwarded to DeepSORT.
+            gating_only_position: Whether gating should use only position terms.
+        """
         if _DeepSortImpl is None:
             raise ImportError(
                 "deep_sort_realtime is not installed. "
@@ -48,6 +65,14 @@ class DeepSort:
         )
 
     def _to_deepsort_dets(self, dets: np.ndarray):
+        """Convert project detection arrays into DeepSORT input tuples.
+
+        Args:
+            dets: Detection array in `x1, y1, x2, y2, score` format.
+
+        Returns:
+            list[tuple[list[float], float, str]]: DeepSORT-compatible detections.
+        """
         deep_dets = []
         for det in dets:
             x1, y1, x2, y2, score = det[:5]
@@ -57,6 +82,18 @@ class DeepSort:
         return deep_dets
 
     def update(self, dets=np.empty((0, 5)), frame=None) -> np.ndarray:
+        """Update tracks for a frame and return confirmed track states.
+
+        Args:
+            dets: Detection array in `x1, y1, x2, y2, score` format.
+            frame: Current frame image required for appearance embeddings.
+
+        Returns:
+            numpy.ndarray: Confirmed tracks in `x1, y1, x2, y2, track_id` format.
+
+        Raises:
+            ValueError: If detections have an invalid shape or `frame` is missing.
+        """
         if dets is None:
             dets = np.empty((0, 5), dtype=float)
 

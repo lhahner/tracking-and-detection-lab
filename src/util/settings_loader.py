@@ -7,6 +7,8 @@ import yaml
 
 @dataclass(frozen=True)
 class PathsConfig:
+    """Store resolved filesystem paths used by the application."""
+
     mot_root: Path
     output_root: Path
     detections_root: Path
@@ -17,6 +19,8 @@ class PathsConfig:
 
 @dataclass(frozen=True)
 class RuntimeConfig:
+    """Store runtime settings that control execution behavior."""
+
     display: bool
     dataset: str
     detector: str
@@ -26,6 +30,8 @@ class RuntimeConfig:
 
 @dataclass(frozen=True)
 class Settings:
+    """Represent the fully parsed application configuration."""
+
     project_name: str
     seed: int
     paths: PathsConfig
@@ -33,8 +39,18 @@ class Settings:
     raw: dict[str, Any]  
 
 class SettingsLoader:
+    """Load, resolve, and validate the project's YAML settings file."""
+
     @staticmethod
     def load(path):
+        """Load, resolve, and validate the YAML settings file.
+
+        Args:
+            path: Path to the YAML settings file.
+
+        Returns:
+            Settings: Parsed and validated application settings.
+        """
         cfg_path = Path(path).resolve()
         with cfg_path.open("r", encoding="utf-8") as f:
             data = yaml.safe_load(f) or {}
@@ -73,6 +89,15 @@ class SettingsLoader:
 
     @staticmethod
     def resolve(base, value):
+          """Resolve a path value relative to a base directory when needed.
+
+          Args:
+              base: Base directory used for relative paths.
+              value: Path-like value to resolve.
+
+          Returns:
+              Path | None: Absolute resolved path or `None` when no value is set.
+          """
           if value is None:
               return None
           p = Path(value)
@@ -80,5 +105,13 @@ class SettingsLoader:
 
     @staticmethod
     def validate(settings):
+        """Validate required settings before runtime starts.
+
+        Args:
+            settings: Parsed settings object to validate.
+
+        Raises:
+            ValueError: If required filesystem paths do not exist.
+        """
         if not settings.paths.mot_root.exists():
             raise ValueError(f"mot_root not found: {settings.paths.mot_root}")

@@ -23,9 +23,15 @@ np.random.seed(0)
 from .kalmanBoxTracker import KalmanBoxTracker
 
 class Sort(object):
+  """Track multiple objects online using the SORT algorithm."""
+
   def __init__(self, max_age=1, min_hits=3, iou_threshold=0.3):
-    """
-    Sets key parameters for SORT
+    """Initialize the SORT tracker.
+
+    Args:
+      max_age: Maximum number of missed frames before dropping a track.
+      min_hits: Minimum hits before a track is returned.
+      iou_threshold: Minimum IoU used for detection-to-track assignment.
     """
     self.max_age = max_age
     self.min_hits = min_hits
@@ -34,6 +40,14 @@ class Sort(object):
     self.frame_count = 0
 
   def linear_assignment(self, cost_matrix):
+    """Solve the linear assignment problem for a given cost matrix.
+
+    Args:
+      cost_matrix: Pairwise assignment cost matrix.
+
+    Returns:
+      numpy.ndarray: Matched index pairs.
+    """
     try:
       import lap
       _, x, y = lap.lapjv(cost_matrix, extend_cost=True)
@@ -44,13 +58,13 @@ class Sort(object):
       return np.array(list(zip(x, y)))
 
   def update(self, dets=np.empty((0, 5))):
-    """
-    Params:
-      dets - a numpy array of detections in the format [[x1,y1,x2,y2,score],[x1,y1,x2,y2,score],...]
-    Requires: this method must be called once for each frame even with empty detections (use np.empty((0, 5)) for frames without detections).
-    Returns the a similar array, where the last column is the object ID.
+    """Update active SORT tracks with detections from the current frame.
 
-    NOTE: The number of objects returned may differ from the number of detections provided.
+    Args:
+      dets: Detection array in `x1, y1, x2, y2, score` format.
+
+    Returns:
+      numpy.ndarray: Tracking results in `x1, y1, x2, y2, track_id` format.
     """
     self.frame_count += 1
     # get predicted locations from existing trackers.
@@ -89,6 +103,17 @@ class Sort(object):
     return np.empty((0,5))
 
   def associate_detections_to_trackers(self, detections,trackers,iou_threshold = 0.3):
+      """Associate detections with tracker predictions using IoU matching.
+
+      Args:
+        detections: Detection array for the current frame.
+        trackers: Predicted tracker boxes for the current frame.
+        iou_threshold: Minimum IoU required to keep a match.
+
+      Returns:
+        tuple[numpy.ndarray, numpy.ndarray, numpy.ndarray]: Matches,
+        unmatched detections, and unmatched trackers.
+      """
       if(len(trackers)==0):
         return np.empty((0,2),dtype=int), np.arange(len(detections)), np.empty((0,5),dtype=int)
     
@@ -128,6 +153,15 @@ class Sort(object):
       return matches, np.array(unmatched_detections), np.array(unmatched_trackers)
   
   def iou_batch(self, bb_test, bb_gt):
+        """Compute pairwise IoU between test boxes and ground-truth boxes.
+
+        Args:
+          bb_test: Candidate boxes.
+          bb_gt: Reference boxes.
+
+        Returns:
+          numpy.ndarray: IoU matrix.
+        """
         bb_gt = np.expand_dims(bb_gt, 0)
         bb_test = np.expand_dims(bb_test, 1)
   

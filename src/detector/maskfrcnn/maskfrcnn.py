@@ -17,8 +17,17 @@ from detectron2.config import get_cfg
 from detectron2.utils.visualizer import Visualizer
 from detectron2.data import MetadataCatalog, DatasetCatalog
 
-class Detectron2Detector(Detector):
+class MaskFasterRCNNDetector(Detector):
+    """Run Mask R-CNN detection and export MOT-format detections."""
+
     def __init__(self, input_path, output_path, threshold):
+        """Initialize the Mask R-CNN detector.
+
+        Args:
+            input_path: Directory containing input image frames.
+            output_path: Directory where `det.txt` will be written.
+            threshold: Score threshold applied by Detectron2.
+        """
         self.input_path = input_path
         self.output_path = output_path
         self.detections = []
@@ -30,11 +39,11 @@ class Detectron2Detector(Detector):
         self.model = DefaultPredictor(cfg)
     
     def detect(self):
-        """
-        Detect objects using DETR model loaded.
-        
-        Returns a map of detections, where the index is the frame and the
-        value is the corresponding bounding-box and confidence score.
+        """Run Mask R-CNN inference on every frame and persist detections.
+
+        Returns:
+            list[list[str]] | list[str]: Collected detection lines, either read
+            from an existing output file or generated during inference.
         """
         concat_frames, _ = self.read_data()
         frame_index = 1
@@ -62,10 +71,17 @@ class Detectron2Detector(Detector):
         return self.detections
     
     def format_detections(self, frame_index, results):
-        """
-        Format the detections from Detector2 in the required format so
-        that the tracking system is able to handle it.
-        We require the following string: <frame-id>,-1,x,y,w,h,confidence,-1,-1,-1
+        """Convert Detectron2 detections into MOT challenge text lines.
+
+        Args:
+            frame_index: One-based frame index.
+            results: Detectron2 `Instances` object for a single frame.
+
+        Returns:
+            list[str]: MOT-format detection lines.
+
+        Raises:
+            ValueError: If `results` or `frame_index` is missing.
         """
         if results is None:
             raise ValueError("The given results object is None.")
@@ -85,9 +101,13 @@ class Detectron2Detector(Detector):
         return lines
     
     def write_output(self, lines):
-        """
-        Append multiple lines to the output file.
-        `self.output_path` should be a FILE path, e.g. ".../det.txt"
+        """Append detection lines to the detector output file.
+
+        Args:
+            lines: MOT-format lines to append.
+
+        Raises:
+            ValueError: If the output directory does not exist.
         """
         out_dir = os.path.dirname(self.output_path) or "."
         if not os.path.exists(out_dir):
@@ -97,9 +117,14 @@ class Detectron2Detector(Detector):
             f.writelines(lines)
     
     def read_data(self):
-        """
-        Read data (frames) from file-system and return them
-        as Iteralable object where I can access each frame in detect.
+        """Read and sort image frame paths from the input directory.
+
+        Returns:
+            tuple[list[str], list[str]]: Absolute frame paths and corresponding
+            frame filenames.
+
+        Raises:
+            ValueError: If the input directory does not exist.
         """
         if not os.path.exists(self.input_path):
            raise ValueError(f"The given input directory {self.input_path} does not exits")
@@ -113,5 +138,6 @@ class Detectron2Detector(Detector):
         return sorted_frames_concat, frames
        
     def get_model(self):
+        """Return the loaded Mask R-CNN predictor."""
         return self.model 
     

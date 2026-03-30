@@ -1,0 +1,7 @@
+timestamp: 2026-03-21_09-38-44
+dataset: MOT20-01
+detector: yolo
+tracker: sort
+
+              idf1       idp       idr    recall  precision  num_unique_objects  mostly_tracked  partially_tracked  mostly_lost  num_false_positives  num_misses  num_switches  num_fragmentations      mota      motp  num_transfer  num_ascend  num_migrate
+MOT20-01  0.274317  0.663896  0.172874  0.257172    0.98763                  74               9                 20           45                   64       14760           144                 205  0.246704  0.210543            17         129            2

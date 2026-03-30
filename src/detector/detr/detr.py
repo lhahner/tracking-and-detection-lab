@@ -5,20 +5,34 @@ import torch
 from PIL import Image
 
 class DetrDetector(Detector):
+    """Run DETR-based person detection and export MOT-format detections."""
+
     def __init__(self, input_path, output_path, threshold=0.9):
+        """Initialize the DETR detector.
+
+        Args:
+            input_path: Directory containing input image frames.
+            output_path: Directory where `det.txt` will be written.
+            threshold: Confidence threshold used during post-processing.
+        """
         self.input_path = input_path
         self.output_path = output_path
         self.threshold = threshold
         self.image_processor = AutoImageProcessor.from_pretrained("facebook/detr-resnet-50")
         self.model = DetrForObjectDetection.from_pretrained("facebook/detr-resnet-50")
+        self.person_label_ids = {
+            label_id
+            for label_id, label_name in self.model.config.id2label.items()
+            if label_name.lower() == "person"
+        }
         self.detections = []
         
     def detect(self):
-        """
-        Detect objects using DETR model loaded.
-        
-        Returns a map of detections, where the index is the frame and the
-        value is the corresponding bounding-box and confidence score.
+        """Run DETR inference on every frame and persist MOT detections.
+
+        Returns:
+            list[list[str]] | list[str]: Collected detection lines, either read
+            from an existing output file or generated during inference.
         """
         concat_frames, _ = self.read_data()
         frame_index = 1
@@ -48,10 +62,17 @@ class DetrDetector(Detector):
         return self.detections
     
     def format_detections(self, frame_index, results):
-        """
-        Format the detections from Yolo in the required format so
-        that the tracking system is able to handle it.
-        We require the following string: <frame-id>,-1,x,y,w,h,confidence,-1,-1,-1
+        """Convert DETR detections into MOT challenge text lines.
+
+        Args:
+            frame_index: One-based frame index.
+            results: DETR post-processed prediction dictionary.
+
+        Returns:
+            list[str]: MOT-format detection lines for person detections only.
+
+        Raises:
+            ValueError: If `results` or `frame_index` is missing.
         """
         if results is None:
             raise ValueError("The given results object is None.")
@@ -60,9 +81,12 @@ class DetrDetector(Detector):
         
         xyxy = results["boxes"].detach().cpu().numpy()  # (N,4) x1,y1,x2,y2
         conf = results["scores"].detach().cpu().numpy()  # (N,)
+        labels = results["labels"].detach().cpu().numpy()  # (N,)
         
         lines = []
-        for (x1, y1, x2, y2), c in zip(xyxy, conf):
+        for (x1, y1, x2, y2), c, label_id in zip(xyxy, conf, labels):
+            if int(label_id) not in self.person_label_ids:
+                continue
             w = x2 - x1
             h = y2 - y1
             line = f"{frame_index},-1,{x1:.0f},{y1:.0f},{w:.3f},{h:.3f},{c:.6f},-1,-1,-1\n"
@@ -71,9 +95,13 @@ class DetrDetector(Detector):
         return lines
     
     def write_output(self, lines):
-        """
-        Append multiple lines to the output file.
-        `self.output_path` should be a FILE path, e.g. ".../det.txt"
+        """Append detection lines to the detector output file.
+
+        Args:
+            lines: MOT-format lines to append.
+
+        Raises:
+            ValueError: If the output directory does not exist.
         """
         out_dir = os.path.dirname(self.output_path) or "."
         if not os.path.exists(out_dir):
@@ -83,9 +111,14 @@ class DetrDetector(Detector):
             f.writelines(lines)
     
     def read_data(self):
-        """
-        Read data (frames) from file-system and return them
-        as Iteralable object where I can access each frame in detect.
+        """Read and sort image frame paths from the input directory.
+
+        Returns:
+            tuple[list[str], list[str]]: Absolute frame paths and corresponding
+            frame filenames.
+
+        Raises:
+            ValueError: If the input directory does not exist.
         """
         if not os.path.exists(self.input_path):
            raise ValueError(f"The given input directory {self.input_path} does not exits")
@@ -99,4 +132,5 @@ class DetrDetector(Detector):
         return sorted_frames_concat, frames
        
     def get_model(self):
+        """Return the loaded DETR model instance."""
         return self.model 

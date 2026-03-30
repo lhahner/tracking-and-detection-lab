@@ -6,12 +6,26 @@ import numpy as np
 from util.datatype import Datatype
 
 class Visualizer:
+    """Display image frames, tracking boxes, and LiDAR bird's-eye views."""
+
     def __init__(self, datatype):
+        """Create a visualization helper for RGB or LiDAR data.
+
+        Args:
+            datatype: Data modality that determines the visualization mode.
+        """
         self.datatype = datatype
         self.fig = None
         self.axis_one = None
             
     def visualize_data(self, dir_path, frame, filetype):
+        """Load and display a frame image on the active matplotlib axis.
+
+        Args:
+            dir_path: Directory containing frame images.
+            frame: Frame number to visualize.
+            filetype: File extension of the frame images.
+        """
         filename = f"{frame:06d}.{filetype}"
         path = os.path.join(dir_path, filename)
         im = io.imread(path)
@@ -19,6 +33,12 @@ class Visualizer:
         plt.title('Tracked Targets')
             
     def visualize_boxes(self, bounding_box, colours):
+        """Draw tracked bounding boxes on the active matplotlib axis.
+
+        Args:
+            bounding_box: One or more tracked boxes in `x1, y1, x2, y2, id` form.
+            colours: Color lookup table indexed by track ID.
+        """
         d = np.asarray(bounding_box, dtype=np.int32)
         if d.ndim == 1:
             d = d.reshape(1, -1)
@@ -33,15 +53,13 @@ class Visualizer:
             )
     
     def visualize_and_draw(self):
+        """Refresh the interactive plot and clear the current axis."""
         self.fig.canvas.flush_events()
         plt.draw()
         self.axis_one.cla()
 
     def setup_panel(self):
-        """
-        Setting the panel on which we want to display
-        our read dead with the given rectangles
-        """
+        """Create the interactive matplotlib panel used for visualization."""
         plt.ion()
         self.fig = plt.figure()
         self.axis_one = self.fig.add_subplot(111, aspect='equal')
@@ -53,6 +71,18 @@ class Visualizer:
       y_range=(-40.0, 40.0),  # left/right
       z_range=(-3.0, 1.0),  # up/down
       resolution=0.1):
+      """Convert a KITTI LiDAR `.bin` file into a bird's-eye-view tensor.
+
+      Args:
+          bin_path: Path to the KITTI LiDAR binary file.
+          x_range: Forward range in meters.
+          y_range: Lateral range in meters.
+          z_range: Vertical range in meters.
+          resolution: Output grid resolution in meters per cell.
+
+      Returns:
+          numpy.ndarray: BEV tensor with height, intensity, and density channels.
+      """
       pts = np.fromfile(bin_path, dtype=np.float32).reshape(-1, 4)
       x, y, z, i = pts.T
 
