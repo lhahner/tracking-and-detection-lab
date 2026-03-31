@@ -19,37 +19,23 @@ The main runtime entrypoint is [src/app.py](/home/lennart/Dokumente/gau/advanced
 - [benchmarks/](/home/lennart/Dokumente/gau/advanced-research-training-applied-system-development/track-lab/benchmarks): saved benchmark result files.
 - [scripts/](/home/lennart/Dokumente/gau/advanced-research-training-applied-system-development/track-lab/scripts): plotting and helper scripts.
 - [docs/](/home/lennart/Dokumente/gau/advanced-research-training-applied-system-development/track-lab/docs): report material and documentation assets.
-- [src/libs/mmdetection3d/](/home/lennart/Dokumente/gau/advanced-research-training-applied-system-development/track-lab/src/libs/mmdetection3d): vendored OpenMMLab MMDetection3D codebase.
 
 ## Software requirements
-
-Use one conda environment named `openmmlab` for the whole project. That environment should contain both the OpenMMLab stack and the detector/tracker/runtime packages used by this repository.
 
 ### System software
 
 Install these system-level requirements first:
 
-- Linux is the safest target platform for this repository and for OpenMMLab.
+- Linux is the safest target platform for this repository.
 - Conda or Miniconda.
 - Python `3.10` inside the conda environment.
 - PyTorch compatible with your CPU or CUDA runtime.
 - `git`
 - GCC 5+ for native extension builds.
 
-### OpenMMLab stack
-
-This repository vendors `MMDetection3D` under [src/libs/mmdetection3d/](/home/lennart/Dokumente/gau/advanced-research-training-applied-system-development/track-lab/src/libs/mmdetection3d). The compatibility window present in this repo is:
-
-- `mmcv>=2.0.0rc4,<2.2.0`
-- `mmdet>=3.0.0,<3.3.0`
-- `mmengine>=0.7.1,<1.0.0`
-- `openmim`
-
-Those ranges come from [src/libs/mmdetection3d/requirements/mminstall.txt](/home/lennart/Dokumente/gau/advanced-research-training-applied-system-development/track-lab/src/libs/mmdetection3d/requirements/mminstall.txt) and the official OpenMMLab installation flow.
-
 ### Python packages required by this project
 
-Install these packages in the same `openmmlab` environment:
+Install these packages in the same project environment:
 
 - `numpy`
 - `filterpy`
@@ -65,52 +51,52 @@ Install these packages in the same `openmmlab` environment:
 - `matplotlib`
 - `opencv-python`
 - `pyyaml`
-- `detectron2`
 
 These cover the current runtime code in [src/app.py](/home/lennart/Dokumente/gau/advanced-research-training-applied-system-development/track-lab/src/app.py), the detector modules under [src/detector/](/home/lennart/Dokumente/gau/advanced-research-training-applied-system-development/track-lab/src/detector), the tracker modules under [src/tracker/](/home/lennart/Dokumente/gau/advanced-research-training-applied-system-development/track-lab/src/tracker), and the evaluation/visualization utilities under [src/util/](/home/lennart/Dokumente/gau/advanced-research-training-applied-system-development/track-lab/src/util).
 
-Sources:
-
-- https://github.com/open-mmlab/mmdetection3d
-- https://mmdetection3d.readthedocs.io/en/dev/getting_started.html
-- https://openmim.readthedocs.io/en/latest/installation.html
+`detectron2` is optional and only required for the `frcnn` and `detectron2` detector backends under [src/detector/frcnn/](/home/lennart/Dokumente/gau/advanced-research-training-applied-system-development/track-lab/src/detector/frcnn) and [src/detector/maskfrcnn/](/home/lennart/Dokumente/gau/advanced-research-training-applied-system-development/track-lab/src/detector/maskfrcnn).
 
 ## Recommended environment setup
 
-Create and activate the conda environment named `openmmlab`:
+The repository includes a setup script that creates a fresh conda environment, installs a compatible PyTorch build, pins `numpy<2` for `motmetrics`, keeps `setuptools<81` for `detectron2`, installs the project requirements, and optionally installs `detectron2`.
+
+From the repository root, run one of:
 
 ```bash
-conda create --name openmmlab python=3.10 -y
-conda activate openmmlab
-python -m pip install --upgrade pip
+bash install.sh
+bash install.sh --cuda cu121
+bash install.sh --cuda cu124
+bash install.sh --without-detectron2
 ```
 
-Install PyTorch and torchvision first. Choose the command that matches your machine from the official PyTorch installer.
+The script defaults to:
 
-For CPU-only environments, a typical command is:
+- conda environment name `track-lab`
+- Python `3.10`
+- PyTorch `2.5.1`
+- torchvision `0.20.1`
+- CPU-only install unless `--cuda` is passed
+
+If you want to install manually instead of using the script, follow the same order:
+
+1. Create and activate a conda environment with Python `3.10`.
+2. Install `pip`, `wheel`, and `setuptools<81`.
+3. Install `torch`, `torchvision`, and `torchaudio` from the official PyTorch index for your CPU/CUDA target.
+4. Install `numpy<2`.
+5. Install `-r requirements.txt`.
+6. Install `detectron2` from source with `--no-build-isolation` if you need the `frcnn` or `detectron2` backends.
+
+After installation, activate the environment and run the project from the repository root:
 
 ```bash
-conda install pytorch torchvision cpuonly -c pytorch
+conda activate track-lab
+PYTHONPATH=src python src/app.py
 ```
 
-After PyTorch is installed, install the OpenMMLab stack:
+Notes:
 
-```bash
-pip install openmim
-mim install 'mmengine>=0.7.1,<1.0.0'
-mim install 'mmcv>=2.0.0rc4,<2.2.0'
-mim install 'mmdet>=3.0.0,<3.3.0'
-```
-
-Then install the rest of the project runtime packages into the same `openmmlab` environment:
-
-```bash
-pip install numpy filterpy scikit-image lap motmetrics transformers \
-  matplotlib pillow pyyaml opencv-python deep-sort-realtime ultralytics
-python -m pip install 'git+https://github.com/facebookresearch/detectron2.git'
-```
-
-After that, run the project from the same `openmmlab` environment.
+- `detectron2` may print a `pkg_resources` deprecation warning. With the pinned `setuptools<81`, this is expected and non-fatal.
+- The DETR backend downloads model files from Hugging Face on first use. Without `HF_TOKEN`, downloads still work but may be slower or rate-limited.
 
 ## Dataset layout
 

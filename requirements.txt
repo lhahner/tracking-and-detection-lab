@@ -1,0 +1,16 @@
+# Pip-compatible requirements for the project runtime.
+# Install PyTorch and torchvision first for your platform, then install these packages.
+
+numpy<2
+filterpy
+scikit-image
+lap
+motmetrics
+transformers
+timm
+matplotlib
+Pillow
+PyYAML
+opencv-python
+deep-sort-realtime
+ultralytics
