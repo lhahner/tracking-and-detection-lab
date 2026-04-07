@@ -14,8 +14,6 @@ from util.visualizer import Visualizer
 from util.settings_loader import SettingsLoader
 from util.evaluation import Evaluation
 
-import evaluation
-
 import glob
 import time
 import argparse
@@ -29,10 +27,10 @@ from tracker.DeepSORT.deepSort import DeepSort as DeepSortTracker
 from tracker.DeepSORT.deepSort import DeepSort as DeepSortTracker
 
 # Detection systems
-from detector.yolo.yolo import YoloDetector
-from detector.detr.detr import DetrDetector
-from detector.maskfrcnn.maskfrcnn import MaskFasterRCNNDetector
-from detector.frcnn.frcnn import FasterRCNNDetector
+from detector.yolo.yolo_ultralytics import YoloUltralyticsDetector
+from detector.detr.detr_huggingface import DetrHuggingFaceDetector
+from detector.maskfrcnn.maskfrcnn_detectron2 import MaskFasterRCNNDetectron2Detector
+from detector.frcnn.frcnn_detectron2 import FasterRCNNDetectron2Detector
 
 from inference import inference
 
