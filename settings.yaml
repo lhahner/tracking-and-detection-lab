@@ -3,7 +3,7 @@ project:
   seed: 0
 
 paths:
-  mot_root: "/home/lennart/Dokumente/gau/advanced-research-training-applied-system-development/track-lab/data/MOT15/train/KITTI-17/img1" # absolute or relative to this file
+  dataset_path: "/home/lennart/Dokumente/gau/advanced-research-training-applied-system-development/track-lab/data/MOT15/train/KITTI-17/img1" # absolute or relative to this file
   output_root: "./output"
   detections_root: "./data"
   models_root: "./detector/model/yolo11n.pt"
@@ -12,11 +12,12 @@ paths:
   tracking_path: "/home/lennart/Dokumente/gau/advanced-research-training-applied-system-development/track-lab/src/output/KITTI-17.txt"
   
 runtime:
+  mode: "train"
   display: false
   dataset: "KITTI-17"                      
   detector: "detr"                  
   tracker: "deepsort"
-  datatype: "jpg"
+  datatype: "bin"
   benchmark: true
 
 detectors:
