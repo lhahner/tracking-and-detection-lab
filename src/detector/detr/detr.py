@@ -4,7 +4,7 @@ import os
 import torch
 from PIL import Image
 
-class DetrDetector(Detector):
+class DetrHuggingFaceDetector(Detector):
     """Run DETR-based person detection and export MOT-format detections."""
 
     def __init__(self, input_path, output_path, threshold=0.9):

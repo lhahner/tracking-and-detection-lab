@@ -63,7 +63,8 @@ class Visualizer:
         plt.ion()
         self.fig = plt.figure()
         self.axis_one = self.fig.add_subplot(111, aspect='equal')
-    
+   
+        
     def lidar_bin_to_bev(
       self,
       bin_path,
@@ -121,3 +122,24 @@ class Visualizer:
 
       bev = np.stack([max_height, max_intensity, density], axis=-1)
       return bev
+
+    def visualize_image_and_bev(self, dataset, dataitem, split="training"):
+      frame = dataset[dataitem]
+      normalized_sample_id = frame["sample_id"].lstrip('0')
+      
+      image = io.imread(frame["image_path"])
+      bev = self.lidar_bin_to_bev(frame["points_path"])
+
+      plt.ion()
+      fig, (axis_image, axis_bev) = plt.subplots(1, 2, figsize=(14, 6))
+      axis_image.imshow(image)
+      axis_image.set_title(f"KITTI Image {normalized_sample_id}")
+      axis_image.axis("off")
+
+      axis_bev.imshow(np.flipud(bev))
+      axis_bev.set_title(f"LiDAR BEV {normalized_sample_id}")
+      axis_bev.set_xlabel("Forward")
+      axis_bev.set_ylabel("Left / Right")
+
+      fig.tight_layout()
+      plt.draw()

@@ -17,7 +17,7 @@ from detectron2.config import get_cfg
 from detectron2.utils.visualizer import Visualizer
 from detectron2.data import MetadataCatalog, DatasetCatalog
 
-class MaskFasterRCNNDetector(Detector):
+class MaskFasterRCNNDetectron2Detector(Detector):
     """Run Mask R-CNN detection and export MOT-format detections."""
 
     def __init__(self, input_path, output_path, threshold):

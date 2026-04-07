@@ -3,7 +3,7 @@ from ultralytics import YOLO
 import os
 from pathlib import Path
 
-class YoloDetector(Detector):
+class YoloUltralyticsDetector(Detector):
     """Run YOLO-based person detection and export MOT-format detections."""
 
     def __init__(self, input_path, output_path, model_path):
