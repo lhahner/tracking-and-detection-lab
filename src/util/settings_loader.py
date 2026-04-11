@@ -59,7 +59,7 @@ class SettingsLoader:
 
         base = cfg_path.parent
         resolved_paths = PathsConfig(
-            mot_root=SettingsLoader.resolve(base, paths.get("dataset_path", "../data/MOT15")),
+            dataset_path=SettingsLoader.resolve(base, paths.get("dataset_path", "../data/MOT15")),
             output_root=SettingsLoader.resolve(base, paths.get("output_root", "./output")),
             detections_root=SettingsLoader.resolve(base, paths.get("detections_root", "./data")),
             models_root=SettingsLoader.resolve(base, paths.get("models_root", "./detector")),

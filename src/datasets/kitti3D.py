@@ -1,99 +1,187 @@
-import numpy as np
 import os
-import torch
-from torch.utils.data import Dataset
-from PIL import Image
+from typing import Any
 
-import sys
-BASE = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.dirname(BASE))
+import numpy as np
+from PIL import Image
+from torch.utils.data import Dataset
+
+from util.kitti_boxes import extract_points_in_box, image_box_to_lidar_proposal
+from util.kitti_calib import parse_kitti_calibration
+
 
 CLASSES = {
-        'Pedestrian': 0, 
-        'Cyclist': 1, 
-        'Car': 2
-    }
+    "Background": 0,
+    "Pedestrian": 1,
+    "Cyclist": 2,
+    "Car": 3,
+}
+
+SUPPORTED_OBJECT_TYPES = tuple(name for name in CLASSES if name != "Background")
+
 
 class Kitti3D(Dataset):
-    def __init__(self, data_root, split="train"):
-        self.dir_calib = os.path.join(data_root, "training", "calib")
+    """Single KITTI dataset entry point for frame and object-crop access."""
+
+    def __init__(
+        self,
+        data_root,
+        split="train",
+        mode="frame",
+        num_points=1024,
+        include_dontcare=False,
+        transform=None,
+    ):
+        self.data_root = data_root
+        self.split = split
+        self.mode = mode
+        self.num_points = num_points
+        self.include_dontcare = include_dontcare
+        self.transform = transform
+
+        subset_dir = "testing" if split == "test" else "training"
+        self.dir_calib = os.path.join(data_root, subset_dir, "calib")
         self.dir_label = os.path.join(data_root, "training", "label_2")
-        self.dir_velodyne = os.path.join(data_root, "training", "velodyne")
-        self.dir_image = os.path.join(data_root, "training", "image_2")
-        self.transform = None
-         
-        if split == "test":
-            self.dir_calib = os.path.join(data_root, "testing", "calib")
-            # dir_label = os.path.join(data_root, "testing", "")
-            self.dir_velodyne = os.path.join(data_root, "testing", "velodyne")
-        
+        self.dir_velodyne = os.path.join(data_root, subset_dir, "velodyne")
+        self.dir_image = os.path.join(data_root, subset_dir, "image_2")
+
         self.split_file = os.path.join(data_root, "ImageSets", f"{split}.txt")
-        with open(self.split_file, "r") as f:
-            self.sample_ids = [line.strip() for line in f]
-            
-        
+        with open(self.split_file, "r", encoding="utf-8") as f:
+            self.sample_ids = [line.strip() for line in f if line.strip()]
+
+        if self.mode not in {"frame", "object"}:
+            raise ValueError(f"Unsupported mode '{self.mode}'. Expected 'frame' or 'object'.")
+
+        self.object_index = self._build_object_index() if self.mode == "object" else []
+
     def __len__(self):
-          return len(self.sample_ids)
+        return len(self.object_index) if self.mode == "object" else len(self.sample_ids)
 
     def __getitem__(self, idx):
-          sample_id = self.sample_ids[idx]
+        if self.mode == "object":
+            return self._get_object_item(idx)
+        return self._get_frame_item(self.sample_ids[idx])
 
-          image, image_path = self._load_image(sample_id)
-          calib, calib_path = self._load_calib(sample_id)
-          points, points_path = self._load_velodyne(sample_id)
-          target, target_path = self._load_label(sample_id)
+    def _get_frame_item(self, sample_id):
+        image, image_path = self._load_image(sample_id)
+        calib, calib_path = self._load_calib(sample_id)
+        points, points_path = self._load_velodyne(sample_id)
+        target, target_path = self._load_label(sample_id)
 
-          if self.transform is not None:
-              image = self.transform(image)
+        if self.transform is not None and image is not None:
+            image = self.transform(image)
 
-          return {
-              "image": image,
-              "image_path": image_path,
-              "points": points,
-              "points_path": points_path,
-              "calib": calib,
-              "calib_path": calib_path,
-              "target": target, 
-              "target_path": target_path,
-              "sample_id": sample_id
-          }
+        return {
+            "image": image,
+            "image_path": image_path,
+            "points": points,
+            "points_path": points_path,
+            "calib": calib,
+            "calib_path": calib_path,
+            "target": target,
+            "target_path": target_path,
+            "sample_id": sample_id,
+        }
+
+    def _get_object_item(self, idx):
+        sample_id, object_idx = self.object_index[idx]
+        frame = self._get_frame_item(sample_id)
+        target_object = frame["target"][object_idx]
+        proposal = image_box_to_lidar_proposal(target_object, frame["calib"])
+        cropped_points = extract_points_in_box(frame["points"], proposal)
+        sampled_points = self._sample_or_pad_points(cropped_points)
+
+        return {
+            "points": sampled_points,
+            "raw_points": cropped_points,
+            "label": CLASSES[target_object["type"]],
+            "label_name": target_object["type"],
+            "proposal": proposal,
+            "target": target_object,
+            "sample_id": sample_id,
+        }
+
+    def _build_object_index(self):
+        object_index = []
+        if self.split == "test":
+            return object_index
+
+        for sample_id in self.sample_ids:
+            objects, _ = self._load_label(sample_id)
+            filtered_objects = self.filter_supported_objects(objects)
+            for object_idx, _ in filtered_objects:
+                object_index.append((sample_id, object_idx))
+        return object_index
+
+    def filter_supported_objects(self, objects):
+        """
+        Filters the label classes to a list of supported objects.
+        KITTI can have labels like "DontCare" or "Background" 
+        which are not in interest for this project.
+        """
+        filtered = []
+        for object_idx, obj in enumerate(objects):
+            object_type = obj["type"]
+            if object_type in SUPPORTED_OBJECT_TYPES:
+                filtered.append((object_idx, obj))
+            elif object_type == "DontCare" and self.include_dontcare:
+                filtered.append((object_idx, obj))
+        return filtered
+
+    def _sample_or_pad_points(self, points):
+        if points.size == 0:
+            return np.zeros((self.num_points, 4), dtype=np.float32)
+
+        if points.shape[0] >= self.num_points:
+            choice = np.random.choice(points.shape[0], self.num_points, replace=False)
+            return points[choice].astype(np.float32)
+
+        padding = np.zeros((self.num_points - points.shape[0], points.shape[1]), dtype=np.float32)
+        return np.concatenate([points.astype(np.float32), padding], axis=0)
 
     def _load_image(self, sample_id):
-          path = os.path.join(self.dir_image, f"{sample_id}.png")
-          return Image.open(path).convert("RGB"), path
+        path = os.path.join(self.dir_image, f"{sample_id}.png")
+        if not os.path.exists(path):
+            return None, path
+        return Image.open(path).convert("RGB"), path
 
     def _load_velodyne(self, sample_id):
-          path = os.path.join(self.dir_velodyne, f"{sample_id}.bin")
-          if path is None:
-              return None
-          return np.fromfile(path, dtype=np.float32).reshape(-1, 4), path
+        path = os.path.join(self.dir_velodyne, f"{sample_id}.bin")
+        if not os.path.exists(path):
+            return None, path
+        return np.fromfile(path, dtype=np.float32).reshape(-1, 4), path
 
     def _load_calib(self, sample_id):
-          path = os.path.join(self.dir_calib, f"{sample_id}.txt")
-          calib = {}
-          with open(path, "r") as f:
-              for line in f:
-                  key, value = line.strip().split(":", 1)
-                  calib[key] = np.array([float(x) for x in value.split()], dtype=np.float32)
-          return calib, path
+        path = os.path.join(self.dir_calib, f"{sample_id}.txt")
+        return parse_kitti_calibration(path), path
 
     def _load_label(self, sample_id):
-          path = os.path.join(self.dir_label, f"{sample_id}.txt") 
-          if path is None:
-              return None
+        """
+        Opens the label file and parses the data to a object that contains
+        all the labels for a given frame.
+        """
+        if self.split == "test":
+            return [], None
 
-          objects = []
-          with open(path, "r") as f:
-              for line in f:
-                  fields = line.strip().split()
-                  objects.append({
-                      "type": fields[0],
-                      "truncated": float(fields[1]),
-                      "occluded": int(fields[2]),
-                      "alpha": float(fields[3]),
-                      "bbox": np.array(fields[4:8], dtype=np.float32),
-                      "dimensions": np.array(fields[8:11], dtype=np.float32),  # h, w, l
-                      "location": np.array(fields[11:14], dtype=np.float32),   # x, y, z
-                      "rotation_y": float(fields[14]),
-                  })
-          return objects, path
+        path = os.path.join(self.dir_label, f"{sample_id}.txt")
+        if not os.path.exists(path):
+            return [], path
+
+        objects: list[dict[str, Any]] = []
+        with open(path, "r", encoding="utf-8") as f:
+            for line in f:
+                fields = line.strip().split()
+                if not fields:
+                    continue
+                objects.append(
+                    {
+                        "type": fields[0],
+                        "truncated": float(fields[1]),
+                        "occluded": int(fields[2]),
+                        "alpha": float(fields[3]),
+                        "bbox": np.array(fields[4:8], dtype=np.float32),
+                        "dimensions": np.array(fields[8:11], dtype=np.float32),
+                        "location": np.array(fields[11:14], dtype=np.float32),
+                        "rotation_y": float(fields[14]),
+                    }
+                )
+        return objects, path
