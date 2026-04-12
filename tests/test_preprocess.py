@@ -3,13 +3,14 @@ import sys
 import unittest
 from unittest.mock import MagicMock, patch
 import numpy as np
-from detector.pointnet.preprocess import normalize_points
 
 TESTS_DIR = os.path.dirname(__file__)
 PROJECT_ROOT = os.path.dirname(TESTS_DIR)
 SRC_ROOT = os.path.join(PROJECT_ROOT, "src")
 if SRC_ROOT not in sys.path:
     sys.path.insert(0, SRC_ROOT)
+
+from detector.pointnet.preprocess import normalize_points
 
 class TestPreprocess(unittest.TestCase):
     def test_normalize_points(self):

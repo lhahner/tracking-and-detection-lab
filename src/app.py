@@ -160,6 +160,7 @@ if __name__ == "__main__":
           split="train",
           mode="object",
           num_points=1024,
+          include_background=True,
       )
 
       val_dataset = Kitti3D(
@@ -167,6 +168,7 @@ if __name__ == "__main__":
           split="val",
           mode="object",
           num_points=1024,
+          include_background=True,
       )
 
       trainer = PointnetTrainer(

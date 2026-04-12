@@ -92,12 +92,12 @@ class Kitti3DTest(unittest.TestCase):
         self.assertEqual(
             object_index,
             [
-                ("000000", 0),
-                ("000000", 1),
-                ("000001", 0),
-                ("000001", 1),
-                ("000002", 0),
-                ("000002", 1),
+                ('object', "000000", 0),
+                ('object', "000000", 1),
+                ('object', "000001", 0),
+                ('object', "000001", 1),
+                ('object', "000002", 0),
+                ('object', "000002", 1),
             ],
         )
         self.assertEqual(mock_load_label.call_count, 3)

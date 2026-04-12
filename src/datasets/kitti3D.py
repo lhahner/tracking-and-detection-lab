@@ -5,7 +5,8 @@ import numpy as np
 from PIL import Image
 from torch.utils.data import Dataset
 
-from util.kitti_boxes import extract_points_in_box, image_box_to_lidar_proposal
+from detector.pointnet.proposals import generate_proposals
+from util.kitti_boxes import extract_points_in_box, image_box_to_lidar_proposal, proposal_iou_bev
 from util.kitti_calib import parse_kitti_calibration
 
 
@@ -28,12 +29,16 @@ class Kitti3D(Dataset):
         split="train",
         mode="frame",
         num_points=1024,
+        include_background=False,
+        background_iou_threshold=0.1,
         transform=None
     ):
         self.data_root = data_root
         self.split = split
         self.mode = mode
         self.num_points = num_points
+        self.include_background = include_background
+        self.background_iou_threshold = background_iou_threshold
         self.transform = transform
 
         subset_dir = "testing" if split == "test" else "training"
@@ -81,7 +86,23 @@ class Kitti3D(Dataset):
         }
 
     def _get_object_item(self, idx):
-        sample_id, object_idx = self.object_index[idx]
+        item = self.object_index[idx]
+        if item[0] == "background":
+            _, sample_id, proposal = item
+            cropped_points = proposal["points"]
+            sampled_points = self._sample_or_pad_points(cropped_points)
+
+            return {
+                "points": sampled_points,
+                "raw_points": cropped_points,
+                "label": CLASSES["Background"],
+                "label_name": "Background",
+                "proposal": proposal,
+                "target": None,
+                "sample_id": sample_id,
+            }
+
+        _, sample_id, object_idx = item
         frame = self._get_frame_item(sample_id)
         target_object = frame["target"][object_idx]
         proposal = image_box_to_lidar_proposal(target_object, frame["calib"])
@@ -111,8 +132,29 @@ class Kitti3D(Dataset):
             objects, _ = self._load_label(sample_id)
             filtered_objects = self.filter_supported_objects(objects)
             for object_idx, _ in filtered_objects:
-                object_index.append((sample_id, object_idx))
+                object_index.append(("object", sample_id, object_idx))
+            if self.include_background:
+                object_index.extend(self._build_background_index(sample_id, filtered_objects))
         return object_index
+
+    def _build_background_index(self, sample_id, filtered_objects):
+        frame = self._get_frame_item(sample_id)
+        if frame["points"] is None or frame["points"].size == 0:
+            return []
+
+        gt_proposals = [
+            image_box_to_lidar_proposal(obj, frame["calib"])
+            for _, obj in filtered_objects
+        ]
+        background_index = []
+        for proposal in generate_proposals(frame["points"]):
+            max_iou = max(
+                (proposal_iou_bev(proposal, gt_proposal) for gt_proposal in gt_proposals),
+                default=0.0,
+            )
+            if max_iou < self.background_iou_threshold:
+                background_index.append(("background", sample_id, proposal))
+        return background_index
 
     def filter_supported_objects(self, objects):
         """
