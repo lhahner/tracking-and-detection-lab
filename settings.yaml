@@ -19,3 +19,6 @@ runtime:
   tracker: "deepsort"
   datatype: "bin"
   benchmark: true
+  
+logging:
+	log_dir: "./logs"
