@@ -59,9 +59,6 @@ class PointNetDetector(Detector):
 
     def detect_points(self, points):
         proposals = generate_proposals(points)
-        if not proposals:
-            raise ValueError("The proposals coming from clustering were empty")
-
         crop_tensors = [
             prepare_crop(proposal["points"], self.num_points, use_intensity=self.use_intensity)
             for proposal in proposals

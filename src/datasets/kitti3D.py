@@ -28,14 +28,12 @@ class Kitti3D(Dataset):
         split="train",
         mode="frame",
         num_points=1024,
-        include_dontcare=False,
-        transform=None,
+        transform=None
     ):
         self.data_root = data_root
         self.split = split
         self.mode = mode
         self.num_points = num_points
-        self.include_dontcare = include_dontcare
         self.transform = transform
 
         subset_dir = "testing" if split == "test" else "training"
@@ -123,7 +121,7 @@ class Kitti3D(Dataset):
             object_type = obj["type"]
             if object_type in SUPPORTED_OBJECT_TYPES:
                 filtered.append((object_idx, obj))
-            elif object_type == "DontCare" and self.include_dontcare:
+            elif object_type == "DontCare":
                 filtered.append((object_idx, obj))
         return filtered
 
