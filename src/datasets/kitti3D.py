@@ -87,11 +87,15 @@ class Kitti3D(Dataset):
         proposal = image_box_to_lidar_proposal(target_object, frame["calib"])
         cropped_points = extract_points_in_box(frame["points"], proposal)
         sampled_points = self._sample_or_pad_points(cropped_points)
-
+        
+        label_name = target_object["type"]
+        if label_name not in CLASSES:
+            raise ValueError(f"Unsupported KITTI object type for training")
+        
         return {
             "points": sampled_points,
             "raw_points": cropped_points,
-            "label": CLASSES[target_object["type"]],
+            "label": CLASSES[label_name],
             "label_name": target_object["type"],
             "proposal": proposal,
             "target": target_object,
@@ -121,8 +125,7 @@ class Kitti3D(Dataset):
             object_type = obj["type"]
             if object_type in SUPPORTED_OBJECT_TYPES:
                 filtered.append((object_idx, obj))
-            elif object_type == "DontCare":
-                filtered.append((object_idx, obj))
+
         return filtered
 
     def _sample_or_pad_points(self, points):
