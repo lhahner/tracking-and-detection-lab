@@ -12,10 +12,13 @@ def build_model(num_classes: int, input_channels: int = 4) -> PointNetClassifier
 
 
 def load_checkpoint(model: torch.nn.Module, checkpoint_path: str | Path, device: torch.device) -> torch.nn.Module:
-    checkpoint = torch.load(checkpoint_path, map_location=device)
+    try:
+        checkpoint = torch.load(checkpoint_path, map_location=device)
+    except EOFError:
+       raise ValueError(f"Either there is no checkpoint file {checkpoint_path} or the file is empty") 
     
     if len(checkpoint) == 0:
-        raise ValueError(f"The given checkpoint file {str} is empty.")
+        raise ValueError(f"The given checkpoint file {checkpoint_path} is empty.")
     
     state_dict = checkpoint.get("model_state_dict", checkpoint)
     model.load_state_dict(state_dict)
