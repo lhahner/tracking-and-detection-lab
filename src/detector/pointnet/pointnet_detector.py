@@ -4,6 +4,7 @@ from pathlib import Path
 
 import torch
 
+from datasets.kitti3D import Kitti3D
 from detector.detector import Detector
 from detector.pointnet.infer import build_model, load_checkpoint, predict_crops
 from detector.pointnet.postprocess import (
@@ -46,10 +47,10 @@ class PointNetDetector(Detector):
             2: "Cyclist",
             3: "Car",
         }
+        if num_classes > len(self.class_names):
+            raise ValueError("Number of classes exceeds class name list.")
 
     def read_data(self, input_directory):
-        from datasets.kitti3D import Kitti3D
-
         return Kitti3D(
             data_root=input_directory,
             split="test",
@@ -58,17 +59,21 @@ class PointNetDetector(Detector):
         )
 
     def detect_points(self, points):
+        if points is None or points.size == 0:
+            return []
+
         proposals = generate_proposals(points)
-        
         if not proposals:
             return []
-        
+
         crop_tensors = [
             prepare_crop(proposal["points"], self.num_points, use_intensity=self.use_intensity)
             for proposal in proposals
         ]
+
         batch = torch.stack(crop_tensors, dim=0)
         labels, scores, _ = predict_crops(self.model, batch, self.device)
+
         detections = attach_predictions(
             proposals,
             labels,
@@ -77,6 +82,7 @@ class PointNetDetector(Detector):
             self.score_threshold,
         )
         return non_max_suppression_bev(detections)
+
 
     def detect(self):
         dataset = self.read_data(self.input_path)
