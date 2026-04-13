@@ -54,6 +54,7 @@ class PointnetTrainer(Trainer):
             num_points=self.num_points,
             use_intensity=self.use_intensity,
             shuffle=True,
+            drop_last=True
         )
 
         val_loader = get_dataloader(

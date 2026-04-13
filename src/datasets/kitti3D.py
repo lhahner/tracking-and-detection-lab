@@ -87,9 +87,16 @@ class Kitti3D(Dataset):
 
     def _get_object_item(self, idx):
         item = self.object_index[idx]
+
         if item[0] == "background":
-            _, sample_id, proposal = item
-            cropped_points = proposal["points"]
+            _, sample_id, center, dimensions, yaw = item
+            frame = self._get_frame_item(sample_id)
+            proposal = {
+                "center": center,
+                "dimensions": dimensions,
+                "yaw": yaw,
+            }
+            cropped_points = extract_points_in_box(frame["points"], proposal)
             sampled_points = self._sample_or_pad_points(cropped_points)
 
             return {
@@ -153,7 +160,16 @@ class Kitti3D(Dataset):
                 default=0.0,
             )
             if max_iou < self.background_iou_threshold:
-                background_index.append(("background", sample_id, proposal))
+                background_index.append(
+                    (
+                        "background",
+                        sample_id,
+                        proposal["center"].astype(np.float32),
+                        proposal["dimensions"].astype(np.float32),
+                        np.float32(proposal["yaw"]),
+                    )
+                )
+
         return background_index
 
     def filter_supported_objects(self, objects):

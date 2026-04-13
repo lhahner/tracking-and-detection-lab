@@ -151,7 +151,7 @@ class Application:
     
 if __name__ == "__main__":
     settings = SettingsLoader.load("settings.yaml")
-    if settings.runtime.mode is "inference":
+    if settings.runtime.mode == "inference":
         inference(Application(0.0, 0, np.random.rand(32, 3)), settings)
         
     elif settings.runtime.mode == "train":
@@ -160,7 +160,7 @@ if __name__ == "__main__":
           split="train",
           mode="object",
           num_points=1024,
-          include_background=True,
+          include_background=True
       )
 
       val_dataset = Kitti3D(
