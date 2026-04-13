@@ -58,15 +58,6 @@ class SettingsLoader:
         runtime = data.get("runtime", {})
 
         base = cfg_path.parent
-        resolved_paths = PathsConfig(
-            dataset_path=SettingsLoader.resolve(base, paths.get("dataset_path", "../data/MOT15")),
-            output_root=SettingsLoader.resolve(base, paths.get("output_root", "./output")),
-            detections_root=SettingsLoader.resolve(base, paths.get("detections_root", "./data")),
-            models_root=SettingsLoader.resolve(base, paths.get("models_root", "./detector")),
-            detection_path=paths.get("detection_path", "data/*/*/det/det.txt"),
-            ground_truth_path=paths.get("ground_truth_path"),
-            tracking_path=paths.get("tracking_path")
-        )
 
         settings = Settings(
             project_name=project.get("name", "tracking-and-detection-lab"),
@@ -83,6 +74,16 @@ class SettingsLoader:
               ),
             raw=data,
           )
+        
+        resolved_paths = PathsConfig(
+            dataset_path=SettingsLoader.resolve(base, paths.get("dataset_path", "../data/")),
+            output_root=SettingsLoader.resolve(base, paths.get("output_root", "./output")),
+            detections_root=SettingsLoader.resolve(base, paths.get("detections_root", "./data")),
+            models_root=SettingsLoader.resolve(base, paths.get("models_root", f"./detector/{settings.runtime.detector}-model.pth")),
+            detection_path=paths.get("detection_path", "data/*/*/det/det.txt"),
+            ground_truth_path=paths.get("ground_truth_path"),
+            tracking_path=paths.get("tracking_path")
+        )
         SettingsLoader.validate(settings)
         return settings
 
