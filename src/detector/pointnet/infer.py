@@ -15,8 +15,10 @@ def load_checkpoint(model: torch.nn.Module, checkpoint_path: str | Path, device:
     try:
         checkpoint = torch.load(checkpoint_path, map_location=device)
     except EOFError:
-       raise ValueError(f"Either there is no checkpoint file {checkpoint_path} or the file is empty") 
-    
+       raise ValueError(f"There checkpoint file {checkpoint_path} is empty") 
+    except FileNotFoundError:
+       raise ValueError(f"There is no checkpoint file {checkpoint_path}.")
+ 
     if len(checkpoint) == 0:
         raise ValueError(f"The given checkpoint file {checkpoint_path} is empty.")
     
