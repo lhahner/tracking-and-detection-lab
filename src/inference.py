@@ -29,7 +29,7 @@ def inference(self, app, settings):
     evaluation_runner = Evaluation(iou_threshold=0.5)
     app.run_detector_by_argument(
         settings.runtime.detector,
-        dataset_path=settings.paths.mot_root,
+        dataset_path=settings.paths.dataset_path,
         detection_path=settings.paths.detection_path,
         model_path=settings.paths.models_root,
     )
@@ -71,7 +71,7 @@ def inference(self, app, settings):
 
                 if settings.runtime.display:
                     visualizer.visualize_data(
-                        dir_path=settings.paths.mot_root,
+                        dir_path=settings.paths.dataset_path,
                         filetype=settings.runtime.datatype,
                         frame=frame,
                     )
@@ -79,7 +79,7 @@ def inference(self, app, settings):
                 start_time = time.time()
                 if settings.runtime.tracker.lower() == "deepsort":
                     frame_path = os.path.join(
-                        settings.paths.mot_root,
+                        settings.paths.dataset_path,
                         f"{frame:06d}.{settings.runtime.datatype}",
                     )
                     frame_img = io.imread(frame_path)

@@ -1,14 +1,28 @@
+import os
+import sys
+import types
 import unittest
 from unittest.mock import MagicMock, patch
 import numpy as np
 
-from src.util.visualizer import Visualizer
+TESTS_DIR = os.path.dirname(__file__)
+PROJECT_ROOT = os.path.dirname(TESTS_DIR)
+SRC_ROOT = os.path.join(PROJECT_ROOT, "src")
+if SRC_ROOT not in sys.path:
+    sys.path.insert(0, SRC_ROOT)
+
+if "skimage" not in sys.modules:
+    skimage_module = types.ModuleType("skimage")
+    skimage_module.io = types.SimpleNamespace(imread=MagicMock())
+    sys.modules["skimage"] = skimage_module
+
+from util.visualizer import Visualizer
 
 class TestVisualizer(unittest.TestCase):
-    @patch("src.util.visualizer.plt.draw")
-    @patch("src.util.visualizer.plt.subplots")
-    @patch("src.util.visualizer.plt.ion")
-    @patch("src.util.visualizer.io.imread")
+    @patch("util.visualizer.plt.draw")
+    @patch("util.visualizer.plt.subplots")
+    @patch("util.visualizer.plt.ion")
+    @patch("util.visualizer.io.imread")
     def test_visualize_image_and_bev(self, mock_imread, mock_ion, mock_subplots, mock_draw):
         visualizer = Visualizer("bin")
 

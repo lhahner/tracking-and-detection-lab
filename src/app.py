@@ -31,7 +31,9 @@ from detector.yolo.yolo_ultralytics import YoloUltralyticsDetector
 from detector.detr.detr_huggingface import DetrHuggingFaceDetector
 from detector.maskfrcnn.maskfrcnn_detectron2 import MaskFasterRCNNDetectron2Detector
 from detector.frcnn.frcnn_detectron2 import FasterRCNNDetectron2Detector
+from detector.pointnet.pointnet_trainer import PointnetTrainer
 
+from datasets.kitti3D import Kitti3D
 from inference import inference
 
 class Application:
@@ -149,9 +151,37 @@ class Application:
     
 if __name__ == "__main__":
     settings = SettingsLoader.load("settings.yaml")
-    if settings.runtime.mode is "inference":
+    if settings.runtime.mode == "inference":
         inference(Application(0.0, 0, np.random.rand(32, 3)), settings)
         
-    elif settings.runtime.mode is "train":
-        raise NotYetImplemented()
+    elif settings.runtime.mode == "train":
+      train_dataset = Kitti3D(
+          data_root=settings.paths.dataset_path,
+          split="train",
+          mode="object",
+          num_points=1024,
+          include_background=True
+      )
+
+      val_dataset = Kitti3D(
+          data_root=settings.paths.dataset_path,
+          split="val",
+          mode="object",
+          num_points=1024,
+          include_background=True,
+      )
+
+      trainer = PointnetTrainer(
+          train_dataset=train_dataset,
+          val_dataset=val_dataset,
+          output_checkpoint=settings.paths.models_root,
+          epochs=20,
+          batch_size=16,
+          num_points=1024,
+          learning_rate=1e-3,
+          use_intensity=True,
+      )
+
+      trainer.train()
+
   
