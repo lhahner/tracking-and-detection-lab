@@ -27,10 +27,14 @@ from tracker.DeepSORT.deepSort import DeepSort as DeepSortTracker
 from tracker.DeepSORT.deepSort import DeepSort as DeepSortTracker
 
 # Detection systems
-from detector.yolo.yolo import YoloDetector
-from detector.detr.detr import DetrDetector
-from detector.maskfrcnn.maskfrcnn import MaskFasterRCNNDetector
-from detector.frcnn.frcnn import FasterRCNNDetector
+from detector.yolo.yolo_ultralytics import YoloUltralyticsDetector
+from detector.detr.detr_huggingface import DetrHuggingFaceDetector
+from detector.maskfrcnn.maskfrcnn_detectron2 import MaskFasterRCNNDetectron2Detector
+from detector.frcnn.frcnn_detectron2 import FasterRCNNDetectron2Detector
+from detector.pointnet.pointnet_trainer import PointnetTrainer
+
+from datasets.kitti3D import Kitti3D
+from inference import inference
 
 class Application:
     """Coordinate detector execution, tracking, visualization, and evaluation."""
@@ -132,7 +136,6 @@ class Application:
                             help="Maximum number of frames to keep alive a track without associated detections.", 
                             type=int, default=1)
         parser.add_argument("--detector", 
-                            help="Specify which detection system you want to use, the directory which contains the detection inside the data folder should have the same name.", 
                             type=str, default='frcnn')
         parser.add_argument("--dataset",
                             help="Specify which dataset to use, the name should be equal to where the dataset is present",
@@ -147,104 +150,38 @@ class Application:
         return args
     
 if __name__ == "__main__":
-  app = Application(0.0, 0, np.random.rand(32, 3))
-  
-  args = app.parse_args()
-  phase = args.phase
-  path_detection = []
-  
-  settings = SettingsLoader.load("settings.yaml")
-  evaluation_runner = Evaluation(iou_threshold=0.5)
-  
-  app.run_detector_by_argument(
-      settings.runtime.detector, 
-      dataset_path=settings.paths.mot_root, 
-      detection_path=settings.paths.detection_path, 
-      model_path=settings.paths.models_root
-    )
+    settings = SettingsLoader.load("settings.yaml")
+    if settings.runtime.mode == "inference":
+        inference(Application(0.0, 0, np.random.rand(32, 3)), settings)
         
-  visualizer = Visualizer(app.datatype)
-  if(settings.runtime.display): 
-    visualizer.setup_panel()
-
-  pattern = os.path.join(settings.paths.detection_path, "det.txt")
-  for seq_dets_fn in glob.glob(pattern):
-    if settings.runtime.tracker.lower() == "deepsort":
-      mot_tracker = DeepSortTracker(
-          max_age=args.max_age,
-          min_hits=args.min_hits,
-          iou_threshold=args.iou_threshold,
-          bgr=False,  # skimage.io.imread returns RGB
+    elif settings.runtime.mode == "train":
+      train_dataset = Kitti3D(
+          data_root=settings.paths.dataset_path,
+          split="train",
+          mode="object",
+          num_points=1024,
+          include_background=True
       )
-    else:
-      mot_tracker = Sort(max_age=args.max_age, 
-                         min_hits=args.min_hits,
-                         iou_threshold=args.iou_threshold)
-     
-    seq_dets = np.loadtxt(seq_dets_fn, delimiter=',') 
-    seq = os.path.basename(os.path.dirname(os.path.dirname(seq_dets_fn)))
-    
-    sequence_output_path = Path(settings.paths.output_root) / f"{seq}.txt"
-    sequence_output_path.parent.mkdir(parents=True, exist_ok=True)
-    sequence_ground_truth_path = Path(settings.paths.ground_truth_path)
 
-    with open(sequence_output_path,'w') as out_file:
-        
-      print("Processing %s."%(seq))
-      converter = CoordinateConverter()
-      for frame in range(int(seq_dets[:,0].max())):
-        frame += 1
-        dets = converter.convert2DDetectionToBox(seq_dets, frame)
-        app.total_frames += 1
+      val_dataset = Kitti3D(
+          data_root=settings.paths.dataset_path,
+          split="val",
+          mode="object",
+          num_points=1024,
+          include_background=True,
+      )
 
-        if(settings.runtime.display):
-           visualizer.visualize_data(
-               dir_path=settings.paths.mot_root, 
-               filetype=settings.runtime.datatype, 
-               frame=frame)
+      trainer = PointnetTrainer(
+          train_dataset=train_dataset,
+          val_dataset=val_dataset,
+          output_checkpoint=settings.paths.models_root,
+          epochs=20,
+          batch_size=16,
+          num_points=1024,
+          learning_rate=1e-3,
+          use_intensity=True,
+      )
 
-        start_time = time.time()
-        if settings.runtime.tracker.lower() == "deepsort":
-          frame_path = os.path.join(
-              settings.paths.mot_root,
-              f"{frame:06d}.{settings.runtime.datatype}"
-          )
-          frame_img = io.imread(frame_path)
-          trackers = mot_tracker.update(dets, frame=frame_img)
-        else:
-          trackers = mot_tracker.update(dets)
-        cycle_time = time.time() - start_time
-        app.total_time += cycle_time
+      trainer.train()
 
-        for d in trackers:
-          print('%d,%d,%.2f,%.2f,%.2f,%.2f,1,-1,-1,-1'%(frame,d[4],d[0],d[1],d[2]-d[0],d[3]-d[1]),file=out_file)
-          if(settings.runtime.display):
-              visualizer.visualize_boxes(d, app.colours)
-        
-        if(settings.runtime.display):
-          visualizer.visualize_and_draw()
-    
-    if settings.runtime.benchmark:
-      if sequence_ground_truth_path.exists():
-        evaluation_summary = evaluation_runner.evaluate_sequence(
-            ground_truth_file_path=sequence_ground_truth_path,
-            predicted_tracking_file_path=sequence_output_path,
-            sequence_name=seq)
-        print(evaluation_summary)
-        benchmark_file_path = evaluation_runner.presist_evaluation(
-            evaluation_summary=evaluation_summary,
-            dataset=seq,
-            detector_name=settings.runtime.detector,
-            tracking_name=settings.runtime.tracker,
-        )
-        print(f"Saved benchmark summary to {benchmark_file_path}")
-      else:
-        print(f"Ground truth file not found for {seq}: {sequence_ground_truth_path}")
-        
-  if app.total_time > 0:
-    fps = app.total_frames / app.total_time
-    print("Total Tracking took: %.3f seconds for %d frames or %.1f FPS" % (app.total_time, app.total_frames, fps))
-  
-  else:
-    print("Total Tracking took: %.3f seconds for %d frames (FPS unavailable: no processing time recorded)" % (app.total_time, app.total_frames))
   

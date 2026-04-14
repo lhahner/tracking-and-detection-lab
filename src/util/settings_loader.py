@@ -8,8 +8,7 @@ import yaml
 @dataclass(frozen=True)
 class PathsConfig:
     """Store resolved filesystem paths used by the application."""
-
-    mot_root: Path
+    dataset_path: Path
     output_root: Path
     detections_root: Path
     models_root: Path
@@ -20,7 +19,7 @@ class PathsConfig:
 @dataclass(frozen=True)
 class RuntimeConfig:
     """Store runtime settings that control execution behavior."""
-
+    mode: str
     display: bool
     dataset: str
     detector: str
@@ -31,7 +30,6 @@ class RuntimeConfig:
 @dataclass(frozen=True)
 class Settings:
     """Represent the fully parsed application configuration."""
-
     project_name: str
     seed: int
     paths: PathsConfig
@@ -60,21 +58,23 @@ class SettingsLoader:
         runtime = data.get("runtime", {})
 
         base = cfg_path.parent
+        
         resolved_paths = PathsConfig(
-            mot_root=SettingsLoader.resolve(base, paths.get("mot_root", "../data/MOT15")),
+            dataset_path=SettingsLoader.resolve(base, paths.get("dataset_path", "../data/")),
             output_root=SettingsLoader.resolve(base, paths.get("output_root", "./output")),
             detections_root=SettingsLoader.resolve(base, paths.get("detections_root", "./data")),
-            models_root=SettingsLoader.resolve(base, paths.get("models_root", "./detector")),
+            models_root=SettingsLoader.resolve(base, paths.get("models_root", f"./detector/default-model.pth")),
             detection_path=paths.get("detection_path", "data/*/*/det/det.txt"),
             ground_truth_path=paths.get("ground_truth_path"),
             tracking_path=paths.get("tracking_path")
         )
-
+        
         settings = Settings(
             project_name=project.get("name", "tracking-and-detection-lab"),
             seed=int(project.get("seed", 0)),
             paths=resolved_paths,
             runtime=RuntimeConfig(
+                mode=runtime.get("mode", "inference"),
                 display=bool(runtime.get("display", False)),
                 dataset=runtime.get("dataset", "*"),
                 detector=runtime.get("detector", "yolo"),
@@ -84,6 +84,7 @@ class SettingsLoader:
               ),
             raw=data,
           )
+        
         SettingsLoader.validate(settings)
         return settings
 
@@ -113,5 +114,5 @@ class SettingsLoader:
         Raises:
             ValueError: If required filesystem paths do not exist.
         """
-        if not settings.paths.mot_root.exists():
-            raise ValueError(f"mot_root not found: {settings.paths.mot_root}")
+        if not settings.paths.dataset_path.exists():
+            raise ValueError(f"dataset_path not found: {settings.paths.dataset_path}")

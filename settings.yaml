@@ -3,48 +3,19 @@ project:
   seed: 0
 
 paths:
-  mot_root: "/home/lennart/Dokumente/gau/advanced-research-training-applied-system-development/track-lab/data/MOT15/train/KITTI-17/img1" # absolute or relative to this file
+  dataset_path: "/media/lennart/LaCie/gau/advanced-research-training-applied-system-development/datasets/kitti_3D_object_detection" # absolute or relative to this file
   output_root: "./output"
   detections_root: "./data"
-  models_root: "./detector/model/yolo11n.pt"
+  models_root: "/home/lennart/Dokumente/gau/master-thesis/tracking-and-detection-lab/src/detector/pointnet/models/pointnet_kitti.pth"
   detection_path: "/home/lennart/Dokumente/gau/advanced-research-training-applied-system-development/track-lab/src/data/detr/KITTI-17/det/"
   ground_truth_path: "/home/lennart/Dokumente/gau/advanced-research-training-applied-system-development/track-lab/data/MOT15/train/KITTI-17/gt/gt.txt"
   tracking_path: "/home/lennart/Dokumente/gau/advanced-research-training-applied-system-development/track-lab/src/output/KITTI-17.txt"
   
 runtime:
+  mode: "train"
   display: false
   dataset: "KITTI-17"                      
   detector: "detr"                  
   tracker: "deepsort"
-  datatype: "jpg"
+  datatype: "bin"
   benchmark: true
-
-detectors:
-  yolo:
-    enabled: false 
-    model_path: "detr.pt"   
-    conf_threshold: 0.25
-    iou_threshold: 0.45
-    classes: []                            
-  detr:
-    enabled: true 
-    checkpoint: "detr/model/checkpoint.pth"
-  detectron2:
-    enabled: false
-    config_file: "detectron2/config.yaml"
-    weights: "detectron2/model/model_final.pth"
-
-trackers:
-  sort:
-    max_age: 1
-    min_hits: 3
-    iou_threshold: 0.3
-  deepsort:
-    max_age: 1
-    min_hits: 3
-    iou_threshold: 0.3
-
-io:
-  detection_filename: "det.txt"
-  tracking_filename_pattern: "{sequence}.txt"
-  overwrite_outputs: true
