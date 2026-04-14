@@ -18,7 +18,6 @@ class TestLoggerInt(unittest.TestCase):
         
         logger.info("test logging")
         path = os.path.join(PROJECT_ROOT, 'logs/app.log')
-        print(path) 
         self.assertTrue(
             os.path.exists(path)
         )

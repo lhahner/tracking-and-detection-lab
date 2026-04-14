@@ -15,6 +15,7 @@ class PathsConfig:
     detection_path: str
     ground_truth_path: str | None
     tracking_path: str | None
+    logging_path: str | None
 
 @dataclass(frozen=True)
 class RuntimeConfig:

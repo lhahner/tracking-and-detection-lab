@@ -13,6 +13,8 @@ from torch.utils.data import DataLoader
 from datasets.kitti3D import Kitti3D
 from detector.pointnet.infer import build_model
 
+from util.logging_config import LoggingConfig
+
 class PointnetTrainer(Trainer):
     def __init__(self, train_dataset, val_dataset, output_checkpoint, epochs, batch_size, num_points, learning_rate,
                  use_intensity):
@@ -24,6 +26,8 @@ class PointnetTrainer(Trainer):
         self.num_points = num_points
         self.learning_rate = learning_rate
         self.use_intensity = use_intensity
+        self.logging_config = LoggingConfig()
+        self.logger = logging_config.get_logger(__name__)
     
     def evaluate(self, model, loader, device):
         model.eval()
@@ -40,10 +44,15 @@ class PointnetTrainer(Trainer):
         return 0.0 if total_examples == 0 else total_correct / total_examples
 
     def train(self):
-        print(
-            "Starting PointNet training "
-            )
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.logger.info("Starting training")
+        device = []
+        if torch.cuda.is_available():
+            self.logger.info("Using CUDA device for training")
+            device = torch.device("cuda")
+        else:
+            self.logger.warn("CUDA device not available using CPU")
+            device = torch.device("cpu")
+        
         input_channels = 4 if self.use_intensity else 3
         model = build_model(num_classes=4, input_channels=input_channels).to(device)
         optimizer = torch.optim.Adam(model.parameters(), lr=self.learning_rate)
@@ -54,7 +63,8 @@ class PointnetTrainer(Trainer):
             num_points=self.num_points,
             use_intensity=self.use_intensity,
             shuffle=True,
-            drop_last=True
+            drop_last=True,
+            self.logger
         )
 
         val_loader = get_dataloader(
@@ -63,32 +73,42 @@ class PointnetTrainer(Trainer):
           num_points=self.num_points,
           use_intensity=self.use_intensity,
           shuffle=False,
+          self.logger
         )
     
         best_val_accuracy = -1.0
         checkpoint_path = Path(self.output_checkpoint)
         checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
-
+        self.logger.info(f"Checkpoint path is set to {checkpoint_path}")
+        
         for epoch in range(1, self.epochs + 1):
-            print(f"Epoch {epoch} runninng")
+            self.logger.info(f"Running epoch {epoch}")
+            
             model.train()
             running_loss = 0.0
+            
             for batch in train_loader:
+                self.logger.info(f"Running batch {batch}")
+                
                 points = batch["points"].to(device)
                 labels = batch["labels"].to(device)
 
                 optimizer.zero_grad()
                 logits, _, _ = model(points)
                 loss = F.cross_entropy(logits, labels)
+                self.logger.info(f"loss={loss}, batch={batch}, epoch={epoch}")
+                
                 loss.backward()
                 optimizer.step()
                 running_loss += loss.item()
 
             val_accuracy = self.evaluate(model, val_loader, device)
             average_loss = running_loss / max(len(train_loader), 1)
-            print(f"epoch={epoch} loss={average_loss:.6f} val_accuracy={val_accuracy:.4f}")
+            self.logger.info(f"epoch={epoch} loss={average_loss:.6f} val_accuracy={val_accuracy:.4f}")
 
             if val_accuracy > best_val_accuracy:
+                self.logger.info("Early stopping reached storing at checkpoint")
+                
                 best_val_accuracy = val_accuracy
                 torch.save(
                     {

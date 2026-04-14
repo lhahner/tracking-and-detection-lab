@@ -3,16 +3,22 @@ from __future__ import annotations
 import logging
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
+import datetime
+
+from util.settings_loader import SettingsLoader
 
 class LoggingConfig:
-      def __init__(self, log_dir="logs", log_filename="app.log", log_level=logging.INFO):
-          self.log_dir = Path(log_dir)
-          self.log_dir.mkdir(parents=True, exist_ok=True)
+      def __init__(self, routine="infer", log_level=logging.INFO):
+          settings = SettingsLoader.load("settings.yaml")
+          self.log_dir = Path(settings.paths.logging_path)
+          
+          if not os.path.exists(self.log_dir):
+            self.log_dir.mkdir(parents=True, exist_ok=True)
 
           self.root_logger = logging.getLogger()
 
-          self._log_filename = log_filename
-          self._log_level = _resolve_level(log_level) 
+          self._log_filename = f"{str(datetime.datetime.now())}-{routine}"
+          self._log_level = self._resolve_level(log_level) 
           self._log_format = (
               "%(asctime)s | %(levelname)-8s | %(name)s | "
               "%(filename)s:%(lineno)d | %(message)s"
