@@ -12,7 +12,7 @@ class LoggingConfig:
           self.root_logger = logging.getLogger()
 
           self._log_filename = log_filename
-          self._log_level = log_level 
+          self._log_level = _resolve_level(log_level) 
           self._log_format = (
               "%(asctime)s | %(levelname)-8s | %(name)s | "
               "%(filename)s:%(lineno)d | %(message)s"
