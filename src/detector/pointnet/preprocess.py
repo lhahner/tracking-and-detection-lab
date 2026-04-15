@@ -9,7 +9,7 @@ def sample_points(points: np.ndarray, num_points: int) -> np.ndarray:
     Returns a random set of points from the clustered Dataset.
     """
     if points.shape[0] == 0:
-        self.logger.warn("Some points are empty, continue with zeros") 
+        logger.warn("Some points are empty, continue with zeros") 
         return np.zeros((num_points, points.shape[1] if points.ndim == 2 else 4), dtype=np.float32)
     replace = points.shape[0] < num_points
     choice = np.random.choice(points.shape[0], num_points, replace=replace)

@@ -157,7 +157,7 @@ if __name__ == "__main__":
     elif settings.runtime.mode == "train":
       train_dataset = Kitti3D(
           data_root=settings.paths.dataset_path,
-          split="train",
+          split="training",
           mode="object",
           num_points=1024,
           include_background=True

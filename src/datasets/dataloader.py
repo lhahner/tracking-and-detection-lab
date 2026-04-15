@@ -45,7 +45,7 @@ def get_dataloader(
     shuffle=True,
     drop_last=False,
     collate_mode="auto",
-    logger
+    logger=None
 ):
     if logger is None:
         raise ValueError("To load data provide logger")

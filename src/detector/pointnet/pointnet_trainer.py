@@ -27,7 +27,7 @@ class PointnetTrainer(Trainer):
         self.learning_rate = learning_rate
         self.use_intensity = use_intensity
         self.logging_config = LoggingConfig()
-        self.logger = logging_config.get_logger(__name__)
+        self.logger = self.logging_config.get_logger(__name__)
     
     def evaluate(self, model, loader, device):
         model.eval()
@@ -64,7 +64,7 @@ class PointnetTrainer(Trainer):
             use_intensity=self.use_intensity,
             shuffle=True,
             drop_last=True,
-            self.logger
+            logger=self.logger
         )
 
         val_loader = get_dataloader(
@@ -73,7 +73,7 @@ class PointnetTrainer(Trainer):
           num_points=self.num_points,
           use_intensity=self.use_intensity,
           shuffle=False,
-          self.logger
+          logger=self.logger
         )
     
         best_val_accuracy = -1.0
