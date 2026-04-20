@@ -14,6 +14,10 @@ from detector.pointnet.postprocess import (
 )
 from detector.pointnet.preprocess import prepare_crop
 from detector.pointnet.proposals import generate_proposals
+from util.logging_config import LoggingConfig
+
+logging_config = LoggingConfig()
+logger = logging_config.get_logger(__name__)
 
 
 class PointNetDetector(Detector):
@@ -58,6 +62,7 @@ class PointNetDetector(Detector):
             split="testing",
             mode="frame",
             num_points=self.num_points,
+            logger=logger,
         )
 
     def detect_points(self, points):

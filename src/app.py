@@ -202,7 +202,6 @@ if __name__ == "__main__":
             num_points=1024,
             learning_rate=1e-3,
             use_intensity=True,
-            logger=logger,
         )
 
         trainer.train()

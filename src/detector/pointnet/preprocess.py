@@ -13,7 +13,6 @@ def sample_points(points: np.ndarray, num_points: int) -> np.ndarray:
     """
     Returns a random set of points from the clustered Dataset.
     """
-    breakpoint()
     if logger is None:
         raise ValueError("""
             This functions needs to have a logger object provided to run
@@ -22,9 +21,9 @@ def sample_points(points: np.ndarray, num_points: int) -> np.ndarray:
         logger.warn("Some points are empty, continue with zeros")
 
         if points.ndim == 2:
-            return np.zeros(num_points, points.shape[1], dtype=np.float32)
+            return np.zeros((num_points, points.shape[1]), dtype=np.float32)
         else:
-            return np.zeros(num_points, 4, dtype=np.float32)
+            return np.zeros((num_points, 4), dtype=np.float32)
 
     replace = points.shape[0] < num_points
     choice = np.random.choice(points.shape[0], num_points, replace=replace)

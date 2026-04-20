@@ -58,10 +58,11 @@ class Kitti3D(Dataset):
         self.background_iou_threshold = background_iou_threshold
         self.transform = transform
 
-        self.dir_calib = os.path.join(data_root, self.split, "calib")
-        self.dir_label = os.path.join(data_root, "training", "label_2")
-        self.dir_velodyne = os.path.join(data_root, self.split, "velodyne")
-        self.dir_image = os.path.join(data_root, self.split, "image_2")
+        if split in ["training", "testing"]:
+            self.dir_calib = os.path.join(data_root, self.split, "calib")
+            self.dir_label = os.path.join(data_root, "training", "label_2")
+            self.dir_velodyne = os.path.join(data_root, self.split, "velodyne")
+            self.dir_image = os.path.join(data_root, self.split, "image_2")
 
         self.split_file = os.path.join(data_root, "ImageSets", f"{split}.txt")
         with open(self.split_file, "r", encoding="utf-8") as f:
