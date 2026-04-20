@@ -6,6 +6,11 @@ import numpy as np
 import numpy as np
 import open3d as o3d
 
+from util.logging_config import LoggingConfig
+
+logging_config = LoggingConfig()
+logger = logging_config.get_logger(__name__)
+
 def filter_points(points: np.ndarray, point_cloud_range: tuple[float, float, float, float, float, float]):
     """
     Filters out points according to the provided point_cloud_range.
@@ -22,8 +27,8 @@ def filter_points(points: np.ndarray, point_cloud_range: tuple[float, float, flo
         & (xyz[:, 2] >= z_min)
         & (xyz[:, 2] <= z_max)
     )
+    logger.info(f"filtered points from {points.shape} to {points[mask].shape}")
     return points[mask]
-
 
 def remove_ground(points: np.ndarray, ground_threshold: float = -1.4) -> np.ndarray:
     return points[points[:, 2] > ground_threshold]
@@ -66,15 +71,17 @@ def dbscan_clustering(
 def cluster_to_proposal(cluster: np.ndarray) -> dict:
     """
     Transforms the cluster to the actual proposal
-    where the proposal also includes the center,
-    dimensions, yaw and the actual data points of
-    the cluster.
+    where the proposal of the objects location
+    also includes the center, dimensions, yaw and 
+    the actual data points of the cluster.
     """
     xyz = cluster[:, :3]
     min_xyz = xyz.min(axis=0)
     max_xyz = xyz.max(axis=0)
     center = (min_xyz + max_xyz) / 2.0
     dimensions = np.maximum(max_xyz - min_xyz, 1e-3)
+    
+    logger.debug(f"Cluster;min={min_xyz},max={max_xyz},center={center},dimensions={dimensions}")
     return {
         "center": center.astype(np.float32),
         "dimensions": dimensions.astype(np.float32),

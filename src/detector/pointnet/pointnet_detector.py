@@ -14,6 +14,10 @@ from detector.pointnet.postprocess import (
 )
 from detector.pointnet.preprocess import prepare_crop
 from detector.pointnet.proposals import generate_proposals
+from util.logging_config import LoggingConfig
+
+logging_config = LoggingConfig()
+logger = logging_config.get_logger(__name__)
 
 
 class PointNetDetector(Detector):
@@ -37,7 +41,9 @@ class PointNetDetector(Detector):
         self.num_points = num_points
         self.use_intensity = use_intensity
         self.score_threshold = score_threshold
-        self.device = torch.device(device or ("cuda" if torch.cuda.is_available() else "cpu"))
+        self.device = torch.device(
+            device or ("cuda" if torch.cuda.is_available() else "cpu")
+        )
         input_channels = 4 if use_intensity else 3
         self.model = build_model(num_classes=num_classes, input_channels=input_channels)
         self.model = load_checkpoint(self.model, checkpoint_path, self.device)
@@ -53,9 +59,10 @@ class PointNetDetector(Detector):
     def read_data(self, input_directory):
         return Kitti3D(
             data_root=input_directory,
-            split="test",
+            split="testing",
             mode="frame",
             num_points=self.num_points,
+            logger=logger,
         )
 
     def detect_points(self, points):
@@ -67,7 +74,9 @@ class PointNetDetector(Detector):
             return []
 
         crop_tensors = [
-            prepare_crop(proposal["points"], self.num_points, use_intensity=self.use_intensity)
+            prepare_crop(
+                proposal["points"], self.num_points, use_intensity=self.use_intensity
+            )
             for proposal in proposals
         ]
 
@@ -83,10 +92,11 @@ class PointNetDetector(Detector):
         )
         return non_max_suppression_bev(detections)
 
-
     def detect(self):
         dataset = self.read_data(self.input_path)
         self.output_path.mkdir(parents=True, exist_ok=True)
         for sample in dataset:
             detections = self.detect_points(sample["points"])
-            save_kitti_like_detections(self.output_path / f"{sample['sample_id']}.txt", detections)
+            save_kitti_like_detections(
+                self.output_path / f"{sample['sample_id']}.txt", detections
+            )

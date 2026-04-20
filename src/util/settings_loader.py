@@ -15,6 +15,7 @@ class PathsConfig:
     detection_path: str
     ground_truth_path: str | None
     tracking_path: str | None
+    logging_path: str | None
 
 @dataclass(frozen=True)
 class RuntimeConfig:
@@ -66,7 +67,8 @@ class SettingsLoader:
             models_root=SettingsLoader.resolve(base, paths.get("models_root", f"./detector/default-model.pth")),
             detection_path=paths.get("detection_path", "data/*/*/det/det.txt"),
             ground_truth_path=paths.get("ground_truth_path"),
-            tracking_path=paths.get("tracking_path")
+            tracking_path=paths.get("tracking_path"),
+            logging_path=paths.get("logging_path")
         )
         
         settings = Settings(
