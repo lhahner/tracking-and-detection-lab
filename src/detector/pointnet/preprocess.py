@@ -3,14 +3,29 @@ from __future__ import annotations
 import numpy as np
 import torch
 
+from util.logging_config import LoggingConfig
+
+logging_config = LoggingConfig()
+logger = logging_config.get_logger(__name__)
+
 
 def sample_points(points: np.ndarray, num_points: int) -> np.ndarray:
     """
     Returns a random set of points from the clustered Dataset.
     """
+    breakpoint()
+    if logger is None:
+        raise ValueError("""
+            This functions needs to have a logger object provided to run
+            """)
     if points.shape[0] == 0:
-        logger.warn("Some points are empty, continue with zeros") 
-        return np.zeros((num_points, points.shape[1] if points.ndim == 2 else 4), dtype=np.float32)
+        logger.warn("Some points are empty, continue with zeros")
+
+        if points.ndim == 2:
+            return np.zeros(num_points, points.shape[1], dtype=np.float32)
+        else:
+            return np.zeros(num_points, 4, dtype=np.float32)
+
     replace = points.shape[0] < num_points
     choice = np.random.choice(points.shape[0], num_points, replace=replace)
     return points[choice].astype(np.float32)
@@ -20,7 +35,7 @@ def normalize_points(points: np.ndarray) -> np.ndarray:
     """
     Normalizing by moving the local proposal point cloud so its mean is at the origin,
     computes the largest Euclidean distance from the centered origin,
-    the proposal fits inside a unit sphere, the farthest point has distance from the 
+    the proposal fits inside a unit sphere, the farthest point has distance from the
     origin has distance 1.0.
     """
     if points.size == 0:
@@ -34,7 +49,9 @@ def normalize_points(points: np.ndarray) -> np.ndarray:
     return normalized
 
 
-def prepare_crop(points: np.ndarray, num_points: int, use_intensity: bool = True) -> torch.Tensor:
+def prepare_crop(
+    points: np.ndarray, num_points: int, use_intensity: bool = True
+) -> torch.Tensor:
     """
     Sample points and normalize them to provide a normalized,
     transposed sample set of the data points from the point
