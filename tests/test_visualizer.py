@@ -11,19 +11,24 @@ SRC_ROOT = os.path.join(PROJECT_ROOT, "src")
 if SRC_ROOT not in sys.path:
     sys.path.insert(0, SRC_ROOT)
 
+from util.visualizer import Visualizer
+
 if "skimage" not in sys.modules:
     skimage_module = types.ModuleType("skimage")
     skimage_module.io = types.SimpleNamespace(imread=MagicMock())
     sys.modules["skimage"] = skimage_module
 
-from util.visualizer import Visualizer
 
 class TestVisualizer(unittest.TestCase):
     @patch("util.visualizer.plt.draw")
     @patch("util.visualizer.plt.subplots")
     @patch("util.visualizer.plt.ion")
     @patch("util.visualizer.io.imread")
-    def test_visualize_image_and_bev(self, mock_imread, mock_ion, mock_subplots, mock_draw):
+    def test_visualize_image_and_bev(self,
+                                     mock_imread,
+                                     mock_ion,
+                                     mock_subplots,
+                                     mock_draw):
         visualizer = Visualizer("bin")
 
         dataset = MagicMock()
@@ -43,13 +48,15 @@ class TestVisualizer(unittest.TestCase):
         mock_fig = MagicMock()
         mock_axis_image = MagicMock()
         mock_axis_bev = MagicMock()
-        mock_subplots.return_value = (mock_fig, (mock_axis_image, mock_axis_bev))
-
+        mock_image_bev_tupel = (mock_axis_image, mock_axis_bev)
+        mock_subplots.return_value = (mock_fig, mock_image_bev_tupel)
+    
         visualizer.visualize_image_and_bev(dataset, 0)
 
         dataset.__getitem__.assert_called_once_with(0)
         mock_imread.assert_called_once_with("/fake/path/image.png")
-        visualizer.lidar_bin_to_bev.assert_called_once_with("/fake/path/points.bin")
+        fake_path = "/fake/path/points.bin"
+        visualizer.lidar_bin_to_bev.assert_called_once_with(fake_path)
 
         mock_ion.assert_called_once()
         mock_subplots.assert_called_once_with(1, 2, figsize=(14, 6))
@@ -68,6 +75,23 @@ class TestVisualizer(unittest.TestCase):
 
         mock_fig.tight_layout.assert_called_once()
         mock_draw.assert_called_once()
+
+    def test_lidar_bin_to_bev_default_range_and_resolution(self):
+        path_to_test_bin = "tests/point_sample.bin"
+        visualizer = Visualizer("bin")
+        x_range = (0.0, 50.0)
+        y_range = (-50.0, 50.0)
+        z_range = (-3.0, 1.0)
+        resolution = 0.1
+        bev = visualizer.lidar_bin_to_bev(path_to_test_bin,
+                                          x_range,
+                                          y_range,
+                                          z_range,
+                                          resolution
+                                          )
+        expected_width = (x_range[1] - x_range[0]) / resolution
+        expected_heigth = (y_range[1] - y_range[0]) / resolution
+        self.assertEquals(bev.shape, (expected_width, expected_heigth, 3))
 
 
 if __name__ == "__main__":

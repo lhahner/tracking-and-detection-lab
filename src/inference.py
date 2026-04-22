@@ -19,7 +19,7 @@ from tracker.DeepSORT.deepSort import DeepSort as DeepSortTracker
 from tracker.SORT.sort import Sort
 
 
-def inference(self, app, settings):
+def inference(app, settings):
     if app is None:
         raise ValueError("Application is not definied")
     args = app.parse_args()
@@ -60,6 +60,28 @@ def inference(self, app, settings):
         sequence_output_path = Path(settings.paths.output_root) / f"{seq}.txt"
         sequence_output_path.parent.mkdir(parents=True, exist_ok=True)
         sequence_ground_truth_path = Path(settings.paths.ground_truth_path)
+        ground_truth_by_frame = {}
+        mot_accumulator = None
+        metrics_history = {"idf1": [], "motp": [], "mota": []}
+        should_visualize_metrics = settings.runtime.display and settings.runtime.benchmark
+
+        if should_visualize_metrics and sequence_ground_truth_path.exists():
+            allowed_ground_truth_class_ids = (
+                {1}
+                if evaluation_runner.should_filter_ground_truth_to_pedestrians(seq)
+                else None
+            )
+            ground_truth_by_frame = evaluation_runner.read_mot_file(
+                sequence_ground_truth_path,
+                filter_ground_truth_by_confidence=True,
+                allowed_class_ids=allowed_ground_truth_class_ids,
+            )
+            mot_accumulator = evaluation_runner.create_mot_accumulator()
+        elif should_visualize_metrics:
+            print(
+                f"Ground truth file not found for live metrics in {seq}: "
+                f"{sequence_ground_truth_path}"
+            )
 
         with open(sequence_output_path, "w") as out_file:
             print("Processing %s." % (seq))
@@ -68,13 +90,6 @@ def inference(self, app, settings):
                 frame += 1
                 dets = converter.convert2DDetectionToBox(seq_dets, frame)
                 app.total_frames += 1
-
-                if settings.runtime.display:
-                    visualizer.visualize_data(
-                        dir_path=settings.paths.dataset_path,
-                        filetype=settings.runtime.datatype,
-                        frame=frame,
-                    )
 
                 start_time = time.time()
                 if settings.runtime.tracker.lower() == "deepsort":
@@ -95,11 +110,27 @@ def inference(self, app, settings):
                         % (frame, d[4], d[0], d[1], d[2] - d[0], d[3] - d[1]),
                         file=out_file,
                     )
-                    if settings.runtime.display:
-                        visualizer.visualize_boxes(d, app.colours)
 
                 if settings.runtime.display:
-                    visualizer.visualize_and_draw()
+                    if mot_accumulator is not None:
+                        cumulative_metrics = evaluation_runner.compute_cumulative_tracking_metrics(
+                            mot_accumulator=mot_accumulator,
+                            frame_number=frame,
+                            ground_truth_by_frame=ground_truth_by_frame,
+                            trackers=trackers,
+                            sequence_name=seq,
+                        )
+                        for metric_name, metric_value in cumulative_metrics.items():
+                            metrics_history[metric_name].append(metric_value)
+
+                    visualizer.visualize_tracking_frame(
+                        dataset_path=settings.paths.dataset_path,
+                        frame=frame,
+                        filetype=settings.runtime.datatype,
+                        trackers=trackers,
+                        colours=app.colours,
+                        metrics_history=metrics_history,
+                    )
 
         if settings.runtime.benchmark:
             if sequence_ground_truth_path.exists():

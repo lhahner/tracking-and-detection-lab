@@ -1,0 +1,17 @@
+2026-04-21 15:51:46,575 | INFO     | timm.models._builder | _builder.py:217 | Loading pretrained weights from Hugging Face hub (timm/resnet50.a1_in1k)
+2026-04-21 15:51:46,708 | INFO     | timm.models._hub | _hub.py:232 | [timm/resnet50.a1_in1k] Safe alternative available for 'pytorch_model.bin' (as 'model.safetensors'). Loading weights using safetensors.
+2026-04-21 15:51:46,811 | INFO     | timm.models._builder | _builder.py:282 | Missing keys (fc.weight, fc.bias) discovered while loading pretrained weights. This is expected if model is being adapted.
+2026-04-21 15:51:48,952 | INFO     | deep_sort_realtime.embedder.embedder_pytorch | embedder_pytorch.py:69 | MobileNetV2 Embedder for Deep Sort initialised
+2026-04-21 15:51:48,952 | INFO     | deep_sort_realtime.embedder.embedder_pytorch | embedder_pytorch.py:70 | - gpu enabled: False
+2026-04-21 15:51:48,953 | INFO     | deep_sort_realtime.embedder.embedder_pytorch | embedder_pytorch.py:71 | - half precision: False
+2026-04-21 15:51:48,953 | INFO     | deep_sort_realtime.embedder.embedder_pytorch | embedder_pytorch.py:72 | - max batch size: 16
+2026-04-21 15:51:48,953 | INFO     | deep_sort_realtime.embedder.embedder_pytorch | embedder_pytorch.py:73 | - expects BGR: False
+2026-04-21 15:51:49,071 | INFO     | deep_sort_realtime.deepsort_tracker | deepsort_tracker.py:142 | DeepSort Tracker initialised
+2026-04-21 15:51:49,072 | INFO     | deep_sort_realtime.deepsort_tracker | deepsort_tracker.py:143 | - max age: 1
+2026-04-21 15:51:49,079 | INFO     | deep_sort_realtime.deepsort_tracker | deepsort_tracker.py:144 | - appearance threshold: 0.2
+2026-04-21 15:51:49,080 | INFO     | deep_sort_realtime.deepsort_tracker | deepsort_tracker.py:145 | - nms threshold: OFF
+2026-04-21 15:51:49,080 | INFO     | deep_sort_realtime.deepsort_tracker | deepsort_tracker.py:148 | - max num of appearance features: 100
+2026-04-21 15:51:49,080 | INFO     | deep_sort_realtime.deepsort_tracker | deepsort_tracker.py:149 | - overriding track class : No
+2026-04-21 15:51:49,081 | INFO     | deep_sort_realtime.deepsort_tracker | deepsort_tracker.py:152 | - today given : No
+2026-04-21 15:51:49,081 | INFO     | deep_sort_realtime.deepsort_tracker | deepsort_tracker.py:153 | - in-build embedder : Yes
+2026-04-21 15:51:49,082 | INFO     | deep_sort_realtime.deepsort_tracker | deepsort_tracker.py:154 | - polygon detections : No
