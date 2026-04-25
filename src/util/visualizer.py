@@ -8,6 +8,7 @@ from util.logging_config import LoggingConfig
 logging_config = LoggingConfig()
 logger = logging_config.get_logger(__name__)
 
+
 class Visualizer:
     def __init__(self, datatype):
         self.datatype = datatype
@@ -34,7 +35,7 @@ class Visualizer:
     def __visualize_and_draw(self):
         self.fig.canvas.flush_events()
         plt.draw()
-        self._clear_dashboard_axes()
+        self.__clear_dashboard_axes()
 
     def setup_panel(self):
         plt.ion()
@@ -51,7 +52,7 @@ class Visualizer:
         self.axis_idf1 = self.fig.add_subplot(grid[3, 0])
         self.axis_motp = self.fig.add_subplot(grid[3, 1])
         self.axis_mota = self.fig.add_subplot(grid[3, 2])
-        self._clear_dashboard_axes()
+        self.__clear_dashboard_axes()
 
     def visualize_tracking_frame(self,
                                  dataset_path,
@@ -73,11 +74,11 @@ class Visualizer:
                                      )
         self.axis_one.axis("off")
 
-        self.visualize_boxes(trackers, colours)
-        self._visualize_metric_plots(metrics_history or {})
+        self.__visualize_boxes(trackers, colours)
+        self.__visualize_metric_plots(metrics_history or {})
 
         self.fig.tight_layout()
-        self.visualize_and_draw()
+        self.__visualize_and_draw()
 
     def __clear_dashboard_axes(self):
         axes = [
@@ -156,8 +157,8 @@ class Visualizer:
         x, y, z, i = x[mask], y[mask], z[mask], i[mask]
 
         # image size
-        heigth = int((x_range[1] - x_range[0]) / resolution)
-        width = int((y_range[1] - y_range[0]) / resolution)
+        width = int((x_range[1] - x_range[0]) / resolution)
+        heigth = int((y_range[1] - y_range[0]) / resolution)
 
         # scale and round
         x_idx = np.floor((x - x_range[0]) / resolution).astype(np.int32)

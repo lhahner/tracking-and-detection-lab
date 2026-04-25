@@ -1,3 +1,0 @@
-2026-04-21 15:26:05,018 | INFO     | timm.models._builder | _builder.py:217 | Loading pretrained weights from Hugging Face hub (timm/resnet50.a1_in1k)
-2026-04-21 15:26:05,146 | INFO     | timm.models._hub | _hub.py:232 | [timm/resnet50.a1_in1k] Safe alternative available for 'pytorch_model.bin' (as 'model.safetensors'). Loading weights using safetensors.
-2026-04-21 15:26:05,279 | INFO     | timm.models._builder | _builder.py:282 | Missing keys (fc.weight, fc.bias) discovered while loading pretrained weights. This is expected if model is being adapted.
