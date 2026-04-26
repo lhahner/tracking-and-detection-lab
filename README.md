@@ -7,9 +7,9 @@ The main runtime entrypoint is [src/app.py](/home/lennart/Dokumente/gau/advanced
 
 <div style="display: flex; flex-justify-content: center;">
   <div>
-![hippo](https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExZzJvNmZuZnRnd3h4b2EwOGdsZGdhbzBma3BxcjlhMXlpejFxNHZkZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/P9lYN2gbWDERpiukXN/giphy.gif)
+    <img src="https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExZzJvNmZuZnRnd3h4b2EwOGdsZGdhbzBma3BxcjlhMXlpejFxNHZkZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/P9lYN2gbWDERpiukXN/giphy.gif">
   </div>
-    <div>
+<div>
 
 ## What the project does
 
