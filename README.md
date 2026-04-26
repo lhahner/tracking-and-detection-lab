@@ -5,6 +5,8 @@ This project benchmarks object detection and multi-object tracking pipelines on 
 
 The main runtime entrypoint is [src/app.py](/home/lennart/Dokumente/gau/advanced-research-training-applied-system-development/track-lab/src/app.py). Runtime configuration is read from [src/settings.yaml](/home/lennart/Dokumente/gau/advanced-research-training-applied-system-development/track-lab/src/settings.yaml).
 
+![hippo](https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExZzJvNmZuZnRnd3h4b2EwOGdsZGdhbzBma3BxcjlhMXlpejFxNHZkZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/P9lYN2gbWDERpiukXN/giphy.gif)
+
 ## What the project does
 
 - Runs 2D object detectors on image sequences and writes detections in MOT format.
