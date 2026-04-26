@@ -4,7 +4,6 @@ import types
 import unittest
 from unittest.mock import MagicMock, patch
 import numpy as np
-import matplotlib.pyplot as plt
 
 TESTS_DIR = os.path.dirname(__file__)
 PROJECT_ROOT = os.path.dirname(TESTS_DIR)
@@ -77,54 +76,46 @@ class TestVisualizer(unittest.TestCase):
         mock_draw.assert_called_once()
 
     @patch("util.visualizer.io.imread")
-    @patch("util.visualizer.setup_panel")
-    @patch("util.visualizer.axis_one")
     def test_visualize_tracking_frame_render_image(self,
-                                                   mock_imread,
-                                                   mock_setup_panel,
-                                                   mock_axis_one):
+                                                   mock_imread):
         visualizer = Visualizer("bin")
-
-        dataset = MagicMock()
-        dataset.__getitem__.return_value = {
-            "image_path": "/fake/path/image.png",
-            "points_path": "/fake/path/points.bin",
-            "sample_id": "000123",
-        }
-
         fake_image = np.zeros((375, 1242, 3), dtype=np.uint8)
-
         mock_imread.return_value = fake_image
-        plt.ion()
-        visualizer.fig = plt.figure(figsize=(13, 7))
-        grid = visualizer.fig.add_gridspec(
-            nrows=4,
-            ncols=3,
-            width_ratios=[4, 4, 4],
-            height_ratios=[4, 4, 4, 4],
-            hspace=0.35,
-            wspace=0.18,
-        )
-        visualizer.axis_one = visualizer.fig.add_subplot(
-                grid[0:3, 0:3],
-                aspect="equal")
-        visualizer.axis_idf1 = visualizer.fig.add_subplot(grid[3, 0])
-        visualizer.axis_motp = visualizer.fig.add_subplot(grid[3, 1])
-        visualizer.axis_mota = visualizer.fig.add_subplot(grid[3, 2])
-        axes = [
-            visualizer.axis_one,
-            visualizer.axis_idf1,
-            visualizer.axis_motp,
-            visualizer.axis_mota,
-        ]
-        for axis in axes:
-            if axis is not None:
-                axis.cla()
-        mock_axis_one.imshow.assert_called_once()
-        visualizer.__visualize_boxes.assert_called_once()
-        visualizer.__visualize_metric_plots.assert_called_once()
+
+        visualizer.fig = MagicMock()
+        visualizer.fig.canvas = MagicMock()
+        visualizer.axis_one = MagicMock()
+        visualizer.axis_one.title = MagicMock()
+        visualizer.axis_idf1 = MagicMock()
+        visualizer.axis_motp = MagicMock()
+        visualizer.axis_mota = MagicMock()
+
+        trackers = np.array([[10, 20, 30, 40, 5]])
+        colours = np.ones((32, 3), dtype=np.float32)
+        metrics_history = {"idf1": [0.5]}
+
+        with patch.object(visualizer,
+                          "_Visualizer__visualize_boxes") as mock_boxes, \
+                patch.object(visualizer,
+                             "_Visualizer__visualize_metric_plots") as \
+                mock_metrics, \
+                patch.object(visualizer,
+                             "_Visualizer__visualize_and_draw") as mock_draw:
+            visualizer.visualize_tracking_frame("/fake/dataset",
+                                                123,
+                                                "png",
+                                                trackers,
+                                                colours,
+                                                metrics_history)
+
+        mock_imread.assert_called_once_with("/fake/dataset/000123.png")
+        visualizer.axis_one.imshow.assert_called_once_with(fake_image)
+        visualizer.axis_one.title.set_text.assert_called_once()
+        visualizer.axis_one.axis.assert_called_once_with("off")
+        mock_boxes.assert_called_once_with(trackers, colours)
+        mock_metrics.assert_called_once_with(metrics_history)
         visualizer.fig.tight_layout.assert_called_once()
-        visualizer.__visualize_and_draw.assert_called_once()
+        mock_draw.assert_called_once()
 
     def test_lidar_bin_to_bev_default_range_and_resolution(self):
         path_to_test_bin = "tests/point_sample.bin"
@@ -142,14 +133,56 @@ class TestVisualizer(unittest.TestCase):
         expected_width = (x_range[1] - x_range[0]) / resolution
         expected_heigth = (y_range[1] - y_range[0]) / resolution
         self.assertEquals(bev.shape, (expected_heigth, expected_width, 3))
-    # TODO Behavior Test for lidar_bin_to_bev
-    def test_lidar_bin_to_bev_synthetic_point_cloud_transformed():
-        points = np.array([0.1, 0.1, 0.1],
-                          [0.1, 0.1, 0.1],
-                          [0.1, 0.1, 0.1])
-        raise NotImplementedError()
 
-    # TODO negative Test for lidar_bin_to_bev
+    @patch("util.visualizer.np.fromfile")
+    def test_lidar_bin_to_bev_synthetic_point_cloud_transformed(self,
+                                                                mock_fromfile):
+        points = np.array([0.3, 0.5, 0.4, 0.7, 0.1, 0.1, 0.1, 0.1])
+        mock_fromfile.return_value = points
+        visualizer = Visualizer("bin")
+        bev = visualizer.lidar_bin_to_bev("")
+
+        max_height = bev[bev != 0][0]
+        max_intensity = bev[bev != 0][1]
+        max_density = bev[bev != 0][2]
+
+        self.assertEquals(np.floor(max_height), 0)
+        self.assertEquals(np.floor(max_intensity), 0)
+        self.assertEquals(np.floor(max_density), 0)
+
+    @patch("util.visualizer.np.fromfile")
+    def test_lidar_bin_to_bev_negative_tests(self,
+                                             mock_fromfile):
+        points = np.array([0.3, 0.5, 0.4])
+        mock_fromfile.return_value = points
+        visualizer = Visualizer("bin")
+        with self.assertRaises(ValueError):
+            visualizer.lidar_bin_to_bev("")
+
+        with self.assertRaises(ValueError):
+            visualizer.lidar_bin_to_bev("",
+                                        (40),
+                                        (-40.0, 40.0),
+                                        (-3.0),
+                                        0.1)
+
+        points = np.array([0.3, 0.5, 0.4, 0.7])
+        x_range = (0.0, 50.0)
+        y_range = (-50.0, 50.0)
+        z_range = (-3.0, 1.0)
+        resolution = 0.1
+        mock_fromfile.return_value = points
+
+        expected_width = (x_range[1] - x_range[0]) / resolution
+        expected_heigth = (y_range[1] - y_range[0]) / resolution
+
+        bev = visualizer.lidar_bin_to_bev("",
+                                          x_range,
+                                          y_range,
+                                          z_range,
+                                          0)
+        self.assertEquals(bev.shape, (expected_heigth, expected_width, 3))
+
 
 if __name__ == "__main__":
     unittest.main()

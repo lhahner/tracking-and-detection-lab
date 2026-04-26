@@ -143,6 +143,14 @@ class Visualizer:
             raise ValueError("The range should in the format of [0, 80]")
 
         points = np.fromfile(bin_path, dtype=np.float32)
+        if points.shape[0] % 4 != 0 and len(points.shape) == 1:
+            raise ValueError("The flat pointcloud should be divided "
+                             "in x,y,z and intensity")
+
+        if resolution <= 0:
+            logger.warn("Division by zero will cause Programm interrupt" 
+                        "continuing with 0.1 resolution.")
+            resolution = 0.1
 
         points = points.reshape(-1, 4)
         x, y, z, i = points.T
@@ -171,7 +179,6 @@ class Visualizer:
         max_height = np.full((heigth, width), -np.inf, dtype=np.float32)
         max_intensity = np.zeros((heigth, width), dtype=np.float32)
         counts = np.zeros((heigth, width), dtype=np.int32)
-
         # Find the largest values in terms of height and intensity
         for xi, yi, zi, ii in zip(x_idx, y_idx, z, i):
             if zi > max_height[yi, xi]:
@@ -179,12 +186,10 @@ class Visualizer:
             if ii > max_intensity[yi, xi]:
                 max_intensity[yi, xi] = ii
             counts[yi, xi] += 1
-
         # All values not set by our loop
         max_height[max_height == -np.inf] = z_range[0]
         z_range_difference = (z_range[1] - z_range[0] + 1e-6)
         max_height = (max_height - z_range[0]) / z_range_difference
-
         # Density is defined by the counts, more points = higher density
         density = np.log(counts + 1) / np.log(64)
         density = np.clip(density, 0, 1)
