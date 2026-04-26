@@ -1,4 +1,4 @@
-[![Python application](https://github.com/lhahner/tracking-and-detection-lab/actions/workflows/python-app.yml/badge.svg)](https://github.com/lhahner/tracking-and-detection-lab/actions/workflows/python-app.yml)
+[![Python application](https://github.com/lhahner/tracking-and-detection-lab/actions/workflows/python-app.yml/badge.svg)](https://github.com/lhahner/tracking-and-detection-lab/actions/workflows/python-app.yml) [![Pylint](https://github.com/lhahner/tracking-and-detection-lab/actions/workflows/pylint.yml/badge.svg)](https://github.com/lhahner/tracking-and-detection-lab/actions/workflows/pylint.yml)
 # Tracking and Detection Lab
 
 This project benchmarks object detection and multi-object tracking pipelines on MOT-style datasets such as `MOT15`, `KITTI-17`, and `MOT20-01`. It combines detector backends, tracker backends, visualization utilities, and MOT metric evaluation in one repository.
