@@ -1,7 +1,0 @@
-2026-04-19 19:27:49,638 | INFO     | __main__ | kitti3D.py:163 | Building object index for sample 000000
-2026-04-19 19:27:49,639 | INFO     | __main__ | kitti3D.py:167 | Loaded objects 1
-2026-04-19 19:27:49,639 | INFO     | __main__ | kitti3D.py:171 | 
-            Loaded filtered objects 1
-            
-2026-04-19 19:27:49,639 | INFO     | __main__ | kitti3D.py:192 | Building background index with sample 000000
-2026-04-19 19:27:50,170 | INFO     | detector.pointnet.proposals | proposals.py:30 | filtered points from (115384, 4) to (63073, 4)

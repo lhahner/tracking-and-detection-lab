@@ -105,7 +105,7 @@ class Application:
                 input_path=dataset_path, output_path=detection_path, threshold=0.9
             )
         if detector_name == "detr":
-            detector = DetrDetector(
+            detector = DetrHuggingFaceDetector(
                 input_path=dataset_path,
                 output_path=detection_path,
             )
