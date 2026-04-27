@@ -8,15 +8,15 @@ import open3d as o3d
 
 from util.logging_config import LoggingConfig
 
-logging_config = LoggingConfig()
-logger = logging_config.get_logger(__name__)
-
 def filter_points(points: np.ndarray, point_cloud_range: tuple[float, float, float, float, float, float]):
     """
     Filters out points according to the provided point_cloud_range.
     In e.g. KITTI-3D for example has no labels in the background this a filter should 
     cut out any points behind the vehicle.
     """
+    logging_config = LoggingConfig()
+    logger = logging_config.get_logger(__name__)
+
     x_min, y_min, z_min, x_max, y_max, z_max = point_cloud_range
     xyz = points[:, :3]
     mask = (
@@ -75,6 +75,9 @@ def cluster_to_proposal(cluster: np.ndarray) -> dict:
     also includes the center, dimensions, yaw and 
     the actual data points of the cluster.
     """
+    logging_config = LoggingConfig()
+    logger = logging_config.get_logger(__name__)
+
     xyz = cluster[:, :3]
     min_xyz = xyz.min(axis=0)
     max_xyz = xyz.max(axis=0)

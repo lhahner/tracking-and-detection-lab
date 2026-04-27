@@ -10,21 +10,24 @@ if SRC_ROOT not in sys.path:
     sys.path.insert(0, SRC_ROOT)
 
 from datasets.kitti3D import Kitti3D
+from util.logging_config import LoggingConfig
 
-BASE_DIR = "/media/lennart/LaCie/gau/advanced-research-training-applied-system-development/datasets/kitti_3D_object_detection"
+BASE_DIR = "tests/data/kitti3d_dummy"
+
+logging_config = LoggingConfig()
+logger = logging_config.get_logger(__name__)
 
 class Kitti3DTest(unittest.TestCase):
     def test_dataset_loaded_and_get_item(self):
-        kitti3D = Kitti3D(BASE_DIR, split="train")
-        first_frame = kitti3D[1]
-        
+        kitti3D = Kitti3D(BASE_DIR, split="training", logger=logger)
+        first_frame = kitti3D[0]
         self.assertEqual(
-            first_frame["sample_id"], "000001",
+            first_frame["sample_id"], "000000",
             "Should be the first id of the frame"
         )
         self.assertEqual(
-            first_frame["target"][0]["type"], "Truck", 
-            "Should be truck as 000001.txt is Truck"
+            first_frame["target"][0]["type"], "Pedestrian",
+            "Should be Pedestrian as 000000.txt is Predestrian"
         )
         self.assertTrue(
             first_frame["calib"]["P0"][0][0] != 0,
@@ -36,17 +39,19 @@ class Kitti3DTest(unittest.TestCase):
         self.assertTrue(
             first_frame["points"] is not None, "Points shouldn't be empty"
         )
-    
+
     @patch("datasets.kitti3D.Kitti3D._load_label")
     def test__load_label(self, mock_load_label):
-      mock_load_label.return_value = ("1", "/fake/path")
-      kitti3D = Kitti3D(BASE_DIR, split="train")
-      tmp = kitti3D._load_label(1)
-      assert tmp == ("1", "/fake/path")
-    
+        mock_load_label.return_value = ("1", "/fake/path")
+        kitti3D = Kitti3D(BASE_DIR, split="training", logger=logger)
+        tmp = kitti3D._load_label(1)
+        assert tmp == ("1", "/fake/path")
+
     @patch("datasets.kitti3D.Kitti3D._load_label")
     @patch("datasets.kitti3D.Kitti3D.filter_supported_objects")
-    def test__build_object_index(self, mock_filter_supported_objects, mock_load_label):
+    def test__build_object_index(self,
+                                 mock_filter_supported_objects,
+                                 mock_load_label):
         objects = [
             {
                 "type": "Truck",
@@ -84,11 +89,9 @@ class Kitti3DTest(unittest.TestCase):
             (0, objects[0]),
             (1, objects[1]),
         ]
-        
-        kitti3D = Kitti3D(BASE_DIR, split="train")
+        kitti3D = Kitti3D(BASE_DIR, split="training", logger=logger)
         kitti3D.sample_ids = ["000000", "000001", "000002"]
         object_index = kitti3D._build_object_index()
-        
         self.assertEqual(
             object_index,
             [
@@ -102,8 +105,7 @@ class Kitti3DTest(unittest.TestCase):
         )
         self.assertEqual(mock_load_label.call_count, 3)
         self.assertEqual(mock_filter_supported_objects.call_count, 3)
-        
-        
-        
+
+
 if __name__ == "__main__":
     unittest.main()

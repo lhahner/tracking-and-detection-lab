@@ -3,7 +3,7 @@ project:
   seed: 0
 
 paths:
-  dataset_path: "/home/lennart/Dokumente/gau/advanced-research-training-applied-system-development/track-lab/data/MOT15/train/KITTI-17/img1/" 
+  dataset_path: "" 
   output_root: "./output"
   detections_root: "./data"
   models_root: "/home/lennart/Dokumente/gau/master-thesis/tracking-and-detection-lab/src/detector/pointnet/models/pointnet_kitti.pth"

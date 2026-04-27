@@ -86,8 +86,6 @@ class SettingsLoader:
               ),
             raw=data,
           )
-        
-        SettingsLoader.validate(settings)
         return settings
 
     @staticmethod

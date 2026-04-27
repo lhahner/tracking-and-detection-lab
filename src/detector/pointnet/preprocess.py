@@ -5,18 +5,14 @@ import torch
 
 from util.logging_config import LoggingConfig
 
-logging_config = LoggingConfig()
-logger = logging_config.get_logger(__name__)
-
 
 def sample_points(points: np.ndarray, num_points: int) -> np.ndarray:
     """
     Returns a random set of points from the clustered Dataset.
     """
-    if logger is None:
-        raise ValueError("""
-            This functions needs to have a logger object provided to run
-            """)
+    logging_config = LoggingConfig()
+    logger = logging_config.get_logger(__name__)
+
     if points.shape[0] == 0:
         logger.warn("Some points are empty, continue with zeros")
 

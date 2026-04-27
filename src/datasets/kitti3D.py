@@ -161,7 +161,8 @@ class Kitti3D(Dataset):
             return object_index
 
         for sample_id in self.sample_ids:
-            self.logger.info(f"Building object index for sample {sample_id}")
+            self.logger.info("Building object index "
+                             f"for sample {sample_id}")
 
             # Loads labels into object array.
             objects, _ = self._load_label(sample_id)
@@ -169,7 +170,8 @@ class Kitti3D(Dataset):
 
             # Filters out dont care values
             filtered_objects = self.filter_supported_objects(objects)
-            self.logger.info("Loaded filtered objects {len(filtered_objects)}")
+            self.logger.info("Loaded filtered objects"
+                             f"{len(filtered_objects)}")
 
             # Builds object_index map with the data for training
             for object_idx, _ in filtered_objects:
@@ -214,8 +216,9 @@ class Kitti3D(Dataset):
             if max_iou < self.background_iou_threshold:
                 center_proposal = proposal["center"].astype(np.float32)
                 self.logger.debug(
-                    f"background;sample_id={sample_id},center={center_proposal}"
-                )
+                       f"background;sample_id={sample_id}",
+                       f"center={center_proposal}"
+                   )
 
                 background_index.append(
                     (

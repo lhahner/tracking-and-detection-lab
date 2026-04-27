@@ -5,9 +5,6 @@ from skimage import io
 import numpy as np
 from util.logging_config import LoggingConfig
 
-logging_config = LoggingConfig()
-logger = logging_config.get_logger(__name__)
-
 
 class Visualizer:
     def __init__(self, datatype):
@@ -139,6 +136,9 @@ class Visualizer:
         x_range / resolution and y_range /resoltion provide width
         and height of the image.
         """
+        logging_config = LoggingConfig()
+        logger = logging_config.get_logger(__name__)
+
         if not all(isinstance(i, tuple) for i in [x_range, y_range, z_range]):
             raise ValueError("The range should in the format of [0, 80]")
 
