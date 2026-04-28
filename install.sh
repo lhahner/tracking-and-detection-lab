@@ -9,6 +9,8 @@ TORCHVISION_VERSION="${TORCHVISION_VERSION:-0.20.1}"
 TORCHAUDIO_VERSION="${TORCHAUDIO_VERSION:-2.5.1}"
 CUDA_FLAVOR="${CUDA_FLAVOR:-cpu}"
 INSTALL_DETECTRON2="${INSTALL_DETECTRON2:-1}"
+INSTALL_MMDET3D="${INSTALL_MMDET3D:-0}"
+MMDET3D_REPO_URL="${MMDET3D_REPO_URL:-git+https://github.com/lhahner/mmdetection3d-cpu-only.git}"
 
 usage() {
   cat <<'EOF'
@@ -20,12 +22,14 @@ Options:
   --python VERSION        Python version. Default: 3.10
   --cuda FLAVOR           One of: cpu, cu121, cu124. Default: cpu
   --without-detectron2    Skip detectron2 installation
+  --with-mmdet3d          Install MMDetection3D and its OpenMMLab dependencies
   --help                  Show this help
 
 Examples:
   bash install.sh
   bash install.sh --cuda cu121
   bash install.sh --env track-lab-gpu --cuda cu124
+  bash install.sh --with-mmdet3d
 EOF
 }
 
@@ -45,6 +49,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --without-detectron2)
       INSTALL_DETECTRON2=0
+      shift
+      ;;
+    --with-mmdet3d)
+      INSTALL_MMDET3D=1
       shift
       ;;
     --help)
@@ -113,6 +121,25 @@ else
   echo "Skipping detectron2 installation"
 fi
 
+if [[ "${INSTALL_MMDET3D}" == "1" ]]; then
+  echo "Installing OpenMMLab package manager"
+  python -m pip install -U openmim
+
+  echo "Installing MMEngine"
+  mim install mmengine
+
+  echo "Installing mmcv-lite for CPU-oriented MMDetection3D usage"
+  mim install "mmcv-lite>=2.0.0rc4,<2.2.0"
+
+  echo "Installing MMDetection"
+  mim install "mmdet>=3.0.0,<3.4.0"
+
+  echo "Installing MMDetection3D from fork without build isolation: ${MMDET3D_REPO_URL}"
+  python -m pip install -v --no-build-isolation "${MMDET3D_REPO_URL}"
+else
+  echo "Skipping MMDetection3D installation"
+fi
+
 echo "Verifying installed packages"
 python - <<'PY'
 import importlib.util
@@ -128,6 +155,12 @@ if importlib.util.find_spec("detectron2") is not None:
     print(f"detectron2={getattr(detectron2, '__version__', 'installed')}")
 else:
     print("detectron2=not-installed")
+
+if importlib.util.find_spec("mmdet3d") is not None:
+    import mmdet3d
+    print(f"mmdet3d={getattr(mmdet3d, '__version__', 'installed')}")
+else:
+    print("mmdet3d=not-installed")
 
 print(f"timm_installed={importlib.util.find_spec('timm') is not None}")
 PY
