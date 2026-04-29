@@ -1,5 +1,7 @@
 data
 src/detector/yolo/model/*.pt
+external/*
+
 
 # Vim
 *~
