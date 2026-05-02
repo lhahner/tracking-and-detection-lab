@@ -10,7 +10,7 @@ TORCHAUDIO_VERSION="${TORCHAUDIO_VERSION:-2.5.1}"
 CUDA_FLAVOR="${CUDA_FLAVOR:-cpu}"
 INSTALL_DETECTRON2="${INSTALL_DETECTRON2:-1}"
 INSTALL_MMDET3D="${INSTALL_MMDET3D:-0}"
-MMDET3D_REPO_URL="${MMDET3D_REPO_URL:-git+https://github.com/lhahner/mmdetection3d-cpu-only.git}"
+MMDET3D_REPO_URL="${MMDET3D_REPO_URL:-https://github.com/lhahner/mmdetection3d-cpu-only.git}"
 
 usage() {
   cat <<'EOF'
@@ -36,14 +36,29 @@ EOF
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --env)
+      if [[ $# -lt 2 ]]; then
+        echo "Missing value for --env" >&2
+        usage
+        exit 1
+      fi
       ENV_NAME="$2"
       shift 2
       ;;
     --python)
+      if [[ $# -lt 2 ]]; then
+        echo "Missing value for --python" >&2
+        usage
+        exit 1
+      fi
       PYTHON_VERSION="$2"
       shift 2
       ;;
     --cuda)
+      if [[ $# -lt 2 ]]; then
+        echo "Missing value for --cuda" >&2
+        usage
+        exit 1
+      fi
       CUDA_FLAVOR="$2"
       shift 2
       ;;
@@ -86,9 +101,10 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 eval "$(conda shell.bash hook)"
 
-echo "Creating conda environment '${ENV_NAME}' with Python ${PYTHON_VERSION}"
-conda create -n "${ENV_NAME}" "python=${PYTHON_VERSION}" -y
-
+if ! conda env list | awk '{print $1}' | grep -Fx "${ENV_NAME}" >/dev/null 2>&1; then
+  echo "Creating conda environment '${ENV_NAME}' with Python ${PYTHON_VERSION}"
+  conda create -n "${ENV_NAME}" "python=${PYTHON_VERSION}" -y
+fi
 echo "Activating '${ENV_NAME}'"
 conda activate "${ENV_NAME}"
 
@@ -134,8 +150,18 @@ if [[ "${INSTALL_MMDET3D}" == "1" ]]; then
   echo "Installing MMDetection"
   mim install "mmdet>=3.0.0,<3.4.0"
 
-  echo "Installing MMDetection3D from fork without build isolation: ${MMDET3D_REPO_URL}"
-  python -m pip install -v --no-build-isolation "${MMDET3D_REPO_URL}"
+  if [[ $(lshw -C display | grep vendor) =~ Nvidia && ! $CUDA_FLAVOR =~ cpu ]]; then
+  	echo "Installing MMDetection3D from fork without build isolation: ${MMDET3D_REPO_URL}"
+  	mim install "mmdet3d>=1.1.0" 
+  else
+    echo "No Nvidia GPU detected can't install MMDetection3D normally, instead using custom cpu-only"
+    if [[ ! -d "./external" ]]; then
+      mkdir external
+    fi
+    if [[ ! -d "./external/mmdetection3d-cpu-only" ]]; then
+      git clone "${MMDET3D_REPO_URL}" ./external/mmdetection3d-cpu-only
+    fi
+  fi
 else
   echo "Skipping MMDetection3D installation"
 fi

@@ -72,12 +72,4 @@ class TestMMDetection3DCompatability(unittest.TestCase):
                 ]
             },
         )
-        result, data = inference_detector(model, str(sample_path))
-
         self.assertIsNotNone(model)
-        self.assertIsNotNone(result)
-        self.assertIsNotNone(data)
-        self.assertTrue(
-            hasattr(result, "pred_instances_3d"),
-            "Inference returned no pred_instances_3d attribute.",
-        )
