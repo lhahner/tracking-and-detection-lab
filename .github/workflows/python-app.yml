@@ -30,4 +30,4 @@ jobs:
         ./install.sh
     - name: Test with unittest
       run: |
-        python -m unittest discover -s tests
+        conda run -n track-lab python -m unittest discover -s tests
