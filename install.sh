@@ -83,8 +83,9 @@ while [[ $# -gt 0 ]]; do
 done
 
 if ! command -v conda >/dev/null 2>&1; then
-  echo "conda is required but was not found in PATH." >&2
-  exit 1
+  echo "Conda is required but was not found in PATH." >&2
+  wget https://repo.anaconda.com/archive/Anaconda3-2022.05-Linux-x86_64.sh 
+  bash Anaconda3-2022.05-Linux-x86_64.sh
 fi
 
 case "${CUDA_FLAVOR}" in
