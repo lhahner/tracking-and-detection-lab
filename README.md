@@ -1,8 +1,13 @@
+[![Python application](https://github.com/lhahner/tracking-and-detection-lab/actions/workflows/python-app.yml/badge.svg)](https://github.com/lhahner/tracking-and-detection-lab/actions/workflows/python-app.yml) [![Pylint](https://github.com/lhahner/tracking-and-detection-lab/actions/workflows/pylint.yml/badge.svg)](https://github.com/lhahner/tracking-and-detection-lab/actions/workflows/pylint.yml) [![Dependency Graph](https://github.com/lhahner/tracking-and-detection-lab/actions/workflows/dependabot/update-graph/badge.svg)](https://github.com/lhahner/tracking-and-detection-lab/actions/workflows/dependabot/update-graph) [![CodeQL Advanced](https://github.com/lhahner/tracking-and-detection-lab/actions/workflows/codeql.yml/badge.svg)](https://github.com/lhahner/tracking-and-detection-lab/actions/workflows/codeql.yml)
 # Tracking and Detection Lab
 
 This project benchmarks object detection and multi-object tracking pipelines on MOT-style datasets such as `MOT15`, `KITTI-17`, and `MOT20-01`. It combines detector backends, tracker backends, visualization utilities, and MOT metric evaluation in one repository.
 
 The main runtime entrypoint is [src/app.py](/home/lennart/Dokumente/gau/advanced-research-training-applied-system-development/track-lab/src/app.py). Runtime configuration is read from [src/settings.yaml](/home/lennart/Dokumente/gau/advanced-research-training-applied-system-development/track-lab/src/settings.yaml).
+
+ <div style="display: flex; justify-content: center;">
+    <img width="1000" src="https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExZzJvNmZuZnRnd3h4b2EwOGdsZGdhbzBma3BxcjlhMXlpejFxNHZkZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/P9lYN2gbWDERpiukXN/giphy.gif">
+</div>
 
 ## What the project does
 

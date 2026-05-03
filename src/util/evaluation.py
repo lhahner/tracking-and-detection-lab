@@ -73,6 +73,96 @@ class Evaluation:
         normalized_name = str(sequence_name).upper()
         return normalized_name.startswith(pedestrian_sequences)
 
+    def create_mot_accumulator(self):
+        """Create an accumulator for incremental MOT metric computation.
+
+        Returns:
+            motmetrics.MOTAccumulator: Empty accumulator that can be reused
+            across frames with `compute_cumulative_tracking_metrics`.
+        """
+        return mm.MOTAccumulator(auto_id=False)
+
+    def convert_trackers_to_mot_items(self, trackers):
+        """Convert tracker output from `x1, y1, x2, y2, id` to MOT items.
+
+        Args:
+            trackers: One or more tracker rows in `x1, y1, x2, y2, id` form.
+
+        Returns:
+            list[tuple[int, list[float]]]: Object IDs with boxes in MOT `xywh`
+            format.
+        """
+        tracker_rows = np.asarray(trackers, dtype=float)
+        if tracker_rows.size == 0:
+            return []
+        if tracker_rows.ndim == 1:
+            tracker_rows = tracker_rows.reshape(1, -1)
+
+        mot_items = []
+        for tracker_row in tracker_rows:
+            if tracker_row.size < 5:
+                continue
+
+            x1, y1, x2, y2, track_id = tracker_row[:5]
+            mot_items.append((int(track_id), [x1, y1, x2 - x1, y2 - y1]))
+
+        return mot_items
+
+    def compute_cumulative_tracking_metrics(self,
+                                            mot_accumulator,
+                                            frame_number,
+                                            ground_truth_by_frame,
+                                            trackers,
+                                            sequence_name="sequence"):
+        """Update cumulative MOT metrics for one frame of tracker output.
+
+        This method is intended for live visualization. Pass the same
+        accumulator on every frame and it returns the cumulative IDF1, MOTA,
+        and MOTP values after the current frame has been added.
+
+        Args:
+            mot_accumulator: Accumulator created by `create_mot_accumulator`.
+            frame_number: Current frame number.
+            ground_truth_by_frame: Mapping produced by `read_mot_file`.
+            trackers: Tracker rows in `x1, y1, x2, y2, id` form.
+            sequence_name: Name used in the metrics summary index.
+
+        Returns:
+            dict[str, float]: Cumulative `idf1`, `mota`, and `motp` values.
+        """
+        ground_truth_items = ground_truth_by_frame.get(frame_number, [])
+        predicted_items = self.convert_trackers_to_mot_items(trackers)
+
+        ground_truth_ids = [item[0] for item in ground_truth_items]
+        predicted_ids = [item[0] for item in predicted_items]
+
+        ground_truth_boxes_xywh = [item[1] for item in ground_truth_items]
+        predicted_boxes_xywh = [item[1] for item in predicted_items]
+
+        maximum_iou_distance = 1.0 - self.iou_threshold
+        iou_distance_matrix = mm.distances.iou_matrix(
+            ground_truth_boxes_xywh,
+            predicted_boxes_xywh,
+            max_iou=maximum_iou_distance,
+        )
+
+        mot_accumulator.update(
+            ground_truth_ids,
+            predicted_ids,
+            iou_distance_matrix,
+            frameid=frame_number,
+        )
+
+        metrics = ["idf1", "mota", "motp"]
+        summary = self.metrics_handler.compute(
+            mot_accumulator,
+            metrics=metrics,
+            name=sequence_name,
+        )
+
+        metric_row = summary.loc[sequence_name]
+        return {metric: metric_row[metric] for metric in metrics}
+
     def evaluate_sequence(self, ground_truth_file_path, 
                           predicted_tracking_file_path, 
                           sequence_name="sequence", 

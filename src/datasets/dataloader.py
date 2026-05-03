@@ -45,17 +45,33 @@ def get_dataloader(
     shuffle=True,
     drop_last=False,
     collate_mode="auto",
+    logger=None,
 ):
+    if logger is None:
+        raise ValueError("To load data provide logger")
+
     if collate_mode == "auto":
         collate_mode = getattr(dataset, "mode", "frame")
 
     if collate_mode == "object":
+        logger.info(
+            "Loading;"
+            f"collate_mode={collate_mode}"
+            f"num_points={num_points}"
+            f"batch_size={batch_size}"
+        )
         collate_fn = partial(
             object_collate_fn,
             num_points=num_points,
             use_intensity=use_intensity,
         )
     elif collate_mode == "frame":
+        logger.info(
+            "Loading;"
+            f"collate_mode={collate_mode}"
+            f"num_points={num_points}"
+            f"batch_size={batch_size}"
+        )
         collate_fn = frame_collate_fn
     else:
         raise ValueError(
@@ -71,4 +87,3 @@ def get_dataloader(
         drop_last=drop_last,
         collate_fn=collate_fn,
     )
-
