@@ -149,7 +149,12 @@ if [[ "${INSTALL_MMDET3D}" == "1" ]]; then
 
   echo "Installing MMDetection"
   mim install "mmdet>=3.0.0,<3.4.0"
-
+  
+  if ! command -v lshw >/dev/null 2>&1
+  then
+	  echo "lshw could not be found"
+	  exit 1
+  fi
   if [[ $(lshw -C display | grep vendor) =~ Nvidia && ! $CUDA_FLAVOR =~ cpu ]]; then
   	echo "Installing MMDetection3D from fork without build isolation: ${MMDET3D_REPO_URL}"
   	mim install "mmdet3d>=1.1.0" 

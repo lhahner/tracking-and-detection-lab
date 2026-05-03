@@ -17,12 +17,23 @@ class TestMMDetection3DCompatability(unittest.TestCase):
     def test_cpu_only_compatability(self):
         if importlib.util.find_spec("mmdet3d") is None:
             self.skipTest("mmdet3d is not installed.")
-        MMDET3D = os.path.join(PROJECT_ROOT, "external/mmdetection3d-cpu-only")
-        config_file = os.path.join(MMDET3D, "configs/pointnet2/pointnet2_msg_2xb16-cosine-250e_scannet-seg.py")
-        checkpoint_file = Path(str(
-            f"{PROJECT_ROOT}/tests/data"
-            "/pointnet2_msg_xyz-only_16x2_cosine_250e_scannet_seg-3d-20class_20210514_143838-b4a3cf89_dummy.pth")
-        )
+
+        elif os.path.exists(os.path.join(PROJECT_ROOT, "external/mmdetection3d-cpu-only")):
+            MMDET3D = os.path.join(PROJECT_ROOT,
+                                   "external/mmdetection3d-cpu-only")
+            config_file = os.path.join(MMDET3D,
+                                       "configs/pointnet2/"
+                                       "pointnet2_msg_2xb16-"
+                                       "cosine-250e_scannet-seg.py")
+            checkpoint_file = Path(str(
+                f"{PROJECT_ROOT}/tests/data"
+                "/pointnet2_msg_xyz-only_16x2_"
+                "cosine_250e_scannet_seg-3d-"
+                "20class_20210514_143838-b4a3cf89_dummy.pth")
+            )
+        else:
+            config_file = Path(str('pointpillars_hv_secfpn_8xb6-160e_kitti-3d-car.py'))
+            checkpoint_file = Path(str('hv_pointpillars_secfpn_6x8_160e_kitti-3d-car_20220331_134606-d42d15ed.pth'))
 
         if not config_file or not checkpoint_file:
             self.skipTest("Config or Checkpoint path not present")
@@ -30,7 +41,8 @@ class TestMMDetection3DCompatability(unittest.TestCase):
         config_path = Path(config_file).expanduser()
         checkpoint_path = Path(checkpoint_file).expanduser()
         sample_path = (
-            Path(PROJECT_ROOT) / "tests/data/kitti3d_dummy/training/velodyne/000000.bin"
+            Path(PROJECT_ROOT) / "tests/data/kitti3d_dummy/"
+                                 "training/velodyne/000000.bin"
         )
 
         if not checkpoint_path.exists():
