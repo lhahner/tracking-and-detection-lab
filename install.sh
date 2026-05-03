@@ -3,7 +3,7 @@
 set -euo pipefail
 
 ENV_NAME="${ENV_NAME:-track-lab}"
-PYTHON_VERSION="${PYTHON_VERSION:-3.10}"
+PYTHON_VERSION="${PYTHON_VERSION:-3.10.20}"
 PYTORCH_VERSION="${PYTORCH_VERSION:-2.5.1}"
 TORCHVISION_VERSION="${TORCHVISION_VERSION:-0.20.1}"
 TORCHAUDIO_VERSION="${TORCHAUDIO_VERSION:-2.5.1}"
@@ -108,13 +108,24 @@ fi
 echo "Activating '${ENV_NAME}'"
 conda activate "${ENV_NAME}"
 
+PYTHON_MAJOR_MINOR="$(printf '%s' "${PYTHON_VERSION}" | cut -d. -f1-2)"
+case "${PYTHON_MAJOR_MINOR}" in
+  3.10|3.11|3.12)
+    ;;
+  *)
+    echo "Unsupported Python version for the pinned dependency set: ${PYTHON_VERSION}" >&2
+    echo "Use Python 3.10, 3.11, or 3.12 with torch ${PYTORCH_VERSION}, torchvision ${TORCHVISION_VERSION}, and open3d 0.19.0." >&2
+    exit 1
+    ;;
+esac
+
 echo "Installing packaging tools"
 # Detectron2 still imports pkg_resources, which is no longer present in setuptools 81+.
 python -m pip install --upgrade pip wheel
 python -m pip install "setuptools<81"
 
 echo "Installing helper build/runtime packages"
-python -m pip install ninja opencv-python
+python -m pip install ninja "opencv-python==4.10.0.84"
 
 echo "Installing PyTorch ${PYTORCH_VERSION} and torchvision ${TORCHVISION_VERSION} from ${PYTORCH_INDEX_URL}"
 python -m pip install \
@@ -126,10 +137,43 @@ python -m pip install \
 echo "Installing NumPy < 2 for motmetrics compatibility"
 python -m pip install "numpy<2"
 
+echo "veryfing glibc version for open3d"
+OPEN3D_VIA_CONDA=0
+if [[ "$(uname -s)" == "Linux" ]]; then
+  GLIBC_VERSION="$(ldd --version 2>/dev/null | awk '{print $NF}' | head -n1)"
+  if [[ -n "${GLIBC_VERSION}" ]] && [[ "${GLIBC_VERSION}" != "2.31" ]]; then
+    OPEN3D_VIA_CONDA=1
+  fi
+fi
+
 echo "Installing project requirements"
-python -m pip install -r "${REPO_ROOT}/requirements.txt"
+if [[ "${OPEN3D_VIA_CONDA}" == "1" ]]; then
+  echo "Detected glibc ${GLIBC_VERSION}; installing Open3D from conda-forge because pip wheels require glibc >= 2.31"
+  TMP_REQUIREMENTS="$(mktemp)"
+  grep -v '^open3d==' "${REPO_ROOT}/requirements.txt" > "${TMP_REQUIREMENTS}"
+  python -m pip install -r "${TMP_REQUIREMENTS}"
+  rm -f "${TMP_REQUIREMENTS}"
+  conda install -n "${ENV_NAME}" -c conda-forge open3d -y
+else
+  python -m pip install -r "${REPO_ROOT}/requirements.txt"
+fi
 
 if [[ "${INSTALL_DETECTRON2}" == "1" ]]; then
+  echo "Installing Conda C/C++ toolchain for detectron2"
+  conda install -n "${ENV_NAME}" -c conda-forge gcc_linux-64 gxx_linux-64 -y
+
+  CONDA_BIN_DIR="$(python - <<'PY'
+import sys
+from pathlib import Path
+
+print(Path(sys.prefix) / "bin")
+PY
+)"
+  export CC="${CONDA_BIN_DIR}/x86_64-conda-linux-gnu-gcc"
+  export CXX="${CONDA_BIN_DIR}/x86_64-conda-linux-gnu-g++"
+
+  echo "Using CC=${CC}"
+  echo "Using CXX=${CXX}"
   echo "Installing detectron2 from source"
   python -m pip install --no-build-isolation \
     "detectron2 @ git+https://github.com/facebookresearch/detectron2.git"
@@ -150,11 +194,6 @@ if [[ "${INSTALL_MMDET3D}" == "1" ]]; then
   echo "Installing MMDetection"
   mim install "mmdet>=3.0.0,<3.4.0"
   
-  if ! command -v lshw >/dev/null 2>&1
-  then
-	  echo "lshw could not be found"
-	  exit 1
-  fi
   if [[ $(lspci | grep -i '.* NVIDIA .*') && ! $CUDA_FLAVOR =~ cpu ]]; then
   	echo "Installing MMDetection3D from fork without build isolation: ${MMDET3D_REPO_URL}"
   	mim install "mmdet3d>=1.1.0" 
@@ -169,6 +208,12 @@ if [[ "${INSTALL_MMDET3D}" == "1" ]]; then
   fi
 else
   echo "Skipping MMDetection3D installation"
+fi
+
+echo "Verifying GLIBCXX version"
+if [[ $CONDA_DEFAULT_ENV == track-lab ]]; then
+	conda install -c conda-forge libstdcxx-ng libgcc-ng
+	conda install -c conda-forge gxx_linux-64 gcc_linux-64
 fi
 
 echo "Verifying installed packages"
