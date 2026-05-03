@@ -155,7 +155,7 @@ if [[ "${INSTALL_MMDET3D}" == "1" ]]; then
 	  echo "lshw could not be found"
 	  exit 1
   fi
-  if [[ $(lshw -C display | grep vendor) =~ Nvidia && ! $CUDA_FLAVOR =~ cpu ]]; then
+  if [[ $(lspci | grep -i '.* NVIDIA .*') && ! $CUDA_FLAVOR =~ cpu ]]; then
   	echo "Installing MMDetection3D from fork without build isolation: ${MMDET3D_REPO_URL}"
   	mim install "mmdet3d>=1.1.0" 
   else
@@ -164,7 +164,7 @@ if [[ "${INSTALL_MMDET3D}" == "1" ]]; then
       mkdir external
     fi
     if [[ ! -d "./external/mmdetection3d-cpu-only" ]]; then
-      git clone "${MMDET3D_REPO_URL}" ./external/mmdetection3d-cpu-only
+      git clone "${MMDET3D_REPO_URL}" ${REPO_ROOT}/external/mmdetection3d-cpu-only
     fi
   fi
 else
