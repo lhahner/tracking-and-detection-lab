@@ -84,8 +84,7 @@ done
 
 if ! command -v conda >/dev/null 2>&1; then
   echo "Conda is required but was not found in PATH." >&2
-  wget https://repo.anaconda.com/archive/Anaconda3-2022.05-Linux-x86_64.sh 
-  bash Anaconda3-2022.05-Linux-x86_64.sh
+  exit 1
 fi
 
 case "${CUDA_FLAVOR}" in
