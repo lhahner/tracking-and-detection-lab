@@ -11,7 +11,7 @@ timm
 matplotlib
 Pillow
 PyYAML
-opencv-python
+opencv-python==4.10.0.84
 deep-sort-realtime
 ultralytics
 open3d==0.19.0
