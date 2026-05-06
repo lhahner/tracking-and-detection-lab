@@ -19,5 +19,8 @@ class TestPointRCNNmmDetections3D(unittest.TestCase):
                 "./point_sample.bin",
                 "./models/point_rcnn_2x8_kitti-3d-3classes_20211208_151344.pth"
                 )
-        detections = pointrcnnmmdetections3D.detect()
+        prev_results = []
+        results = []
+        detections = pointrcnnmmdetections3D.format_detections("00001", prev_results,
+                                                               results)
         self.assertTrue(len(detections) > 0)  # Smoke test

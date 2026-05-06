@@ -1,6 +1,7 @@
 import torch
 import sys
 import os
+import math
 
 from detector.detector import Detector
 from torch.utils.data import DataLoader
@@ -52,6 +53,28 @@ class PointRCNNmmDetections3D(Detector):
         write_output(detections)
         return detections
 
-    def format_detections(self, frame_index, results):
-        # https://mmengine.readthedocs.io/en/v0.10.0/api/generated/mmengine.structures.InstanceData.html  
-        xyz_centroids = results.gt_instances_3d().instance_data[instance_data.bboxes]
+    def format_detections(self, frame_index, prev_results, results):
+        """
+        The tracking system requires the following dimensions
+        - x_1: Left boundary coordinate
+        - y_1: Top boundary coordinate
+        - z_1: Top Left boundary coordinate
+        - x_2: Right boundary coordinate
+        - y_2: Bottom boundary coordinate
+        - z_3: Bottom Right boundary coordinate
+        - score: Detection confidence score
+        """
+        xyz_centroids = \
+                results.gt_instances_3d().instance_data[instance_data.bboxes][0]
+        lwh_box = results.gt_instances_3d().instance_data[instance_data.bboxes][1]
+        rotation_box = results.gt_instances_3d().instance_data[instance_data.bboxes][2]
+        det_scores = results.gt_instances_3d().intsance_data[instance_data.det_scores]
+        yaw = rotation_box[2]
+        
+        rotation_matrix = torch.stack(torch.stack([torch.cos(yaw), -torch.sin(yaw), 0]),
+                                      torch.stack([torch.sin(yaw), torch.cos(yaw)], 0),
+                                      torch.stack([0, 0, 1]))
+        box_corner = torch.stack(lwh_box[0]/2, lwh_box[1]/2, lwh_box[2]/2)
+        world_bbox = xyz_centroids + rotation_matrix @ box_corner
+        return world_bbox
+
