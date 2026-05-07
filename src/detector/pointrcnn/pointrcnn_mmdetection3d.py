@@ -6,6 +6,7 @@ import math
 from detector.detector import Detector
 from torch.utils.data import DataLoader
 from util.file_handler import write_output
+from pytorch3d.structures import Pointclouds
 
 if torch.cuda.is_available():
     from mmdet3d.apis import init_model, inteference_detector
@@ -64,17 +65,28 @@ class PointRCNNmmDetections3D(Detector):
         - z_3: Bottom Right boundary coordinate
         - score: Detection confidence score
         """
-        xyz_centroids = \
-                results.gt_instances_3d().instance_data[instance_data.bboxes][0]
+        xyz_centroids = results.gt_instances_3d().instance_data[instance_data.bboxes][0]
         lwh_box = results.gt_instances_3d().instance_data[instance_data.bboxes][1]
         rotation_box = results.gt_instances_3d().instance_data[instance_data.bboxes][2]
         det_scores = results.gt_instances_3d().intsance_data[instance_data.det_scores]
         yaw = rotation_box[2]
-        
+        # Rotation matrix based on yaw at corner z in local coordiantes 
         rotation_matrix = torch.stack(torch.stack([torch.cos(yaw), -torch.sin(yaw), 0]),
                                       torch.stack([torch.sin(yaw), torch.cos(yaw)], 0),
-                                      torch.stack([0, 0, 1]))
-        box_corner = torch.stack(lwh_box[0]/2, lwh_box[1]/2, lwh_box[2]/2)
-        world_bbox = xyz_centroids + rotation_matrix @ box_corner
-        return world_bbox
+                                      torch.stack([0, 0, 1])
+                                      )
+        # compute per bounding each corner of every coodinate, 8 corners meaning 8 cooridnates
+        local_box_corner = torch.stack(
+                [lwh_box[0]/2, lwh_box[1]/2, lwh_box[2]/2]  # corner x left front
+                [lwh_box[0]/2, -lwh_box[1]/2, lwh_box[2]/2]  # corner x right front
+                [-lwh_box[0]/2, -lwh_box[1]/2, lwh_box[2]/2]  # corner x left back
+                [-lwh_box[0]/2, lwh_box[1]/2, lwh_box[2]/2]  # corner x right back
+                [lwh_box[0]/2, lwh_box[1]/2, -lwh_box[2]/2]  # corner y left front
+                [lwh_box[0]/2, -lwh_box[1]/2, -lwh_box[2]/2]  # corner y right front
+                [-lwh_box[0]/2, -lwh_box[1]/2, -lwh_box[2]/2]  # corner y left back
+                [-lwh_box[0]/2, lwh_box[1]/2, -lwh_box[2]/2]  # corner y right back
+        )
+        # The coordiantes of the bounding box in world coordinates
+        world_bbox = xyz_centroids + rotation_matrix @ local_box_corner
+        return Pointclouds(points=list(world_bbox)).get_bounding_boxes
 
