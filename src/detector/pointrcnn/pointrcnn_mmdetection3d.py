@@ -50,11 +50,18 @@ class PointRCNNmmDetections3D(Detector):
         formatted_detections = []
         for point, sample in test_dataloader:
             detections = inference_detector(self.model, point)
-            formatted_detections = self.format_detections(sample, detections)
+            data = results.gt_instances_3d() 
+            formatted_detections = self.format_detections(sample, 
+                                                          data.instance_data[instance_data.bboxes][0],
+                                                          data.instance_data[instance_data.bboxes][1],
+                                                          data.instance_data[instance_data.bboxes][2]
+                                                          data.intsance_data[instance_data.det_scores]
+                                                          )
         write_output(detections)
         return detections
 
-    def format_detections(self, frame_index, prev_results, results):
+    def format_detections(self, frame_index: int, xyz_centroids: torch.tensor, lwh_box: torch.tensor, 
+                          rotation_box: torch.tensor, det_scores):
         """
         The tracking system requires the following dimensions
         - x_1: Left boundary coordinate
@@ -65,17 +72,14 @@ class PointRCNNmmDetections3D(Detector):
         - z_3: Bottom Right boundary coordinate
         - score: Detection confidence score
         """
-        xyz_centroids = results.gt_instances_3d().instance_data[instance_data.bboxes][0]
-        lwh_box = results.gt_instances_3d().instance_data[instance_data.bboxes][1]
-        rotation_box = results.gt_instances_3d().instance_data[instance_data.bboxes][2]
-        det_scores = results.gt_instances_3d().intsance_data[instance_data.det_scores]
         yaw = rotation_box[2]
         # Rotation matrix based on yaw at corner z in local coordiantes 
         rotation_matrix = torch.stack(torch.stack([torch.cos(yaw), -torch.sin(yaw), 0]),
                                       torch.stack([torch.sin(yaw), torch.cos(yaw)], 0),
                                       torch.stack([0, 0, 1])
                                       )
-        # compute per bounding each corner of every coodinate, 8 corners meaning 8 cooridnates
+        # compute per bounding each corner of every coodinate, 
+        # 8 corners meaning 8 cooridnates
         local_box_corner = torch.stack(
                 [lwh_box[0]/2, lwh_box[1]/2, lwh_box[2]/2]  # corner x left front
                 [lwh_box[0]/2, -lwh_box[1]/2, lwh_box[2]/2]  # corner x right front
