@@ -1,7 +1,4 @@
 import torch
-import sys
-import os
-import math
 import numpy as np
 from detector.detector import Detector
 from torch.utils.data import DataLoader
@@ -10,6 +7,7 @@ from pytorch3d.structures import Pointclouds
 
 if torch.cuda.is_available():
     from mmdet3d.apis import init_model, inference_detector
+    from mmdet3d.structures.bbox_3d import Box3DMode
 else:
     exit()
 from util.logging_config import LoggingConfig
@@ -23,8 +21,8 @@ class PointRCNNmmDetections3D(Detector):
         self.dataset_dir = dataset_dir
         self.dataset = dataset
         self.model_path = model_path
-        self.config_file = ''
-        self.checkpoint_file = ''
+        self.config_file = 'model/point_rcnn_2x8_kitti-3d-3classes.py'
+        self.checkpoint_file = 'model/point_rcnn_2x8_kitti-3d-3classes_20211208_151344.pth'
         self.model = init_model(self.config_file, self.checkpoint_file)
 
     def detect(self):
@@ -79,11 +77,12 @@ class PointRCNNmmDetections3D(Detector):
         bboxes = Pointclouds(points=list(world_bbox)).get_bounding_boxes
         return f"{frame_index},{bboxes.flatten()},{det_score},1,-1,-1,-1"
 
-    @staticmethod
-    def custom_collate(batch):
-        filtered_data = []
-        filtered_samples = []
-        for item in batch:
-            filtered_data.append(item["points"])
-            filtered_samples.append(item["sample_id"])
-        return filtered_data, filtered_samples
+
+@staticmethod
+def custom_collate(batch):
+    filtered_data = []
+    filtered_samples = []
+    for item in batch:
+        filtered_data.append(item["points"])
+        filtered_samples.append(item["sample_id"])
+    return filtered_data, filtered_samples

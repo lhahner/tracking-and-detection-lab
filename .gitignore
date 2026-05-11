@@ -1,3 +1,5 @@
+.DS_Store
+
 data
 src/detector/yolo/model/*.pt
 external/*
@@ -58,6 +60,7 @@ coverage.xml
 *.log
 
 # logs
+./logs/*
 /logs
 *.pot
 
