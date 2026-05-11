@@ -34,17 +34,16 @@ class PointRCNNmmDetections3D(Detector):
             bboxes = detections.pred_instances_3d.bboxes3d
             scores = detections.pred_instances_3d.scores_3d
             formatted_detections.append(self.format_detections(sample,
-                                                               bboxes.cpu().numpy()[:, :3],
-                                                               bboxes.cpu().numpy()[:, 3:5],
-                                                               bboxes.cpu().numpy()[:, 6],
-                                                               scores.cpu().numpy()
-                                                               )
-                                        )
+                                                               bboxes.cpu()[:, :3],
+                                                               bboxes.cpu()[:, 3:5],
+                                                               bboxes.cpu()[:, 6],
+                                                               scores.cpu()
+                                                               ))
         write_output(formatted_detections)
         return detections
 
     def format_detections(self, frame_index: int, xyz_centroids: np.array, lwh_box: np.array,
-                          yaw: float, det_score: float):
+                          yaw: torch.tensor, det_score: float):
         """
         The tracking system requires the following dimensions
         - x_1: Left boundary coordinate
@@ -55,26 +54,28 @@ class PointRCNNmmDetections3D(Detector):
         - z_3: Bottom Right boundary coordinate
         - score: Detection confidence score
         """
+        xyz_centroids = Box3DMode.convert(xyz_centroids, Box3DMode.LIDAR, Box3DMode.CAM)
         # Rotation matrix based on yaw at corner z in local coordiantes
-        rotation_matrix = torch.stack(torch.stack([torch.cos(yaw), -torch.sin(yaw), 0]),
-                                      torch.stack([torch.sin(yaw), torch.cos(yaw)], 0),
-                                      torch.stack([0, 0, 1])
-                                      )
+        rotation_matrix: torch.tensor = torch.tensor([
+                [torch.cos(yaw), torch.sin(yaw), 0],
+                [torch.sin(yaw), torch.cos(yaw), 0],
+                [0,                     0,                     1]
+            ])
         # compute per bounding each corner of every coodinate,
         # 8 corners meaning 8 cooridnates
-        local_box_corner = torch.stack(
-                [lwh_box[0]/2, lwh_box[1]/2, lwh_box[2]/2]  # corner x left front
-                [lwh_box[0]/2, -lwh_box[1]/2, lwh_box[2]/2]  # corner x right front
-                [-lwh_box[0]/2, -lwh_box[1]/2, lwh_box[2]/2]  # corner x left back
-                [-lwh_box[0]/2, lwh_box[1]/2, lwh_box[2]/2]  # corner x right back
-                [lwh_box[0]/2, lwh_box[1]/2, -lwh_box[2]/2]  # corner y left front
-                [lwh_box[0]/2, -lwh_box[1]/2, -lwh_box[2]/2]  # corner y right front
-                [-lwh_box[0]/2, -lwh_box[1]/2, -lwh_box[2]/2]  # corner y left back
-                [-lwh_box[0]/2, lwh_box[1]/2, -lwh_box[2]/2]  # corner y right back
-        )
+        local_box_corner: torch.tensor = torch.tensor([
+            [lwh_box[:, 0]/2, lwh_box[:, 1]/2, lwh_box[:, 2]/2],  # corner x left front
+            [lwh_box[:, 0]/2, -lwh_box[:, 1]/2, lwh_box[:, 2]/2],  # corner x right front
+            [-lwh_box[:, 0]/2, -lwh_box[:, 1]/2, lwh_box[:, 2]/2],  # corner x left back
+            [-lwh_box[:, 0]/2, lwh_box[:, 1]/2, lwh_box[:, 2]/2],  # corner x right back
+            [lwh_box[:, 0]/2, lwh_box[:, 1]/2, -lwh_box[:, 2]/2],  # corner y left front
+            [lwh_box[:, 0]/2, -lwh_box[:, 1]/2, -lwh_box[:, 2]/2],  # corner y right front
+            [-lwh_box[:, 0]/2, -lwh_box[:, 1]/2, -lwh_box[:, 2]/2],  # corner y left back
+            [-lwh_box[:, 0]/2, lwh_box[:, 1]/2, -lwh_box[:, 2]/2]  # corner y right back
+        ])
         # The coordiantes of the bounding box in world coordinates
-        world_bbox = torch.from_numpy(xyz_centroids) + rotation_matrix @ local_box_corner
-        bboxes = Pointclouds(points=list(world_bbox)).get_bounding_boxes
+        world_bbox: torch.tensor = torch.from_numpy(xyz_centroids) + rotation_matrix @ local_box_corner
+        bboxes: torch.tensor = Pointclouds(points=list(world_bbox)).get_bounding_boxes()
         return f"{frame_index},{bboxes.flatten()},{det_score},1,-1,-1,-1"
 
 
