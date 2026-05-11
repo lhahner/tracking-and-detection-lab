@@ -2,6 +2,7 @@ data
 src/detector/yolo/model/*.pt
 external/*
 
+**/.DS_Store
 
 # Vim
 *~
