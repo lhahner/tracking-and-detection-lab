@@ -17,12 +17,10 @@ logger = logging_config.get_logger(__name__)
 
 
 class PointRCNNmmDetections3D(Detector):
-    def __init__(self, dataset_dir, dataset, model_path, batch_size=16):
-        self.dataset_dir = dataset_dir
+    def __init__(self, dataset, config_file, checkpoint_file, batch_size=16):
         self.dataset = dataset
-        self.model_path = model_path
-        self.config_file = 'model/point_rcnn_2x8_kitti-3d-3classes.py'
-        self.checkpoint_file = 'model/point_rcnn_2x8_kitti-3d-3classes_20211208_151344.pth'
+        self.config_file = config_file
+        self.checkpoint_file = checkpoint_file
         self.model = init_model(self.config_file, self.checkpoint_file)
 
     def detect(self):
@@ -74,8 +72,10 @@ class PointRCNNmmDetections3D(Detector):
             [-lwh_box[:, 0]/2, lwh_box[:, 1]/2, -lwh_box[:, 2]/2]  # corner y right back
         ])
         # The coordiantes of the bounding box in world coordinates
-        world_bbox: torch.tensor = torch.from_numpy(xyz_centroids) + rotation_matrix @ local_box_corner
-        bboxes: torch.tensor = Pointclouds(points=list(world_bbox)).get_bounding_boxes()
+        world_bbox: torch.tensor = xyz_centroids + local_box_corner @ rotation_matrix
+        world_bbox = world_bbox.unsqueeze(0)
+        breakpoint()
+        bboxes: torch.tensor = Pointclouds(points=world_bbox).get_bounding_boxes()
         return f"{frame_index},{bboxes.flatten()},{det_score},1,-1,-1,-1"
 
 

@@ -34,10 +34,9 @@ class TestPointRCNNmmDetections3D(unittest.TestCase):
 
         xyz_centroids = bboxes[:, :3]
         lwh_box = bboxes[:, 2:5]
-    yaw = bboxes[:, 6]
-det_scroes = np.array([0.78])
-
-    formatted_detections = pointrcnnmmdetections3D.format_detections(
+        yaw = bboxes[:, 6]
+        det_scroes = np.array([0.78])
+        formatted_detections = pointrcnnmmdetections3D.format_detections(
             "00001",
             xyz_centroids,
             lwh_box,
