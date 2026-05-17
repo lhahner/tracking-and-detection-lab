@@ -22,7 +22,22 @@ DET_PATH = ""  # TODO
 
 
 class PointRCNNmmDetections3D(Detector):
-    def __init__(self, dataset, config_file, checkpoint_file, classes, batch_size=16, num_inference_samples=50):
+    """
+    PointRCNN implementation based on the pre-trained
+    model from mmdetection3d.
+
+    Attributes:
+        :param dataset:
+        :param config_file:
+        :param checkpoint_file:
+        :param classes:
+        :param batch_size:
+        :param num_inference_samples:
+    """
+    def __init__(self,
+                 dataset, config_file, classes,
+                 checkpoint_file="model/point_rcnn_2x8_kitti-3d-3classes_20211208_151344.pth",
+                 batch_size=16, num_inference_samples=50):
         self.dataset = dataset
         self.config_file = config_file
         self.checkpoint_file = checkpoint_file
@@ -31,10 +46,21 @@ class PointRCNNmmDetections3D(Detector):
         self.classes = classes
         self.batch_size = batch_size
 
-    def detect(self, format_option="kitti"):
+    def detect(self, format_option="kitti") -> list(str):
+        """
+        Run detection with model using output format for
+        further processing.
+
+        Parameters:
+            :param format_option:
+            :rtype: list(str)
+
+        Returns:
+            List of formatted detectiosn that are not empty and and object.
+        """
         test_dataloader: torch.utils.dataloader = DataLoader(dataset=self.dataset, batch_size=self.batch_size,
                                                              collate_fn=custom_collate)
-        formatted_detections = []
+        formatted_detections: list(str) = []
         for point, sample in test_dataloader:
             num_obj: int = inference_detector(self.model, point)[0].pred_instances_3d.bboxes_3d.tensor.shape[0]
             # Points can contain no  objects
@@ -75,19 +101,32 @@ class PointRCNNmmDetections3D(Detector):
         return formatted_detections
 
     def format_sort_detections(self, frame_index: int, xyz_centroids: np.array, lwh_box: np.array,
-                               yaw: torch.tensor, det_score: float):
+                               yaw: torch.tensor, det_score: float) -> str:
         """
-        TODO format detections for SORT
-        The tracking system requires the following dimensions
-        - x_1: Left boundary coordinate
-        - y_1: Top boundary coordinate
-        - z_1: Top Left boundary coordinate
-        - x_2: Right boundary coordinate
-        - y_2: Bottom boundary coordinate
-        - z_3: Bottom Right boundary coordinate
-        - score: Detection confidence score
+        Format detection output string into format that SORT requires to
+        work with it.
+        Attributes:
+            :param frame_index:
+            :type frame_index: int
+            :param xyz_centroids:
+            :type xyz_centroids: np.array
+            :param lwh_box:
+            :type lwh_box: np.array
+            :param yaw:
+            :type yaw: torch.tensor
+            :param det_score:
+            :type det_score: float
+
+        Returns:
+            String of shape;
+            - x_1: Left boundary coordinate
+            - y_1: Top boundary coordinate
+            - z_1: Top Left boundary coordinate
+            - x_2: Right boundary coordinate
+            - y_2: Bottom boundary coordinate
+            - z_3: Bottom Right boundary coordinate
+            - score: Detection confidence score
         """
-        xyz_centroids = Box3DMode.convert(xyz_centroids, Box3DMode.LIDAR, Box3DMode.CAM)
         # Rotation matrix based on yaw at corner z in local coordiantes
         rotation_matrix: torch.tensor = torch.tensor([
             [torch.cos(yaw), torch.sin(yaw), 0],
@@ -116,6 +155,20 @@ class PointRCNNmmDetections3D(Detector):
         """
         Parses the data from the mmdetection3d inferecne api to the required
         kitti3d format.
+        Parameters:
+            :param xyz_centroids:
+            :type xyz_centroids: np.array
+            :param lwh_box:
+            :type lwh_box: np.array
+            :param yaw:
+            :type yaw: torch.tensor
+            :param det_score:
+            :type det_score: float
+            :param obj_index:
+            :type obj_index: int
+            :rtype: str
+        Returns:
+            Formatted string for kitti3D evaluation
         """
         obj_type: str = self.classes[obj_index]
         truncated = 0  # always 0 for 3D
@@ -154,7 +207,7 @@ class PointRCNNmmDetections3D(Detector):
         KITTI result format:
         type truncated occluded alpha left top right bottom h w l x y z rotation_y score
 
-        Args:
+        Parameters:
             obj_type:
                Types etiher Car, Van, Truck, Pedestrian, Person_sitting, Cyclist, Tram, Misc, DontCare
             truncated:
@@ -173,12 +226,19 @@ class PointRCNNmmDetections3D(Detector):
                 Rotation r_y around Y-axis in camera coordinates.
             score:
                 Indicating confidence of values
+        Returns:
+            Formatted string as Kitti3D evaluation requires.
         """
         return f"{obj_type} {truncated} {occluded} {alpha} {bbox_2d} {dimesnions} {location} {rotation_y} {score}"
 
 
 @staticmethod
 def custom_collate(batch):
+    """
+    Custom collate function for the provided dataloader
+    Parameters:
+        :param batch:
+    """
     filtered_data = []
     filtered_samples = []
     for item in batch:

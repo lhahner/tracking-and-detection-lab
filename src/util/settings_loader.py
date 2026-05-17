@@ -16,6 +16,7 @@ class PathsConfig:
     ground_truth_path: str | None
     tracking_path: str | None
     logging_path: str | None
+    mmdetection3d_path: str | None
 
 @dataclass(frozen=True)
 class RuntimeConfig:
@@ -59,38 +60,38 @@ class SettingsLoader:
         runtime = data.get("runtime", {})
 
         base = cfg_path.parent
-        
         resolved_paths = PathsConfig(
-            dataset_path=SettingsLoader.resolve(base, paths.get("dataset_path", "../data/")),
-            output_root=SettingsLoader.resolve(base, paths.get("output_root", "./output")),
-            detections_root=SettingsLoader.resolve(base, paths.get("detections_root", "./data")),
-            models_root=SettingsLoader.resolve(base, paths.get("models_root", f"./detector/default-model.pth")),
-            detection_path=paths.get("detection_path", "data/*/*/det/det.txt"),
-            ground_truth_path=paths.get("ground_truth_path"),
-            tracking_path=paths.get("tracking_path"),
-            logging_path=paths.get("logging_path")
-        )
-        
+                dataset_path=SettingsLoader.resolve(base, paths.get("dataset_path", "../data/")),
+                output_root=SettingsLoader.resolve(base, paths.get("output_root", "./output")),
+                detections_root=SettingsLoader.resolve(base, paths.get("detections_root", "./data")),
+                models_root=SettingsLoader.resolve(base, paths.get("models_root", f"./detector/default-model.pth")),
+                detection_path=paths.get("detection_path", "data/*/*/det/det.txt"),
+                ground_truth_path=paths.get("ground_truth_path"),
+                tracking_path=paths.get("tracking_path"),
+                logging_path=paths.get("logging_path"),
+                mmdetection3d_path=paths.get("mmdetection3d_path")
+                )
+
         settings = Settings(
-            project_name=project.get("name", "tracking-and-detection-lab"),
-            seed=int(project.get("seed", 0)),
-            paths=resolved_paths,
-            runtime=RuntimeConfig(
-                mode=runtime.get("mode", "inference"),
-                display=bool(runtime.get("display", False)),
-                dataset=runtime.get("dataset", "*"),
-                detector=runtime.get("detector", "yolo"),
-                tracker=runtime.get("tracker", "sort"),
-                datatype=runtime.get("datatype"),
-                benchmark=bool(runtime.get("benchmark", False))
-              ),
-            raw=data,
-          )
+                project_name=project.get("name", "tracking-and-detection-lab"),
+                seed=int(project.get("seed", 0)),
+                paths=resolved_paths,
+                runtime=RuntimeConfig(
+                    mode=runtime.get("mode", "inference"),
+                    display=bool(runtime.get("display", False)),
+                    dataset=runtime.get("dataset", "*"),
+                    detector=runtime.get("detector", "yolo"),
+                    tracker=runtime.get("tracker", "sort"),
+                    datatype=runtime.get("datatype"),
+                    benchmark=bool(runtime.get("benchmark", False))
+                    ),
+                raw=data,
+                )
         return settings
 
     @staticmethod
     def resolve(base, value):
-          """Resolve a path value relative to a base directory when needed.
+        """Resolve a path value relative to a base directory when needed.
 
           Args:
               base: Base directory used for relative paths.
