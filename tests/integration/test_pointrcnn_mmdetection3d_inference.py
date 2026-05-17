@@ -13,19 +13,34 @@ if SRC_ROOT not in sys.path:
 if MMDET3D_SRC_ROOT not in sys.path:
     sys.path.insert(0, MMDET3D_SRC_ROOT)
 
-from datasets.kitti3D import Kitti3D, CLASSES
+from datasets.kitti3D import Kitti3D
 from util.settings_loader import SettingsLoader
+from util.logging_config import LoggingConfig
 
-KITTI3D_DUMMY_PATH = Path(os.path.join(TESTS_DIR, "data", "kitti3d_dummy"))
+KITTI3D_DUMMY_PATH = Path(os.path.join(TESTS_DIR,"..", "data", "kitti3d_dummy"))
 
+logging_config = LoggingConfig()
+logger = logging_config.get_logger(__name__)
+
+CLASSES = {
+    0: "Car",
+    1: "Van",
+    2: "Truck",
+    3: "Pedestrian",
+    4: "Person_sitting",
+    5: "Cyclist",
+    6: "Tram",
+    7: "Misc",
+    8: "DontCare"
+}
 
 class TestPointRCNNMMDetection3DInference(unittest.TestCase):
     def load_mmdet3d_path_from_settings(self):
         settings_loader = SettingsLoader()
-        return settings_loader.load().paths.mmdetection3d_path
+        return settings_loader.load("settings.yaml").paths.mmdetection3d_path
 
     def test_non_gpu_test(self):
-        kitti3d: Kitti3D = Kitti3D(KITTI3D_DUMMY_PATH)
+        kitti3d: Kitti3D = Kitti3D(KITTI3D_DUMMY_PATH, logger=logger)
         if not torch.cuda.is_available():
             with self.assertRaises(EnvironmentError):
                 from detector.pointrcnn.pointrcnn_mmdetection3d import PointRCNNmmDetections3D
@@ -40,12 +55,12 @@ class TestPointRCNNMMDetection3DInference(unittest.TestCase):
         if torch.cuda.is_available():
             from detector.pointrcnn.pointrcnn_mmdetection3d import PointRCNNmmDetections3D
 
-            kitti3d: Kitti3D = Kitti3D(KITTI3D_DUMMY_PATH)
+            kitti3d: Kitti3D = Kitti3D(KITTI3D_DUMMY_PATH, logger=logger)
             pointrcnn: PointRCNNmmDetections3D = PointRCNNmmDetections3D(
                 dataset=kitti3d,
                 config_file=f"{self.load_mmdet3d_path_from_settings()}/point-rcnn_8xb2_kitti-3d-3class.py",
                 classes=CLASSES)
             out: list = pointrcnn.detect()
-            self.assetTrue(len(out) > 0)
+            self.assertTrue(len(out) > 0)
         else:
             self.skipTest("This requires GPU")  # Smoke Test

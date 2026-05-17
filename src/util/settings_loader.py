@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 import yaml
 
+
 @dataclass(frozen=True)
 class PathsConfig:
     """Store resolved filesystem paths used by the application."""
@@ -18,6 +19,7 @@ class PathsConfig:
     logging_path: str | None
     mmdetection3d_path: str | None
 
+
 @dataclass(frozen=True)
 class RuntimeConfig:
     """Store runtime settings that control execution behavior."""
@@ -29,6 +31,7 @@ class RuntimeConfig:
     datatype: str
     benchmark: bool
 
+
 @dataclass(frozen=True)
 class Settings:
     """Represent the fully parsed application configuration."""
@@ -36,7 +39,8 @@ class Settings:
     seed: int
     paths: PathsConfig
     runtime: RuntimeConfig
-    raw: dict[str, Any]  
+    raw: dict[str, Any]
+
 
 class SettingsLoader:
     """Load, resolve, and validate the project's YAML settings file."""
@@ -61,32 +65,32 @@ class SettingsLoader:
 
         base = cfg_path.parent
         resolved_paths = PathsConfig(
-                dataset_path=SettingsLoader.resolve(base, paths.get("dataset_path", "../data/")),
-                output_root=SettingsLoader.resolve(base, paths.get("output_root", "./output")),
-                detections_root=SettingsLoader.resolve(base, paths.get("detections_root", "./data")),
-                models_root=SettingsLoader.resolve(base, paths.get("models_root", f"./detector/default-model.pth")),
-                detection_path=paths.get("detection_path", "data/*/*/det/det.txt"),
-                ground_truth_path=paths.get("ground_truth_path"),
-                tracking_path=paths.get("tracking_path"),
-                logging_path=paths.get("logging_path"),
-                mmdetection3d_path=paths.get("mmdetection3d_path")
-                )
+            dataset_path=SettingsLoader.resolve(base, paths.get("dataset_path", "../data/")),
+            output_root=SettingsLoader.resolve(base, paths.get("output_root", "./output")),
+            detections_root=SettingsLoader.resolve(base, paths.get("detections_root", "./data")),
+            models_root=SettingsLoader.resolve(base, paths.get("models_root", f"./detector/default-model.pth")),
+            detection_path=paths.get("detection_path", "data/*/*/det/det.txt"),
+            ground_truth_path=paths.get("ground_truth_path"),
+            tracking_path=paths.get("tracking_path"),
+            logging_path=paths.get("logging_path"),
+            mmdetection3d_path=paths.get("mmdetection3d_path")
+        )
 
         settings = Settings(
-                project_name=project.get("name", "tracking-and-detection-lab"),
-                seed=int(project.get("seed", 0)),
-                paths=resolved_paths,
-                runtime=RuntimeConfig(
-                    mode=runtime.get("mode", "inference"),
-                    display=bool(runtime.get("display", False)),
-                    dataset=runtime.get("dataset", "*"),
-                    detector=runtime.get("detector", "yolo"),
-                    tracker=runtime.get("tracker", "sort"),
-                    datatype=runtime.get("datatype"),
-                    benchmark=bool(runtime.get("benchmark", False))
-                    ),
-                raw=data,
-                )
+            project_name=project.get("name", "tracking-and-detection-lab"),
+            seed=int(project.get("seed", 0)),
+            paths=resolved_paths,
+            runtime=RuntimeConfig(
+                mode=runtime.get("mode", "inference"),
+                display=bool(runtime.get("display", False)),
+                dataset=runtime.get("dataset", "*"),
+                detector=runtime.get("detector", "yolo"),
+                tracker=runtime.get("tracker", "sort"),
+                datatype=runtime.get("datatype"),
+                benchmark=bool(runtime.get("benchmark", False))
+            ),
+            raw=data,
+        )
         return settings
 
     @staticmethod
@@ -99,11 +103,11 @@ class SettingsLoader:
 
           Returns:
               Path | None: Absolute resolved path or `None` when no value is set.
-          """
-          if value is None:
-              return None
-          p = Path(value)
-          return (base / p).resolve() if not p.is_absolute() else p
+        """
+        if value is None:
+            return None
+        p = Path(value)
+        return (base / p).resolve() if not p.is_absolute() else p
 
     @staticmethod
     def validate(settings):

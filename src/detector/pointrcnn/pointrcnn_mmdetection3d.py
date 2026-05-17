@@ -1,20 +1,24 @@
 import torch
+import os
 import numpy as np
 from detector.detector import Detector
 from torch.utils.data import DataLoader, dataloader
 from util.file_handler import write_output
 from pytorch3d.structures import Pointclouds
+import torch.nn.functional as Functional
 
 if torch.cuda.is_available():
     from mmdet3d.apis import init_model, inference_detector
     from mmdet3d.structures.bbox_3d import Box3DMode
 else:
-    exit()
+    raise EnvironmentError("This model needs a GPU to work")
 from util.logging_config import LoggingConfig
 
 logging_config = LoggingConfig()
 logger = logging_config.get_logger(__name__)
+
 DET_PATH = ""  # TODO
+PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # TODO consider that in Kitti the labels Car and pedestrian are evaluated,
 # therefor it would make sense to filter out other in either the format or
@@ -36,7 +40,7 @@ class PointRCNNmmDetections3D(Detector):
     """
     def __init__(self,
                  dataset, config_file, classes,
-                 checkpoint_file="model/point_rcnn_2x8_kitti-3d-3classes_20211208_151344.pth",
+                 checkpoint_file=f"{PROJECT_DIR}/model/point_rcnn_2x8_kitti-3d-3classes_20211208_151344.pth",
                  batch_size=16, num_inference_samples=50):
         self.dataset = dataset
         self.config_file = config_file
@@ -46,7 +50,7 @@ class PointRCNNmmDetections3D(Detector):
         self.classes = classes
         self.batch_size = batch_size
 
-    def detect(self, format_option="kitti") -> list(str):
+    def detect(self, format_option="kitti") -> list:
         """
         Run detection with model using output format for
         further processing.
@@ -60,31 +64,49 @@ class PointRCNNmmDetections3D(Detector):
         """
         test_dataloader: torch.utils.dataloader = DataLoader(dataset=self.dataset, batch_size=self.batch_size,
                                                              collate_fn=custom_collate)
-        formatted_detections: list(str) = []
+        formatted_detections: list = []
         for point, sample in test_dataloader:
-            num_obj: int = inference_detector(self.model, point)[0].pred_instances_3d.bboxes_3d.tensor.shape[0]
+            num_obj: int = inference_detector(self.model, point)[0][0].pred_instances_3d.bboxes_3d.tensor.shape[0]
             # Points can contain no  objects
             if num_obj == 0:
                 continue
-            all_bboxes: torch.tensor = torch.tensor.zeros(self.num_inference_samples, num_obj, 7)
-            all_scores: torch.tensor = torch.tensor.zeros(self.num_inference_samples, num_obj)
+            # all_bboxes: torch.tensor = torch.zeros(self.num_inference_samples, num_obj, 7)
+            # all_scores: torch.tensor = torch.zeros(self.num_inference_samples, num_obj)
+            
+            all_bboxes: list = []
+            all_scores: list = []
 
-            for i in enumerate(self.num_inference_samples):
-                infered_obj = inference_detector(self.model, point)[0]
-                all_bboxes[i] = infered_obj.pred_instances_3d.bboxes_3d.tensor
-                all_scores[i] = infered_obj.pred_instances_3d.scores_3d
+            for i in range(0, self.num_inference_samples):
+                scores_tensor_infered = inference_detector(self.model, point)[0][0].pred_instances_3d.scores_3d                
+                highest_score_index: int = scores_tensor_infered.argmax()
+                bboxes_tensor_infered = inference_detector(self.model, point)[0][0].pred_instances_3d.bboxes_3d.tensor[highest_score_index, :]
+                
+                # num_obj_actual = bboxes_tensor_infered.shape[0]
+                # if num_obj_actual < num_obj:
+                #    shape_diff = num_obj - num_obj_actual
+                #    bboxes_tensor_infered = Functional.pad(input=bboxes_tensor_infered, pad=(0, 0, shape_diff, 0), mode='constant', value=0)
+                #    scores_tensor_infered = Functional.pad(input=scores_tensor_infered, pad=(0, shape_diff), mode='constant', value=0)
+                #    breakpoint() 
+                # elif num_obj_actual > num_obj:
+                #    bboxes_tensor_infered.resize_(num_obj, 7) 
+                #    scores_tensor_infered.resize_(num_obj)
+                #    breakpoint()
+                all_bboxes.append(bboxes_tensor_infered)
+                all_scores.append(scores_tensor_infered[highest_score_index])
+            
+            bboxes_tensor = torch.stack(all_bboxes)
+            scores_tensor = torch.stack(all_scores)            
 
-            bboxes: torch.tensor = all_bboxes.mean(dim=0, keepdim=True)
-            scores: torch.tensor = all_scores.mean(dim=0, keepdim=True)
-            labels: torch.tensor = inference_detector(self.model, point)[0].pred_instances_3d.labels_3d
-            highest_score_index: int = scores.argmax()
+            bboxes: torch.tensor = bboxes_tensor.mean(dim=0, keepdim=True) 
+            scores: torch.tensor = scores_tensor.mean(dim=0, keepdim=True) 
+            labels: torch.tensor = inference_detector(self.model, point)[0][0].pred_instances_3d.labels_3d
 
             if format_option == "kitti":
                 formatted_detections.append(self.format_kitti3d_detections(xyz_centroids=bboxes[highest_score_index, :3],
                                                                            lwh_box=bboxes[highest_score_index, 3:6],
-                                                                           yaw=bboxes[6],
+                                                                           yaw=bboxes[:, 6],
                                                                            det_score=scores[highest_score_index],
-                                                                           obj_index=labels[highest_score_index]
+                                                                           obj_index=labels[highest_score_index].detach().item()
                                                                            ))
             elif format_option == "sort":
                 formatted_detections.append(self.format_sort_detections(frame_index=sample,
@@ -97,7 +119,7 @@ class PointRCNNmmDetections3D(Detector):
             else:
                 raise ValueError("Given format option not supported")
 
-        write_output(f"{DET_PATH}/{format_option}-det.txt", formatted_detections)
+        write_output(f"{PROJECT_DIR}/{format_option}-det.txt", formatted_detections)
         return formatted_detections
 
     def format_sort_detections(self, frame_index: int, xyz_centroids: np.array, lwh_box: np.array,
@@ -175,7 +197,7 @@ class PointRCNNmmDetections3D(Detector):
         occluded = -1
         alpha = 0
         bbox_2d: np.array = np.array([0, 0, 0, 0])
-        dimensions: np.array = np.array([lwh_box[1], lwh_box[0], lwh_box[2]])
+        dimensions: np.array = np.array([lwh_box.cpu()[1], lwh_box.cpu()[0], lwh_box.cpu()[2]])
         location: np.array = Box3DMode.convert(xyz_centroids, Box3DMode.LIDAR, Box3DMode.CAM)
         rotation_y: float = yaw
         score: float = det_score
