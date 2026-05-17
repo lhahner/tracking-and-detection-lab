@@ -11,6 +11,7 @@ paths:
   ground_truth_path: "/home/lennart/Dokumente/gau/advanced-research-training-applied-system-development/track-lab/data/MOT15/train/KITTI-17/gt/gt.txt"
   tracking_path: "/home/lennart/Dokumente/gau/advanced-research-training-applied-system-development/track-lab/src/output/KITTI-17.txt"
   logging_path: ./logs
+  mmdetection3d_path: "/user/lennart.hahner/u25411/mmdetection3d/configs/point_rcnn/"
   
 runtime:
   mode: "inference"

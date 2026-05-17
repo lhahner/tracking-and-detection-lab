@@ -1,6 +1,8 @@
 import importlib.util
 import os
 import sys
+import numpy as np
+import torch
 import unittest
 from pathlib import Path
 TESTS_DIR = os.path.dirname(__file__)
@@ -43,12 +45,12 @@ class TestMMDetection3DCompatability(unittest.TestCase):
         sample_path = (
             Path(PROJECT_ROOT) / "tests/data/kitti3d_dummy/"
                                  "training/velodyne/000000.bin"
-        )
+)
 
         if not checkpoint_path.exists():
             raise ValueError(
                 "MMDET3D checkpoint file not found: "
-                f"{checkpoint_path}"
+f"{checkpoint_path}"
             )
         if not sample_path.exists():
             raise ValueError(
@@ -84,4 +86,8 @@ class TestMMDetection3DCompatability(unittest.TestCase):
                 ]
             },
         )
+        sample_data = torch.tensor([[1.8324e+01, 4.9000e-02,  8.2900e-01,  0.0000e+00],
+                                [1.8344e+01, 1.0600e-01,  8.2900e-01,  0.0000e+00]])
+        infered_data = inference_detector(model, sample_data)
+        print(infered_data)
         self.assertIsNotNone(model)

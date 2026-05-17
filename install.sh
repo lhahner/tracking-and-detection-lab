@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -euo pipefail
+set -eo pipefail
 
 ENV_NAME="${ENV_NAME:-track-lab}"
 PYTHON_VERSION="${PYTHON_VERSION:-3.10.20}"
@@ -128,11 +128,8 @@ echo "Installing helper build/runtime packages"
 python -m pip install ninja "opencv-python==4.10.0.84"
 
 echo "Installing PyTorch ${PYTORCH_VERSION} and torchvision ${TORCHVISION_VERSION} from ${PYTORCH_INDEX_URL}"
-python -m pip install \
-  "torch==${PYTORCH_VERSION}" \
-  "torchvision==${TORCHVISION_VERSION}" \
-  "torchaudio==${TORCHAUDIO_VERSION}" \
-  --index-url "${PYTORCH_INDEX_URL}"
+conda install "pytorch" "torchvision" -c pytorch
+conda install pytorch3d -c pytorch3d
 
 echo "Installing NumPy < 2 for motmetrics compatibility"
 python -m pip install "numpy<2"
@@ -182,30 +179,35 @@ else
 fi
 
 if [[ "${INSTALL_MMDET3D}" == "1" ]]; then
+  echo "WARNING - MMDetection3D needs gpu, use gcc 13.2.0 and nvcc 11.8.0"
   echo "Installing OpenMMLab package manager"
   python -m pip install -U openmim
 
   echo "Installing MMEngine"
   mim install mmengine
 
-  echo "Installing mmcv-lite for CPU-oriented MMDetection3D usage"
-  mim install "mmcv-lite>=2.0.0rc4,<2.2.0"
+  echo "Installing mmcv"
+  mim install "mmcv==2.1.0"
 
   echo "Installing MMDetection"
-  mim install "mmdet>=3.0.0,<3.4.0"
-  
-  if [[ $(lspci | grep -i '.* NVIDIA .*') && ! $CUDA_FLAVOR =~ cpu ]]; then
-  	echo "Installing MMDetection3D from fork without build isolation: ${MMDET3D_REPO_URL}"
-  	mim install "mmdet3d>=1.1.0" 
-  else
-    echo "No Nvidia GPU detected can't install MMDetection3D normally, instead using custom cpu-only"
-    if [[ ! -d "./external" ]]; then
-      mkdir external
-    fi
-    if [[ ! -d "./external/mmdetection3d-cpu-only" ]]; then
-      git clone "${MMDET3D_REPO_URL}" ${REPO_ROOT}/external/mmdetection3d-cpu-only
-    fi
-  fi
+  mim install 'mmdet>=3.0.0' 
+
+  echo "Installing mmdet3d"
+  mim install "mmdet3d>=1.1.0"
+
+# ---- This part covers the CPU verison of mmdet3d which is not working properly ----  
+#  if [[ $(lspci | grep -i '.* NVIDIA .*') && ! $CUDA_FLAVOR =~ cpu ]]; then
+#  	echo "Installing MMDetection3D from fork without build isolation: ${MMDET3D_REPO_URL}"
+#  	mim install "mmdet3d>=1.1.0" 
+#  else
+#    echo "No Nvidia GPU detected can't install MMDetection3D normally, instead using custom cpu-only"
+#    if [[ ! -d "./external" ]]; then
+#      mkdir external
+#    fi
+#    if [[ ! -d "./external/mmdetection3d-cpu-only" ]]; then
+#      git clone "${MMDET3D_REPO_URL}" ${REPO_ROOT}/external/mmdetection3d-cpu-only
+#    fi
+#  fi
 else
   echo "Skipping MMDetection3D installation"
 fi
