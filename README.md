@@ -37,6 +37,7 @@ Install these system-level requirements first:
 - PyTorch compatible with your CPU or CUDA runtime.
 - `git`
 - GCC 5+ for native extension builds.
+- mmdetection3d directory for config files.
 
 ### Python packages required by this project
 
@@ -102,6 +103,8 @@ Notes:
 
 - `detectron2` may print a `pkg_resources` deprecation warning. With the pinned `setuptools<81`, this is expected and non-fatal.
 - The DETR backend downloads model files from Hugging Face on first use. Without `HF_TOKEN`, downloads still work but may be slower or rate-limited.
+- Don't try to use the configs of MMDetection3D outside of the project.
+  Clone `https://github.com/open-mmlab/mmdetection3d.git` to a local directory where you can find it.
 
 ## Dataset layout
 
