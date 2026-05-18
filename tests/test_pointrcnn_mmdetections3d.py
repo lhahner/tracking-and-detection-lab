@@ -22,7 +22,7 @@ class TestPointRCNNmmDetections3D(unittest.TestCase):
         fake_model = Mock()
         with patch("detector.pointrcnn.pointrcnn_mmdetection3d.init_model", return_value=fake_model):
             pointrcnnmmdetections3D = PointRCNNmmDetections3D(
-             dataset=mock_kitti3D,
+                    dataset=mock_kitti3D,
                     config_file=f"{SRC_ROOT}/detector/pointrcnn/point_rcnn_2x8_kitti-3d-3classes.py",
                     checkpoint_file=f"{SRC_ROOT}/detector/pointrcnn/point_rcnn_2x8_kitti-3d-3classes_20211208_151344.pth"
                     )
@@ -37,10 +37,10 @@ class TestPointRCNNmmDetections3D(unittest.TestCase):
         yaw = bboxes[:, 6]
         det_scroes = np.array([0.78])
         formatted_detections = pointrcnnmmdetections3D.format_detections(
-            "00001",
-            xyz_centroids,
-            lwh_box,
-            yaw,
+                "00001",
+                xyz_centroids,
+                lwh_box,
+                yaw,
                 det_scroes
-        )
+                )
         self.assertEquals("00001,0.2,0.2,0.2,0.2,0.2,1-1,-1,-1", formatted_detections)

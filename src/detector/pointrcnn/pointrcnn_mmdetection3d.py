@@ -50,7 +50,7 @@ class PointRCNNmmDetections3D(Detector):
         self.classes = classes
         self.batch_size = batch_size
 
-    def detect(self, format_option="kitti") -> list:
+    def detect(self, format_option="kitti", serialize=True) -> list:
         """
         Run detection with model using output format for
         further processing.
@@ -72,34 +72,40 @@ class PointRCNNmmDetections3D(Detector):
                 continue
             # all_bboxes: torch.tensor = torch.zeros(self.num_inference_samples, num_obj, 7)
             # all_scores: torch.tensor = torch.zeros(self.num_inference_samples, num_obj)
-            
             all_bboxes: list = []
             all_scores: list = []
 
             for i in range(0, self.num_inference_samples):
-                scores_tensor_infered = inference_detector(self.model, point)[0][0].pred_instances_3d.scores_3d                
-                highest_score_index: int = scores_tensor_infered.argmax()
-                bboxes_tensor_infered = inference_detector(self.model, point)[0][0].pred_instances_3d.bboxes_3d.tensor[highest_score_index, :]
-                
-                # num_obj_actual = bboxes_tensor_infered.shape[0]
-                # if num_obj_actual < num_obj:
-                #    shape_diff = num_obj - num_obj_actual
-                #    bboxes_tensor_infered = Functional.pad(input=bboxes_tensor_infered, pad=(0, 0, shape_diff, 0), mode='constant', value=0)
-                #    scores_tensor_infered = Functional.pad(input=scores_tensor_infered, pad=(0, shape_diff), mode='constant', value=0)
-                #    breakpoint() 
-                # elif num_obj_actual > num_obj:
-                #    bboxes_tensor_infered.resize_(num_obj, 7) 
-                #    scores_tensor_infered.resize_(num_obj)
-                #    breakpoint()
+                scores_tensor_infered = inference_detector(self.model, point)[0][0].pred_instances_3d.scores_3d
+                bboxes_tensor_infered: torch.tensor = inference_detector(self.model, point)[0][0] \
+                                                                                .pred_instances_3d \
+                                                                                .bboxes_3d \
+                                                                                .tensor
+                num_obj_actual: int = bboxes_tensor_infered.shape[0]
+                if num_obj_actual < num_obj:
+                    shape_diff: int = num_obj - num_obj_actual
+                    bboxes_tensor_infered: torch.tensor = Functional.pad(
+                                                            input=bboxes_tensor_infered,
+                                                            pad=(0, 0, shape_diff, 0),
+                                                            mode='constant',
+                                                            value=0)
+                    scores_tensor_infered: torch.tensor = Functional.pad(
+                                                            input=scores_tensor_infered,
+                                                            pad=(0, shape_diff),
+                                                            mode='constant',
+                                                            value=0)
+                elif num_obj_actual > num_obj:
+                    bboxes_tensor_infered.resize_(num_obj, 7)
+                    scores_tensor_infered.resize_(num_obj)
                 all_bboxes.append(bboxes_tensor_infered)
-                all_scores.append(scores_tensor_infered[highest_score_index])
-            
-            bboxes_tensor = torch.stack(all_bboxes)
-            scores_tensor = torch.stack(all_scores)            
+                all_scores.append(scores_tensor_infered)
+            bboxes_tensor: torch.tensor = torch.stack(all_bboxes)
+            scores_tensor: torch.tensor = torch.stack(all_scores)
 
-            bboxes: torch.tensor = bboxes_tensor.mean(dim=0, keepdim=True) 
-            scores: torch.tensor = scores_tensor.mean(dim=0, keepdim=True) 
+            bboxes: torch.tensor = bboxes_tensor.mean(dim=0, keepdim=True)
+            scores: torch.tensor = scores_tensor.mean(dim=0, keepdim=True)
             labels: torch.tensor = inference_detector(self.model, point)[0][0].pred_instances_3d.labels_3d
+            highest_score_index: int = scores.argmax()
 
             if format_option == "kitti":
                 formatted_detections.append(self.format_kitti3d_detections(xyz_centroids=bboxes[highest_score_index, :3],
@@ -118,8 +124,8 @@ class PointRCNNmmDetections3D(Detector):
 
             else:
                 raise ValueError("Given format option not supported")
-
-        write_output(f"{PROJECT_DIR}/{format_option}-det.txt", formatted_detections)
+        if serialize:
+            write_output(f"{PROJECT_DIR}/{format_option}-det.txt", formatted_detections)
         return formatted_detections
 
     def format_sort_detections(self, frame_index: int, xyz_centroids: np.array, lwh_box: np.array,
