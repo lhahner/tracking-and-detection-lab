@@ -118,7 +118,7 @@ class PointRCNNmmDetections3D(Detector):
             scores: torch.tensor = self.__mean_nonzero(tensor=scores_tensor)
             labels: torch.tensor = labels_reference
             highest_score_index: int = scores.argmax()
-            bboxes: torch.tensor = Box3DMode.convert(bboxes_mean, Box3DMode.LIDAR, Box3DMode.CAM).cpu().numpy()
+            bboxes: torch.tensor = Box3DMode.convert(bboxes_mean, Box3DMode.LIDAR, Box3DMode.CAM)
             if format_option == "kitti":
                 formatted_detections.append(self.format_kitti3d_detections(xyz_centroids=bboxes[0, highest_score_index, :3],
                                                                            lwh_box=bboxes[0, highest_score_index, 3:6],

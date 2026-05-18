@@ -188,7 +188,7 @@ if [[ "${INSTALL_MMDET3D}" == "1" ]]; then
   mim install mmengine
 
   echo "Installing mmcv"
-  mim install "mmcv==2.1.0"
+  python -m pip install --no-build-isolation "mmcv==2.1.0"
 
   echo "Installing MMDetection"
   mim install 'mmdet>=3.0.0' 
