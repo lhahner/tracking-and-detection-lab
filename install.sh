@@ -129,6 +129,8 @@ python -m pip install ninja "opencv-python==4.10.0.84"
 
 echo "Installing PyTorch ${PYTORCH_VERSION} and torchvision ${TORCHVISION_VERSION} from ${PYTORCH_INDEX_URL}"
 conda install "pytorch" "torchvision" -c pytorch
+conda install -c conda-forge fvcore iopath -y
+conda install -c pytorch3d -c conda-forge pytorch3d -y
 
 echo "Installing NumPy < 2 for motmetrics compatibility"
 python -m pip install "numpy<2"
