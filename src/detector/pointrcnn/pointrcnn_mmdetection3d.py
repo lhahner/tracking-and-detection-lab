@@ -114,26 +114,20 @@ class PointRCNNmmDetections3D(Detector):
             bboxes_tensor: torch.tensor = torch.stack(all_bboxes)
             scores_tensor: torch.tensor = torch.stack(all_scores)
 
-            bboxes: torch.tensor = self.__mean_nonzero(tensor=bboxes_tensor)
+            bboxes_mean: torch.tensor = self.__mean_nonzero(tensor=bboxes_tensor)
             scores: torch.tensor = self.__mean_nonzero(tensor=scores_tensor)
             labels: torch.tensor = labels_reference
             highest_score_index: int = scores.argmax()
-
+            bboxes: torch.tensor = Box3DMode.convert(bboxes_mean, Box3DMode.LIDAR, Box3DMode.CAM).cpu().numpy()
             if format_option == "kitti":
                 formatted_detections.append(self.format_kitti3d_detections(xyz_centroids=bboxes[0, highest_score_index, :3],
                                                                            lwh_box=bboxes[0, highest_score_index, 3:6],
                                                                            yaw=bboxes[0, :, 6],
                                                                            det_score=scores[0, highest_score_index],
-                                                                           obj_index=labels[0, highest_score_index].detach().item()
+                                                                           obj_index=labels[highest_score_index].detach().item()
                                                                            ))
             elif format_option == "sort":
-                formatted_detections.append(self.format_sort_detections(frame_index=sample,
-                                                                        xyz_centroids=bboxes[0, highest_score_index, :3],
-                                                                        lwh_box=bboxes[0, highest_score_index, 3:6],
-                                                                        yaw=bboxes[0, 6],
-                                                                        det_score=scores[0, highest_score_index]
-                                                                        ))
-
+                pass
             else:
                 raise ValueError("Given format option not supported")
         if serialize:
@@ -219,7 +213,7 @@ class PointRCNNmmDetections3D(Detector):
                                         lwh_box.cpu().numpy()[1],
                                         lwh_box.cpu().numpy()[0],
                                         lwh_box.cpu().numpy()[2]])
-        location: np.array = Box3DMode.convert(xyz_centroids, Box3DMode.LIDAR, Box3DMode.CAM).cpu().numpy()
+        location: np.array = xyz_centroids.cpu().numpy()
         rotation_y: float = yaw
         score: float = det_score
         return self.__build_kitti_gt_string(obj_type=obj_type,
