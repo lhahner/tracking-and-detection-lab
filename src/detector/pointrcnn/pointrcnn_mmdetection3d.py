@@ -50,7 +50,7 @@ class PointRCNNmmDetections3D(Detector):
         self.classes = classes
         self.batch_size = batch_size
 
-    def detect(self, format_option="kitti", serialize=True) -> list:
+    def detect(self, format_option="kitti", serialize=True):
         """
         Run detection with model using output format for
         further processing.
@@ -66,45 +66,55 @@ class PointRCNNmmDetections3D(Detector):
                                                              collate_fn=custom_collate)
         formatted_detections: list = []
         for point, sample in test_dataloader:
-            num_obj: int = inference_detector(self.model, point)[0][0].pred_instances_3d.bboxes_3d.tensor.shape[0]
+            instance_data_reference = inference_detector(self.model, point)[0][0].pred_instances_3d
+            labels_reference: torch.tensor = instance_data_reference.labels_3d
+            num_obj: int = instance_data_reference.bboxes_3d.tensor.shape[0]
             # Points can contain no  objects
             if num_obj == 0:
                 continue
-            # all_bboxes: torch.tensor = torch.zeros(self.num_inference_samples, num_obj, 7)
-            # all_scores: torch.tensor = torch.zeros(self.num_inference_samples, num_obj)
             all_bboxes: list = []
             all_scores: list = []
 
             for i in range(0, self.num_inference_samples):
-                scores_tensor_infered = inference_detector(self.model, point)[0][0].pred_instances_3d.scores_3d
-                bboxes_tensor_infered: torch.tensor = inference_detector(self.model, point)[0][0] \
-                                                                                .pred_instances_3d \
-                                                                                .bboxes_3d \
-                                                                                .tensor
-                num_obj_actual: int = bboxes_tensor_infered.shape[0]
-                if num_obj_actual < num_obj:
-                    shape_diff: int = num_obj - num_obj_actual
+                instance_data = inference_detector(self.model, point)[0][0].pred_instances_3d
+                scores_tensor_infered: torch.tensor = instance_data.scores_3d
+                bboxes_tensor_infered: torch.tensor = instance_data.bboxes_3d.tensor
+
+                num_obj_actual_bbox: int = bboxes_tensor_infered.shape[0]
+                num_obj_actual_score: int = scores_tensor_infered.shape[0]
+
+                if num_obj_actual_bbox != num_obj_actual_score:
+                    raise ValueError("Number of identified objects do not align wiht scores")
+
+                if num_obj_actual_bbox < num_obj:
+                    shape_diff: int = num_obj - num_obj_actual_bbox
                     bboxes_tensor_infered: torch.tensor = Functional.pad(
                                                             input=bboxes_tensor_infered,
                                                             pad=(0, 0, shape_diff, 0),
                                                             mode='constant',
                                                             value=0)
+                elif num_obj_actual_bbox > num_obj:
+                    bboxes_tensor_infered.resize_(num_obj, 7)
+
+                if num_obj_actual_score < num_obj:
+                    shape_diff: int = num_obj - num_obj_actual_score
                     scores_tensor_infered: torch.tensor = Functional.pad(
                                                             input=scores_tensor_infered,
                                                             pad=(0, shape_diff),
                                                             mode='constant',
                                                             value=0)
-                elif num_obj_actual > num_obj:
-                    bboxes_tensor_infered.resize_(num_obj, 7)
+                elif num_obj_actual_score > num_obj:
                     scores_tensor_infered.resize_(num_obj)
+
                 all_bboxes.append(bboxes_tensor_infered)
                 all_scores.append(scores_tensor_infered)
+
             bboxes_tensor: torch.tensor = torch.stack(all_bboxes)
             scores_tensor: torch.tensor = torch.stack(all_scores)
 
-            bboxes: torch.tensor = bboxes_tensor.mean(dim=0, keepdim=True)
-            scores: torch.tensor = scores_tensor.mean(dim=0, keepdim=True)
-            labels: torch.tensor = inference_detector(self.model, point)[0][0].pred_instances_3d.labels_3d
+            bboxes: torch.tensor = self.__mean_nonzero(tensor=bboxes_tensor)
+            scores: torch.tensor = self.__mean_nonzero(tensor=scores_tensor)
+            labels: torch.tensor = labels_reference
             highest_score_index: int = scores.argmax()
 
             if format_option == "kitti":
@@ -203,19 +213,22 @@ class PointRCNNmmDetections3D(Detector):
         occluded = -1
         alpha = 0
         bbox_2d: np.array = np.array([0, 0, 0, 0])
-        dimensions: np.array = np.array([lwh_box.cpu()[1], lwh_box.cpu()[0], lwh_box.cpu()[2]])
-        location: np.array = Box3DMode.convert(xyz_centroids, Box3DMode.LIDAR, Box3DMode.CAM)
+        dimensions: np.array = np.array([
+                                        lwh_box.cpu().numpy()[1],
+                                        lwh_box.cpu().numpy()[0],
+                                        lwh_box.cpu().numpy()[2]])
+        location: np.array = Box3DMode.convert(xyz_centroids, Box3DMode.LIDAR, Box3DMode.CAM).cpu().numpy()
         rotation_y: float = yaw
         score: float = det_score
-        return self.__build_kitti_gt_string(obj_type,
-                                            truncated,
-                                            occluded,
-                                            alpha,
-                                            bbox_2d,
-                                            dimensions,
-                                            location,
-                                            rotation_y,
-                                            score)
+        return self.__build_kitti_gt_string(obj_type=obj_type,
+                                            truncated=truncated,
+                                            occluded=occluded,
+                                            alpha=alpha,
+                                            bbox_2d=bbox_2d,
+                                            dimensions=dimensions,
+                                            location=location,
+                                            rotation_y=rotation_y,
+                                            score=score)
 
     def __build_kitti_gt_string(
             self,
@@ -224,7 +237,7 @@ class PointRCNNmmDetections3D(Detector):
             occluded: float,
             alpha: float,
             bbox_2d: np.array,
-            dimesnions: np.array,
+            dimensions: np.array,
             location: np.array,
             rotation_y: float,
             score: float
@@ -257,7 +270,22 @@ class PointRCNNmmDetections3D(Detector):
         Returns:
             Formatted string as Kitti3D evaluation requires.
         """
-        return f"{obj_type} {truncated} {occluded} {alpha} {bbox_2d} {dimesnions} {location} {rotation_y} {score}"
+        arr_str: str = " ".join(map(str, zip(bbox_2d, dimensions, location)))
+        return f"{obj_type} {truncated} {occluded} {alpha} {arr_str} {rotation_y} {score}"
+
+    def __mean_nonzero(self, tensor: torch.tensor) -> torch.tensor:
+        """
+        Simple helper function to compute the mean of the given tensor.
+
+        Parameters
+            :param tensor:
+            :type tensor: torch.tensor
+            :rtype: torch.tensor
+        """
+        if not tensor.nonzero():
+            raise ValueError("Tensor to compute only includes zeros.")
+        mask: torch.tensor = tensor != 0
+        return tensor.sum(dim=0, keepdim=True) / mask.sum(dim=0, keepdim=True).clamp(min=1)
 
 
 @staticmethod
