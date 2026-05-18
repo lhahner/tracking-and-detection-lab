@@ -11,7 +11,6 @@ SRC_ROOT = os.path.join(PROJECT_ROOT, "src")
 if SRC_ROOT not in sys.path:
     sys.path.insert(0, SRC_ROOT)
 
-from datasets.kitti3D import Kitti3D
 
 class TestPointRCNNmmDetections3D(unittest.TestCase):
     @patch("datasets.kitti3D")
@@ -24,8 +23,8 @@ class TestPointRCNNmmDetections3D(unittest.TestCase):
             pointrcnnmmdetections3D = PointRCNNmmDetections3D(
                     dataset=mock_kitti3D,
                     config_file=f"{SRC_ROOT}/detector/pointrcnn/point_rcnn_2x8_kitti-3d-3classes.py",
-                    checkpoint_file=f"{SRC_ROOT}/detector/pointrcnn/point_rcnn_2x8_kitti-3d-3classes_20211208_151344.pth"
-                    )
+                    checkpoint_file=f"{SRC_ROOT}/detector/pointrcnn/point_rcnn_2x8_kitti-3d-3classes_20211208_151344.pth",
+                    classes={0: "Car", 1: "Pedestrian"})
         # object_type,truncation,occlusion,alpha,left,top,right,bottom,height,width,length,x,y,z,rotation_y 
         # Pedestrian 0.00 0 -0.20 712.40 143.00 810.73 307.92 1.89 0.48 1.20 1.84 1.47 8.41 0.01
         bboxes = torch.tensor([

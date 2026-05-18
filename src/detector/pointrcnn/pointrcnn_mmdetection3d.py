@@ -39,7 +39,9 @@ class PointRCNNmmDetections3D(Detector):
         :param num_inference_samples:
     """
     def __init__(self,
-                 dataset, config_file, classes,
+                 dataset,
+                 config_file,
+                 classes,
                  checkpoint_file=f"{PROJECT_DIR}/model/point_rcnn_2x8_kitti-3d-3classes_20211208_151344.pth",
                  batch_size=16, num_inference_samples=50):
         self.dataset = dataset
@@ -118,18 +120,18 @@ class PointRCNNmmDetections3D(Detector):
             highest_score_index: int = scores.argmax()
 
             if format_option == "kitti":
-                formatted_detections.append(self.format_kitti3d_detections(xyz_centroids=bboxes[highest_score_index, :3],
-                                                                           lwh_box=bboxes[highest_score_index, 3:6],
-                                                                           yaw=bboxes[:, 6],
-                                                                           det_score=scores[highest_score_index],
-                                                                           obj_index=labels[highest_score_index].detach().item()
+                formatted_detections.append(self.format_kitti3d_detections(xyz_centroids=bboxes[0, highest_score_index, :3],
+                                                                           lwh_box=bboxes[0, highest_score_index, 3:6],
+                                                                           yaw=bboxes[0, :, 6],
+                                                                           det_score=scores[0, highest_score_index],
+                                                                           obj_index=labels[0, highest_score_index].detach().item()
                                                                            ))
             elif format_option == "sort":
                 formatted_detections.append(self.format_sort_detections(frame_index=sample,
-                                                                        xyz_centroids=bboxes[highest_score_index, :3],
-                                                                        lwh_box=bboxes[highest_score_index, 3:6],
-                                                                        yaw=bboxes[6],
-                                                                        det_score=scores[highest_score_index]
+                                                                        xyz_centroids=bboxes[0, highest_score_index, :3],
+                                                                        lwh_box=bboxes[0, highest_score_index, 3:6],
+                                                                        yaw=bboxes[0, 6],
+                                                                        det_score=scores[0, highest_score_index]
                                                                         ))
 
             else:
@@ -282,7 +284,7 @@ class PointRCNNmmDetections3D(Detector):
             :type tensor: torch.tensor
             :rtype: torch.tensor
         """
-        if not tensor.nonzero():
+        if tensor.numel() <= 0:
             raise ValueError("Tensor to compute only includes zeros.")
         mask: torch.tensor = tensor != 0
         return tensor.sum(dim=0, keepdim=True) / mask.sum(dim=0, keepdim=True).clamp(min=1)
