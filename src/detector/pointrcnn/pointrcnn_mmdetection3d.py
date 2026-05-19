@@ -67,6 +67,7 @@ class PointRCNNmmDetections3D(Detector):
         test_dataloader: torch.utils.dataloader = DataLoader(dataset=self.dataset, batch_size=self.batch_size,
                                                              collate_fn=custom_collate)
         formatted_detections: list = []
+        detections_result: list = []
         for point, sample in test_dataloader:
             instance_data_reference = inference_detector(self.model, point)[0][0].pred_instances_3d
             labels_reference: torch.tensor = instance_data_reference.labels_3d
@@ -126,6 +127,7 @@ class PointRCNNmmDetections3D(Detector):
                                                                            det_score=scores[0, highest_score_index],
                                                                            obj_index=labels[highest_score_index].detach().item()
                                                                            ))
+                detections_result.append(self.__
             elif format_option == "sort":
                 pass
             else:
@@ -268,6 +270,42 @@ class PointRCNNmmDetections3D(Detector):
         """
         arr_str: str = " ".join(map(str, zip(bbox_2d, dimensions, location)))
         return f"{obj_type} {truncated} {occluded} {alpha} {arr_str} {rotation_y} {score}"
+
+    def __build_detections_tensor(self,
+                                  frame: int,
+                                  obj_type: int,
+                                  dimensions: np.array | torch.tensor,
+                                  location: np.array | torch.tensor,
+                                  score: float):
+        """
+        Builds a tensor that includes the required detections
+        for later evaluation.
+
+        Parameters:
+            obj_type:
+               Types etiher Car, Van, Truck, Pedestrian, Person_sitting, Cyclist, Tram, Misc, DontCare
+            truncated:
+                Where truncated refers to the object leaving image boundraies.
+            occluded:
+                (0,1,2,3) indicating occlusion state 0=fully visible,...,3=unknown
+            alpha:
+                2D bounding box of object, ranging [-pi..pi]
+            bbox_2d:
+                2D bounding box of object in the image. Left, top, right bottom pixels.
+            dimensions:
+                3D object dimensions: height, width, length
+            location:
+                3D object location x,y,z in camera coordinates
+            rotation_y:
+                Rotation r_y around Y-axis in camera coordinates.
+            score:
+                Indicating confidence of values
+
+        Returns:
+            Formatted tensor evaluation requires.
+        """
+        return torch.tensor([[obj_type, [dimensions], [location], [score]]])
+
 
     def __mean_nonzero(self, tensor: torch.tensor) -> torch.tensor:
         """

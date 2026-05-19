@@ -1,7 +1,13 @@
 from pathlib import Path
 import numpy as np
+import torch
+from torch.autograd import grad
 import motmetrics as mm
+import torchmetrics
+from pytorch3d.ops import box3d_overlap
 import datetime
+from util.metrics.mean_average_precision_3D import MeanAveragePrecision3D
+
 
 class Evaluation:
     """Compute and persist MOT-style tracking benchmark metrics."""
@@ -29,14 +35,10 @@ class Evaluation:
             object IDs and bounding boxes in `xywh` format.
         """
         mot_rows = np.loadtxt(Path(file_path), delimiter=",")
-        
-        if mot_rows.ndim == 1: 
+        if mot_rows.ndim == 1:
             mot_rows = mot_rows.reshape(1, -1)
-            
         detections_per_frame = {}
-        
         for mot_row in mot_rows:
-       
             if filter_ground_truth_by_confidence and len(mot_row) > 6 and mot_row[6] <= 0:
                 continue
 
@@ -45,11 +47,10 @@ class Evaluation:
                 # MOT15-style files often store -1 placeholders instead of a semantic class.
                 if class_id >= 0 and class_id not in allowed_class_ids:
                     continue
-           
-            frame_number = int(mot_row[0]); object_id = int(mot_row[1])
+            frame_number = int(mot_row[0])
+            object_id = int(mot_row[1])
             bounding_box_xywh = [mot_row[2], mot_row[3], mot_row[4], mot_row[5]]
             detections_per_frame.setdefault(frame_number, []).append((object_id, bounding_box_xywh))
-            
         return detections_per_frame
 
     def should_filter_ground_truth_to_pedestrians(self, sequence_name):
@@ -163,9 +164,9 @@ class Evaluation:
         metric_row = summary.loc[sequence_name]
         return {metric: metric_row[metric] for metric in metrics}
 
-    def evaluate_sequence(self, ground_truth_file_path, 
-                          predicted_tracking_file_path, 
-                          sequence_name="sequence", 
+    def evaluate_sequence(self, ground_truth_file_path,
+                          predicted_tracking_file_path,
+                          sequence_name="sequence",
                           metrics=None):
         """Evaluate one predicted tracking file against ground truth.
 
@@ -188,35 +189,28 @@ class Evaluation:
             allowed_class_ids=allowed_ground_truth_class_ids,
         )
         predicted_tracks_by_frame = self.read_mot_file(predicted_tracking_file_path, filter_ground_truth_by_confidence=False)
-        
-        mot_accumulator = mm.MOTAccumulator(auto_id=False) # MotMetric setup
-        maximum_iou_distance = 1.0 - self.iou_threshold # default to 0.5
-        
+        mot_accumulator = mm.MOTAccumulator(auto_id=False)  # MotMetric setup
+        maximum_iou_distance = 1.0 - self.iou_threshold  # default to 0.5
         for frame_number in sorted(set(ground_truth_by_frame) | set(predicted_tracks_by_frame)):
             ground_truth_items = ground_truth_by_frame.get(frame_number, [])
             predicted_items = predicted_tracks_by_frame.get(frame_number, [])
-            
             ground_truth_ids = [item[0] for item in ground_truth_items]
             predicted_ids = [item[0] for item in predicted_items]
-            
             ground_truth_boxes_xywh = [item[1] for item in ground_truth_items]
             predicted_boxes_xywh = [item[1] for item in predicted_items]
-            
-            iou_distance_matrix = mm.distances.iou_matrix(ground_truth_boxes_xywh, 
-                                                          predicted_boxes_xywh, 
+            iou_distance_matrix = mm.distances.iou_matrix(ground_truth_boxes_xywh,
+                                                          predicted_boxes_xywh,
                                                           max_iou=maximum_iou_distance)
-            
             mot_accumulator.update(
-                ground_truth_ids, 
-                predicted_ids, 
-                iou_distance_matrix, 
+                ground_truth_ids,
+                predicted_ids,
+                iou_distance_matrix,
                 frameid=frame_number)
-        
-        return self.metrics_handler.compute(mot_accumulator, 
-                                            metrics, 
+        return self.metrics_handler.compute(mot_accumulator,
+                                            metrics,
                                             name=sequence_name
                                             )
-    
+
     def presist_evaluation(self, evaluation_summary, dataset, detector_name, tracking_name):
         """Persist an evaluation summary to a timestamped benchmark file.
 
@@ -254,3 +248,52 @@ class Evaluation:
             benchmark_file.write("\n")
 
         return benchmark_file_path
+
+    def compute_mAP_3D(self, predicted_detections: list, ground_truth: list):
+        metric = MeanAveragePrecision3D(iou_type="bbox")
+        metric.update(predicted_detections, ground_truth)
+        return metric.compute()
+
+    def compute_IoU_3D(self, predicted_detections: list, ground_truth: list):
+        return box3d_overlap(predicted_detections, ground_truth)
+
+    def compute_precision_and_recall(self,
+                                     predicted_detection_classes: torch.tensor,
+                                     ground_truth: torch.tensor) -> tuple[torch.tensor, torch.tensor]:
+        if predicted_detection_classes.shape[0] == ground_truth.shape[0]:
+            num_classes = predicted_detection_classes.shape[0]
+            precision = torchmetrics.Precision(task="multiclass", average="macro", num_classes=num_classes)
+            recall = torchmetrics.Recall(task="multiclass", average="macro", num_classes=num_classes)
+            return precision(
+                    predicted_detection_classes, ground_truth
+                    ), recall(
+                    predicted_detection_classes, ground_truth
+                    )
+        else:
+            raise ValueError("Predicted detections classes do not match with ground truth")
+
+    def compute_average_precision(self,
+                                  predicted_detection_scores: torch.tensor,
+                                  ground_truth: torch.tensor,
+                                  thresholds: torch.tensor = None):
+        if predicted_detection_scores.shape[0] == ground_truth.shape[0]:
+            if thresholds is None:
+                thresholds = torch.tensor.from_numpy(np.arange(start=0.2, stop=0.7, step=0.05))
+            precisions, recalls = []
+
+            for threshold in thresholds:
+                predictions: torch.tensor = [0 if score >= threshold else 1 for score in predicted_detection_scores]
+                precision, recall = self.compute_precision_and_recall(
+                        predicted_detection_classes=predictions,
+                        ground_truth=ground_truth)
+                precisions.append(precision)
+                recalls.append(recall)
+            precisions.append(1)
+            recalls.append(0)
+
+            precisions_tensor = torch.stack(precisions)
+            recalls_tensor = torch.stack(recalls)
+
+            return torch.sum((recalls_tensor[:-1] - recalls_tensor[1:]) * precisions_tensor[:-1])
+        else:
+            raise ValueError("Predicted detections classes do not match with ground truth")
