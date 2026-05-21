@@ -1,0 +1,3 @@
+[submodule "docs/thesis/deep-learning-based-detection-systems-for-multi-object-tracking-in-lidar-data"]
+	path = docs/thesis/deep-learning-based-detection-systems-for-multi-object-tracking-in-lidar-data
+	url = https://gitlab.gwdg.de/lennart.hahner/deep-learning-based-detection-systems-for-multi-object-tracking-in-lidar-data.git
