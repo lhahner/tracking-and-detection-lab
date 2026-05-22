@@ -249,11 +249,6 @@ class Evaluation:
 
         return benchmark_file_path
 
-    def compute_mAP_3D(self, predicted_detections: list, ground_truth: list):
-        metric = MeanAveragePrecision3D(iou_type="bbox")
-        metric.update(predicted_detections, ground_truth)
-        return metric.compute()
-
     def compute_IoU_3D(self, predicted_detections: list, ground_truth: list):
         return box3d_overlap(predicted_detections, ground_truth)
 
@@ -297,3 +292,18 @@ class Evaluation:
             return torch.sum((recalls_tensor[:-1] - recalls_tensor[1:]) * precisions_tensor[:-1])
         else:
             raise ValueError("Predicted detections classes do not match with ground truth")
+
+    def compute_mAP_3D(self,
+                       predicted_detections_predictions: torch.tensor,
+                       ground_truth: torch.tensor,
+                       classes: torch.tensor,
+                       labels: torch.tensor):
+        if predicted_detections_predictions.shape[0] == ground_truth.shape[0]:
+            metric = MeanAveragePrecision3D(classes=classes,
+                                            labels=labels)
+            metric.update(
+                    preds=predicted_detections_predictions,
+                    target=ground_truth)
+            return metric.compute()
+        else:
+            raise ValueError("")

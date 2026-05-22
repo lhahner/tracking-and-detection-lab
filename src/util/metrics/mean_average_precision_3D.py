@@ -2,6 +2,7 @@ import torch
 from torchmetrics import Metric
 from util.evaluation import Evaluation
 
+
 class MeanAveragePrecision3D(Metric):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
