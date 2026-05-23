@@ -40,7 +40,6 @@ class YoloUltralyticsDetector(Detector):
                 return self.detections
             else:
                 print(f"file empty running detection on given dataset.")
-        
         for frame, concat_frame in zip(frames, concat_frames):
             detection_results = self.model(concat_frame)
             for detection_result in detection_results:
@@ -49,7 +48,7 @@ class YoloUltralyticsDetector(Detector):
                 self.write_output(formatted)
             frame_index += 1
         return self.detections
-        
+
     def format_detections(self, frame_index, results):
         """Convert YOLO detections into MOT challenge text lines.
 
