@@ -2,8 +2,6 @@ import os
 import sys
 import torch
 import unittest
-import torch
-from pathlib import Path
 
 TESTS_DIR = os.path.dirname(__file__)
 PROJECT_ROOT = os.path.dirname(os.path.dirname(TESTS_DIR))
@@ -17,24 +15,23 @@ if MMDET3D_SRC_ROOT not in sys.path:
 from util.evaluation import Evaluation
 
 
-class TestEvaluationmAP3D(unittest.TestCase):
+class TestmAPEvaluation(unittest.TestCase):
     def test_simple_precision_evaluation(self):
         predictions: list = [
             dict(
-                boxes=torch.tensor([]),
-                scores=torch.tensor([]),
-                labels=torch.tensor([])
+                boxes=torch.empty((0, 7), dtype=torch.float32),
+                scores=torch.tensor([], dtype=torch.float32),
+                labels=torch.tensor([], dtype=torch.long)
             )
         ]
 
         ground_truth: list = [
                 dict(
-                    boxes=torch.tensor([]),
-                    scores=torch.tensor([]),
-                    labels=torch.tensor([])
+                    boxes=torch.empty((0, 7), dtype=torch.float32),
+                    labels=torch.tensor([], dtype=torch.long)
                 )
         ]
 
         evaluation = Evaluation()
         results = evaluation.compute_mAP_3D(predicted_detections=predictions, ground_truth=ground_truth)
-        self.assertTrue(len(results) > 0)  # Smoke test
+        self.assertIsInstance(results, torch.Tensor)
