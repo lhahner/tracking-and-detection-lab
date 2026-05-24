@@ -43,11 +43,13 @@ class MeanAveragePrecision3D(Metric):
 
             tp_tensor = torch.zeros(best_gt_idx.shape[0])
             fp_tensor = torch.zeros(best_gt_idx.shape[0])
+            matched_ground_truths = torch.zeros(class_ground_truths.shape[0], dtype=torch.bool)
 
             for pred_idx, (iou, gt_idx) in enumerate(zip(best_iou, best_gt_idx)):
-                if iou >= self.iou_threshold:
+                if iou >= self.iou_threshold and not matched_ground_truths[gt_idx]:
                     class_wise_true_positives.append(class_predictions[pred_idx])
                     tp_tensor[pred_idx] = 1
+                    matched_ground_truths[gt_idx] = True
                 else:
                     fp_tensor[pred_idx] = 1
                     class_wise_false_negatives.append(class_predictions[pred_idx])
@@ -56,7 +58,6 @@ class MeanAveragePrecision3D(Metric):
             precision = cumulative_tp / torch.clamp(cumulative_tp + cumulative_fp, min=1e-8)
             recall = cumulative_tp / len(class_ground_truths)  # total number of ground_truth_classes
             class_wise_average_precision.append(self.__compute_average_precision(precision, recall))
-        breakpoint()
         return torch.stack(class_wise_average_precision).mean()
 
     def __collect_class_values(self, predictions, ground_truths, req_class):
@@ -71,9 +72,12 @@ class MeanAveragePrecision3D(Metric):
             for value in ground_truth:
                 if req_class == value[8].item():
                     class_ground_truths.append(value)
-        if len(class_predictions) == 0 or len(class_predictions) == 0:
+        if len(class_predictions) == 0 or len(class_ground_truths) == 0:
             return torch.tensor([]), torch.tensor([])
-        return torch.stack(class_predictions), torch.stack(class_ground_truths)
+        class_predictions_tensor = torch.stack(class_predictions)
+        score_order = torch.argsort(class_predictions_tensor[:, 7], descending=True)
+        sorted_class_predictions = class_predictions_tensor[score_order]
+        return sorted_class_predictions, torch.stack(class_ground_truths)
 
     def __compute_average_precision(self, precision, recall: torch.Tensor):
         if precision.numel() == 0 or recall.numel() == 0:
