@@ -293,33 +293,17 @@ class Evaluation:
             raise ValueError("Predicted detections classes do not match with ground truth")
 
     def compute_mAP_3D(self,
-                       predicted_detections: list,
-                       ground_truth: list):
+                       predicted_detections: torch.tensor,
+                       ground_truth: torch.tensor,
+                       classes):
         if len(predicted_detections) != len(ground_truth):
             raise ValueError("Predicted detections and ground truth must have the same batch size")
 
         from util.metrics.mean_average_precision_3D import MeanAveragePrecision3D
 
-        predicted_scores = []
-        predicted_labels = []
-        ground_truth_labels = []
-
-        for prediction, target in zip(predicted_detections, ground_truth):
-            predicted_scores.append(prediction.get("scores", torch.tensor([], dtype=torch.float32)).reshape(-1))
-            predicted_labels.append(prediction.get("labels", torch.tensor([], dtype=torch.long)).reshape(-1))
-            ground_truth_labels.append(target.get("labels", torch.tensor([], dtype=torch.long)).reshape(-1))
-
-        predicted_scores_tensor = torch.cat(predicted_scores) if predicted_scores else torch.tensor([], dtype=torch.float32)
-        predicted_labels_tensor = torch.cat(predicted_labels) if predicted_labels else torch.tensor([], dtype=torch.long)
-        ground_truth_labels_tensor = torch.cat(ground_truth_labels) if ground_truth_labels else torch.tensor([], dtype=torch.long)
-
-        classes = torch.unique(torch.cat([predicted_labels_tensor, ground_truth_labels_tensor])) if (
-            predicted_labels_tensor.numel() > 0 or ground_truth_labels_tensor.numel() > 0
-        ) else torch.tensor([], dtype=torch.long)
-
         metric = MeanAveragePrecision3D(classes=classes)
         metric.update(
-            preds=predicted_scores_tensor,
-            target=ground_truth_labels_tensor,
-            labels=predicted_labels_tensor)
+            preds=predicted_detections,
+            target=ground_truth,
+            classes=classes)
         return metric.compute()

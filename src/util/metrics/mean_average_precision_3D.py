@@ -1,67 +1,107 @@
 import torch
-from torchmetrics import Metric
+from torchmetrics import Metric, Precision, Recall
+from pytorch3d.ops import box3d_overlap
+from util.coordinate_converter import CoordinateConverter
 
 
 class MeanAveragePrecision3D(Metric):
-    def __init__(self, **kwargs):
+    def __init__(self, classes, **kwargs):
         super().__init__(**kwargs)
-        self.add_state("predicted_scores", default=[], dist_reduce_fx="cat")
-        self.add_state("predicted_labels", default=[], dist_reduce_fx="cat")
-        self.add_state("ground_truth_labels", default=[], dist_reduce_fx="cat")
-        self.classes = kwargs.get("classes", torch.tensor([], dtype=torch.long))
+        self.add_state("predictions", default=[], dist_reduce_fx="cat")
+        self.add_state("ground_truths", default=[], dist_reduce_fx="cat")
+        self.add_state("classes", default=torch.tensor([]), dist_reduce_fx="cat")
+        self.iou_threshold = 0.5
+        self.coordinate_converter = CoordinateConverter()
 
-    def update(self, preds: torch.tensor, target: torch.tensor, labels: torch.tensor) -> None:
-        if preds.ndim != 1 or target.ndim != 1 or labels.ndim != 1:
-            raise ValueError("preds, target and labels must be one-dimensional tensors")
-        if preds.shape != labels.shape:
-            raise ValueError("preds and labels must have the same shape")
-
-        self.predicted_scores.append(preds)
-        self.predicted_labels.append(labels)
-        self.ground_truth_labels.append(target)
+    def update(self, preds: torch.tensor, target: torch.tensor, classes: torch.tensor) -> None:
+        self.predictions.append(preds)
+        self.ground_truths.append(target)
+        self.classes = classes
 
     def compute(self):
-        if not self.predicted_scores:
+        if not self.predictions:
             return torch.tensor(0.0)
 
-        predicted_scores = torch.cat(self.predicted_scores)
-        predicted_labels = torch.cat(self.predicted_labels)
-        ground_truth_labels = torch.cat(self.ground_truth_labels)
-
-        classes = self.classes
-        if classes.numel() == 0:
-            if predicted_labels.numel() == 0 and ground_truth_labels.numel() == 0:
-                return torch.tensor(0.0)
-            classes = torch.unique(torch.cat([predicted_labels, ground_truth_labels])) # ?
-
+        if len(self.classes) == 0:
+            return torch.tensor(0.0)
         class_wise_average_precision = []
-        for c in classes:
-            pred_mask = predicted_labels == c
-            gt_mask = ground_truth_labels == c
 
-            class_predicted_scores = predicted_scores[pred_mask]
-            class_ground_truth_labels = ground_truth_labels[gt_mask]
+        for class_ in self.classes:
+            class_wise_true_positives = []
+            class_wise_false_negatives = []
 
-            if class_predicted_scores.numel() == 0 or class_ground_truth_labels.numel() == 0:
+            class_predictions, class_ground_truths = self.__collect_class_values(self.predictions,
+                                                                                 self.ground_truths,
+                                                                                 class_.item())
+            if class_predictions.numel() == 0 or class_ground_truths.numel() == 0:
                 class_wise_average_precision.append(torch.tensor(0.0))
                 continue
+            prediction_corner_boxes = self.coordinate_converter.boxes_3d_to_corners(class_predictions[:, :7])
+            ground_truth_cornder_boxes = self.coordinate_converter.boxes_3d_to_corners(class_ground_truths[:, :7])
+            _, iou_3d_class = box3d_overlap(prediction_corner_boxes, ground_truth_cornder_boxes)
+            best_iou, best_gt_idx = torch.max(iou_3d_class, dim=1)
 
-            sorted_scores, _ = torch.sort(class_predicted_scores, descending=True)
-            true_positives = torch.ones_like(sorted_scores) # ? 
-            false_positives = torch.zeros_like(sorted_scores) # ?
+            tp_tensor = torch.zeros(best_gt_idx.shape[0])
+            fp_tensor = torch.zeros(best_gt_idx.shape[0])
 
-            cumulative_tp = torch.cumsum(true_positives, dim=0) # ?
-            cumulative_fp = torch.cumsum(false_positives, dim=0) # ?
+            for pred_idx, (iou, gt_idx) in enumerate(zip(best_iou, best_gt_idx)):
+                if iou >= self.iou_threshold:
+                    class_wise_true_positives.append(class_predictions[pred_idx])
+                    tp_tensor[pred_idx] = 1
+                else:
+                    fp_tensor[pred_idx] = 1
+                    class_wise_false_negatives.append(class_predictions[pred_idx])
+            cumulative_tp = torch.cumsum(tp_tensor, dim=0)
+            cumulative_fp = torch.cumsum(fp_tensor, dim=0)
+            precision = cumulative_tp / torch.clamp(cumulative_tp + cumulative_fp, min=1e-8)
+            recall = cumulative_tp / len(class_ground_truths)  # total number of ground_truth_classes
+            class_wise_average_precision.append(self.__compute_average_precision(precision, recall))
+        breakpoint()
+        return torch.stack(class_wise_average_precision).mean()
 
-            precisions = cumulative_tp / (cumulative_tp + cumulative_fp) # ?
-            recalls = cumulative_tp / class_ground_truth_labels.numel() # ?
+    def __collect_class_values(self, predictions, ground_truths, req_class):
+        class_predictions: list = []
+        class_ground_truths: list = []
+        for prediction in predictions:
+            for value in prediction:
+                if req_class == value[8].item():
+                    class_predictions.append(value)
 
-            precisions = torch.cat([precisions, torch.tensor([1.0], device=precisions.device)]) # ?
-            recalls = torch.cat([recalls, torch.tensor([0.0], device=recalls.device)]) # ?
+        for ground_truth in ground_truths:
+            for value in ground_truth:
+                if req_class == value[8].item():
+                    class_ground_truths.append(value)
+        if len(class_predictions) == 0 or len(class_predictions) == 0:
+            return torch.tensor([]), torch.tensor([])
+        return torch.stack(class_predictions), torch.stack(class_ground_truths)
 
-            class_wise_average_precision.append(
-                torch.sum((recalls[:-1] - recalls[1:]) * precisions[:-1])
+    def __compute_average_precision(self, precision, recall: torch.Tensor):
+        if precision.numel() == 0 or recall.numel() == 0:
+            return torch.tensor(0.0, device=precision.device)
+
+        padded_recall = torch.cat(
+            [
+                torch.tensor([0.0]),
+                recall,
+                torch.tensor([1.0]),
+            ]
+        )
+
+        padded_precision = torch.cat(
+            [
+                torch.tensor([0.0]),
+                precision,
+                torch.tensor([0.0]),
+            ]
+        )
+
+        for i in range(padded_precision.numel() - 2, -1, -1):
+            padded_precision[i] = torch.maximum(
+                padded_precision[i],
+                padded_precision[i + 1],
             )
 
-        class_wise_average_precision_tensor = torch.stack(class_wise_average_precision)
-        return class_wise_average_precision_tensor.sum() / len(classes)
+        recall_change_indices = torch.where(padded_recall[1:] != padded_recall[:-1])[0]
+        padded_recall_diff = padded_recall[recall_change_indices + 1] - padded_recall[recall_change_indices]
+        ap = torch.sum(padded_recall_diff * padded_precision[recall_change_indices + 1])
+        return ap
