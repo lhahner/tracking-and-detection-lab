@@ -296,8 +296,8 @@ class Evaluation:
                        predicted_detections: torch.tensor,
                        ground_truth: torch.tensor,
                        classes):
-        if len(predicted_detections) != len(ground_truth):
-            raise ValueError("Predicted detections and ground truth must have the same batch size")
+        if predicted_detections.numel() == 0 or ground_truth.numel() == 0 or classes.numel() == 0:
+            raise ValueError("The given arguments contain empty data, cant compute mAP with these.")
 
         from util.metrics.mean_average_precision_3D import MeanAveragePrecision3D
 
