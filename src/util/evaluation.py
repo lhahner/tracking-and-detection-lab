@@ -249,6 +249,9 @@ class Evaluation:
         return benchmark_file_path
 
     def compute_IoU_3D(self, predicted_detections: list, ground_truth: list):
+        if predicted_detections.numel() == 0 or ground_truth.numel() == 0:
+            raise ValueError("Prediction or Ground truth empty can compute IoU.")
+        
         return box3d_overlap(predicted_detections, ground_truth)
 
     def compute_precision_and_recall(self,
@@ -269,7 +272,8 @@ class Evaluation:
     def compute_average_precision(self,
                                   predicted_detection_scores: torch.tensor,
                                   ground_truth: torch.tensor,
-                                  thresholds: torch.tensor = None):
+                                  thresholds: torch.tensor = None,
+                                  num_classes):
         # TODO create a separate metric here.
         if predicted_detection_scores.shape[0] == ground_truth.shape[0]:
             if thresholds is None:
@@ -280,7 +284,8 @@ class Evaluation:
                 predictions: torch.tensor = [0 if score >= threshold else 1 for score in predicted_detection_scores]
                 precision, recall = self.compute_precision_and_recall(
                         predicted_detection_classes=predictions,
-                        ground_truth=ground_truth)
+                        ground_truth=ground_truth,
+                        num_classes=num_classes)
                 precisions.append(precision)
                 recalls.append(recall)
             precisions.append(1)
