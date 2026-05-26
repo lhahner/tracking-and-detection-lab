@@ -272,8 +272,8 @@ class Evaluation:
     def compute_average_precision(self,
                                   predicted_detection_scores: torch.tensor,
                                   ground_truth: torch.tensor,
-                                  thresholds: torch.tensor = None,
-                                  num_classes):
+                                  num_classes,
+                                  thresholds: torch.tensor = None):
         # TODO create a separate metric here.
         if predicted_detection_scores.shape[0] == ground_truth.shape[0]:
             if thresholds is None:
