@@ -75,10 +75,10 @@ class CoordinateConverter:
         rotation_matrices = torch.zeros((boxes_3d.shape[0], 3, 3), device=device, dtype=dtype)
 
         rotation_matrices[:, 0, 0] = cos_yaw
-        rotation_matrices[:, 0, 1] = -sin_yaw
-        rotation_matrices[:, 1, 0] = sin_yaw
-        rotation_matrices[:, 1, 1] = cos_yaw
-        rotation_matrices[:, 2, 2] = 1.0
+        rotation_matrices[:, 0, 2] = sin_yaw
+        rotation_matrices[:, 1, 1] = 1.0
+        rotation_matrices[:, 2, 0] = -sin_yaw
+        rotation_matrices[:, 2, 2] = cos_yaw
 
         rotated_corners = torch.bmm(
             local_corners,

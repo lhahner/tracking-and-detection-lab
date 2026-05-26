@@ -127,7 +127,6 @@ class PointRCNNmmDetections3D(Detector):
                                                                            det_score=scores[0, highest_score_index],
                                                                            obj_index=labels[highest_score_index].detach().item()
                                                                            ))
-                detections_result.append(self.__
             elif format_option == "sort":
                 pass
             else:

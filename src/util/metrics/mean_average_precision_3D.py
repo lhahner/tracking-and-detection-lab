@@ -1,5 +1,5 @@
-import torch
 from torchmetrics import Metric, Precision, Recall
+import torch
 from pytorch3d.ops import box3d_overlap
 from util.coordinate_converter import CoordinateConverter
 
@@ -97,17 +97,17 @@ class MeanAveragePrecision3D(Metric):
         # Padding recall to 0 and 1, where 0 is min and 1 is max along the x axis
         padded_recall = torch.cat(
             [
-                torch.tensor([0.0]),
+                torch.tensor([0.0]).cpu(),
                 recall,
-                torch.tensor([1.0]),
+                torch.tensor([1.0]).cpu(),
             ]
         )
         # Here the padding is 0 as min but the second there is not max and gets replaced by the max prec.
         padded_precision = torch.cat(
             [
-                torch.tensor([0.0]),
+                torch.tensor([0.0]).cpu(),
                 precision,
-                torch.tensor([0.0]),
+                torch.tensor([0.0]).cpu(),
             ]
         )
         # Here we replace the max value with the max value of the precision values y axis

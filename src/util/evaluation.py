@@ -253,9 +253,9 @@ class Evaluation:
 
     def compute_precision_and_recall(self,
                                      predicted_detection_classes: torch.tensor,
-                                     ground_truth: torch.tensor) -> tuple[torch.tensor, torch.tensor]:
+                                     ground_truth: torch.tensor,
+                                     num_classes) -> tuple[torch.tensor, torch.tensor]:
         if predicted_detection_classes.shape[0] == ground_truth.shape[0]:
-            num_classes = predicted_detection_classes.shape[0]
             precision = torchmetrics.Precision(task="multiclass", average="macro", num_classes=num_classes)
             recall = torchmetrics.Recall(task="multiclass", average="macro", num_classes=num_classes)
             return precision(
@@ -270,6 +270,7 @@ class Evaluation:
                                   predicted_detection_scores: torch.tensor,
                                   ground_truth: torch.tensor,
                                   thresholds: torch.tensor = None):
+        # TODO create a separate metric here.
         if predicted_detection_scores.shape[0] == ground_truth.shape[0]:
             if thresholds is None:
                 thresholds = torch.tensor.from_numpy(np.arange(start=0.2, stop=0.7, step=0.05))
