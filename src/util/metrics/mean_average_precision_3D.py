@@ -7,22 +7,22 @@ from util.coordinate_converter import CoordinateConverter
 class MeanAveragePrecision3D(Metric):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.add_state("predictions", default=[], dist_reduce_fx="cat")
-        self.add_state("ground_truths", default=[], dist_reduce_fx="cat")
+        self.add_state("predictions", default=torch.tensor(0), dist_reduce_fx="cat")
+        self.add_state("ground_truths", default=torch.tensor(0), dist_reduce_fx="cat")
         self.add_state("classes", default=torch.tensor(0), dist_reduce_fx="cat")
         self.iou_threshold = 0.5
         self.coordinate_converter = CoordinateConverter()
 
     def update(self, preds: torch.tensor, target: torch.tensor, classes: torch.tensor) -> None:
-        self.predictions.append(preds)
-        self.ground_truths.append(target)
+        self.predictions = preds
+        self.ground_truths = target
         self.classes = classes
 
     def compute(self):
-        if not self.predictions:
+        if self.predictions.numel() == 0:
             return torch.tensor(0.0)
 
-        if len(self.classes) == 0:
+        if self.classes.numel() == 0:
             return torch.tensor(0.0)
         class_wise_average_precision = []
 
@@ -69,20 +69,20 @@ class MeanAveragePrecision3D(Metric):
         return torch.stack(class_wise_average_precision).mean()
 
     def __collect_class_values(self, predictions, ground_truths, req_class):
-        if len(predictions) == 0 or len(ground_truths) == 0 or req_class is None:
+        if predictions.numel() == 0 or ground_truths.numel() == 0 or req_class is None:
             raise ValueError("Given arguments are empty.")
-        # TODO shape guard
+        if predictions.shape[1] != 9 or ground_truths.shape[1] != 9:
+            raise ValueError("The given tensor dos not meet the required shape of (N, 9)")
+
         class_predictions: list = []
         class_ground_truths: list = []
         for prediction in predictions:
-            for value in prediction:
-                if req_class == value[8].item():
-                    class_predictions.append(value)
+            if req_class == prediction[8].item():
+                class_predictions.append(prediction)
 
         for ground_truth in ground_truths:
-            for value in ground_truth:
-                if req_class == value[8].item():
-                    class_ground_truths.append(value)
+            if req_class == ground_truth[8].item():
+                class_ground_truths.append(ground_truth)
 
         if len(class_predictions) == 0 or len(class_ground_truths) == 0:
             return torch.tensor([]), torch.tensor([])
