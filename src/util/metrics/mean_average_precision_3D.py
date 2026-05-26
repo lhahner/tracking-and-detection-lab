@@ -5,11 +5,11 @@ from util.coordinate_converter import CoordinateConverter
 
 
 class MeanAveragePrecision3D(Metric):
-    def __init__(self, classes, **kwargs):
+    def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.add_state("predictions", default=[], dist_reduce_fx="cat")
         self.add_state("ground_truths", default=[], dist_reduce_fx="cat")
-        self.add_state("classes", default=torch.tensor([]), dist_reduce_fx="cat")
+        self.add_state("classes", default=torch.tensor(0), dist_reduce_fx="cat")
         self.iou_threshold = 0.5
         self.coordinate_converter = CoordinateConverter()
 
@@ -29,7 +29,6 @@ class MeanAveragePrecision3D(Metric):
         for class_ in self.classes:
             class_wise_true_positives = []
             class_wise_false_negatives = []
-            
             # Filter from all predictions to lists containing predictions and gt values for this class only
             class_predictions, class_ground_truths = self.__collect_class_values(self.predictions,
                                                                                  self.ground_truths,
@@ -46,7 +45,6 @@ class MeanAveragePrecision3D(Metric):
             _, iou_3d_class = box3d_overlap(prediction_corner_boxes, ground_truth_cornder_boxes)
             # Considering that we only consider the preds with the gt that has has the highest IoU
             best_iou, best_gt_idx = torch.max(iou_3d_class, dim=1)
-            
             tp_tensor = torch.zeros(best_gt_idx.shape[0])
             fp_tensor = torch.zeros(best_gt_idx.shape[0])
             matched_ground_truths = torch.zeros(class_ground_truths.shape[0], dtype=torch.bool)
@@ -64,15 +62,16 @@ class MeanAveragePrecision3D(Metric):
             # Cumlative sum to prevent divison by 0  and to reflect the descending recall whenever we match too much.
             cumulative_tp = torch.cumsum(tp_tensor, dim=0)
             cumulative_fp = torch.cumsum(fp_tensor, dim=0)
-            
             precision = cumulative_tp / torch.clamp(cumulative_tp + cumulative_fp, min=1e-8)
             recall = cumulative_tp / len(class_ground_truths)  # total number of ground_truth_classes
-            
             # Compute AP, initally the integration of the trade-off curve between recall and precision
             class_wise_average_precision.append(self.__compute_average_precision(precision, recall))
         return torch.stack(class_wise_average_precision).mean()
 
     def __collect_class_values(self, predictions, ground_truths, req_class):
+        if len(predictions) == 0 or len(ground_truths) == 0 or req_class is None:
+            raise ValueError("Given arguments are empty.")
+        # TODO shape guard
         class_predictions: list = []
         class_ground_truths: list = []
         for prediction in predictions:
@@ -84,6 +83,7 @@ class MeanAveragePrecision3D(Metric):
             for value in ground_truth:
                 if req_class == value[8].item():
                     class_ground_truths.append(value)
+
         if len(class_predictions) == 0 or len(class_ground_truths) == 0:
             return torch.tensor([]), torch.tensor([])
         class_predictions_tensor = torch.stack(class_predictions)

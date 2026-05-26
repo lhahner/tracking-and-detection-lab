@@ -33,7 +33,6 @@ class TestmAPEvaluation(unittest.TestCase):
                                             classes=classes)
         self.assertIsInstance(results, torch.Tensor)
 
-
     def test_perfect_detection_returns_one(self):
         predictions = torch.tensor([[1.8, 2.7, 3.1, 2.2, 4.3, 1.1, 0.8, 0.8, 2]])
         ground_truth = torch.tensor([[1.8, 2.7, 3.1, 2.2, 4.3, 1.1, 0.8, 1.0, 2]])
@@ -41,9 +40,9 @@ class TestmAPEvaluation(unittest.TestCase):
 
         evaluation = Evaluation()
         results = evaluation.compute_mAP_3D(
-            predicted_detections=predictions,
-            ground_truth=ground_truth,
-            classes=classes)
+                predicted_detections=predictions,
+                ground_truth=ground_truth,
+                classes=classes)
 
         self.assertTrue(torch.isclose(results, torch.tensor(1.0)))
 
@@ -51,35 +50,35 @@ class TestmAPEvaluation(unittest.TestCase):
         sorted_predictions = torch.tensor([[1.8, 2.7, 3.1, 2.2, 4.3, 1.1, 0.8, 0.9, 2],
                                            [8.0, 8.0, 8.0, 2.2, 4.3, 1.1, 0.8, 0.2, 2]])
         unsorted_predictions = torch.tensor([
-                                             [8.0, 8.0, 8.0, 2.2, 4.3, 1.1, 0.8, 0.2, 2],
-                                             [1.8, 2.7, 3.1, 2.2, 4.3, 1.1, 0.8, 0.9, 2]])
+            [8.0, 8.0, 8.0, 2.2, 4.3, 1.1, 0.8, 0.2, 2],
+            [1.8, 2.7, 3.1, 2.2, 4.3, 1.1, 0.8, 0.9, 2]])
         ground_truth = torch.tensor([[1.8, 2.7, 3.1, 2.2, 4.3, 1.1, 0.8, 1.0, 2]])
         classes = torch.tensor([2])
 
         evaluation = Evaluation()
         sorted_results = evaluation.compute_mAP_3D(
-            predicted_detections=sorted_predictions,
-            ground_truth=ground_truth,
-            classes=classes)
+                predicted_detections=sorted_predictions,
+                ground_truth=ground_truth,
+                classes=classes)
         unsorted_results = evaluation.compute_mAP_3D(
-            predicted_detections=unsorted_predictions,
-            ground_truth=ground_truth,
-            classes=classes)
+                predicted_detections=unsorted_predictions,
+                ground_truth=ground_truth,
+                classes=classes)
 
         self.assertTrue(torch.isclose(sorted_results, unsorted_results))
 
     def test_duplicate_predictions_do_not_inflate_map_above_one(self):
         predictions = torch.tensor([
-                                    [1.8, 2.7, 3.1, 2.2, 4.3, 1.1, 0.8, 0.9, 2],
-                                    [1.8, 2.7, 3.1, 2.2, 4.3, 1.1, 0.8, 0.8, 2]])
+            [1.8, 2.7, 3.1, 2.2, 4.3, 1.1, 0.8, 0.9, 2],
+            [1.8, 2.7, 3.1, 2.2, 4.3, 1.1, 0.8, 0.8, 2]])
         ground_truth = torch.tensor([[1.8, 2.7, 3.1, 2.2, 4.3, 1.1, 0.8, 1.0, 2]])
         classes = torch.tensor([2])
 
         evaluation = Evaluation()
         results = evaluation.compute_mAP_3D(
-                    predicted_detections=predictions,
-                    ground_truth=ground_truth,
-                    classes=classes)
+                predicted_detections=predictions,
+                ground_truth=ground_truth,
+                classes=classes)
 
         self.assertTrue(torch.isclose(results, torch.tensor(1.0)))
 
@@ -91,6 +90,6 @@ class TestmAPEvaluation(unittest.TestCase):
         evaluation = Evaluation()
         with self.assertRaises(ValueError):
             evaluation.compute_mAP_3D(
-                predicted_detections=predictions,
-                ground_truth=ground_truth,
-                classes=classes)
+                    predicted_detections=predictions,
+                    ground_truth=ground_truth,
+                    classes=classes)

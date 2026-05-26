@@ -301,7 +301,7 @@ class Evaluation:
 
         from util.metrics.mean_average_precision_3D import MeanAveragePrecision3D
 
-        metric = MeanAveragePrecision3D(classes=classes)
+        metric = MeanAveragePrecision3D()
         metric.update(
             preds=predicted_detections,
             target=ground_truth,
