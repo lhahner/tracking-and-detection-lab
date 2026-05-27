@@ -303,8 +303,7 @@ class Evaluation:
                        ground_truth: torch.tensor,
                        classes):
         if predicted_detections.numel() == 0 or ground_truth.numel() == 0 or classes.numel() == 0:
-            raise ValueError("The given arguments contain empty data, cant compute mAP with these.")
-
+            return torch.tensor([0])
         from util.metrics.mean_average_precision_3D import MeanAveragePrecision3D
 
         metric = MeanAveragePrecision3D()

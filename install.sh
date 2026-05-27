@@ -120,9 +120,11 @@ case "${PYTHON_MAJOR_MINOR}" in
 esac
 
 echo "Installing packaging tools"
-# Detectron2 still imports pkg_resources, which is no longer present in setuptools 81+.
+# Detectron2 still imports pkg_resources, which is no longer present in
+# setuptools 81+. MMCV's metadata build also expects setuptools.command.build,
+# which is available in modern setuptools releases.
 python -m pip install --upgrade pip wheel
-python -m pip install "setuptools<81"
+python -m pip install "setuptools>=65.5,<81"
 
 echo "Installing helper build/runtime packages"
 python -m pip install ninja "opencv-python==4.10.0.84"
@@ -246,6 +248,6 @@ PY
 
 echo
 echo "Installation complete."
-echo "Note: detectron2 may emit a pkg_resources deprecation warning with setuptools<81."
+echo "Note: detectron2 may emit a pkg_resources deprecation warning with setuptools>=65.5,<81."
 echo "Activate with: conda activate ${ENV_NAME}"
 echo "Run the app with: PYTHONPATH=src python src/app.py"
