@@ -2,9 +2,47 @@ from torchmetrics import Metric, Precision, Recall
 import torch
 from pytorch3d.ops import box3d_overlap
 from util.coordinate_converter import CoordinateConverter
-
+from util.metrics.average_precision_3D import AveragePrecision3D
 
 class MeanAveragePrecision3D(Metric):
+    r"""Compute the `Mean-Average-Precision (mAP) for 3D object detection predictions.
+
+    Args:
+        predictions:
+            Input to be evaluated, the Inpute requires to a tensor where each row represents
+            one detections and the values correspond to exactly nine values.
+
+        ground_truths:
+            Ground truth values where the predictions are evaulated on, it requires to be a
+            tensor of the size of the number of required predictions with the values.
+
+        classes:
+            Number of classes in that given dataset
+
+        kwargs: Additional keyword arguments, see :ref:`Metric kwargs` for more info.
+
+    Raises:
+        ValueError:
+            If ``predictions`` or ``ground_truth`` is not of shape (N, 9)
+        ValueError:
+            If ``predictions`` or ``ground_truth`` is not empty
+        
+
+    Example::
+
+        Basic example on how to use this metric internally         
+
+        >>> predictions = torch.randn(3, 9)
+        >>> ground_truth = torch.randn(2, 9)
+        >>> classes = torch.tenosr([1, 2, 3])
+        >>> metric = MeanAveragePrecision3D()
+        >>> metric.update(
+        >>>         predictions=predictions,
+        >>>         ground_truths=ground_truths,
+        >>>         classes=classes)
+        >>> metric.compute()
+
+    """
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.add_state("predictions", default=torch.tensor(0), dist_reduce_fx="cat")
@@ -69,6 +107,11 @@ class MeanAveragePrecision3D(Metric):
         return torch.stack(class_wise_average_precision).mean()
 
     def __collect_class_values(self, predictions, ground_truths, req_class):
+        """
+        This method generates two lists that filters the given predictions tensor
+        and the given ground_truth tensor to two tensors only consiting of the 
+        predictions and the groundtruths from the given req_class.
+        """
         if predictions.numel() == 0 or ground_truths.numel() == 0 or req_class is None:
             raise ValueError("Given arguments are empty.")
         if predictions.shape[1] != 9 or ground_truths.shape[1] != 9:
@@ -92,35 +135,8 @@ class MeanAveragePrecision3D(Metric):
         return sorted_class_predictions, torch.stack(class_ground_truths)
 
     def __compute_average_precision(self, precision, recall: torch.Tensor):
-        if precision.numel() == 0 or recall.numel() == 0:
-            return torch.tensor(0.0, device=precision.device)
-        # Padding recall to 0 and 1, where 0 is min and 1 is max along the x axis
-        padded_recall = torch.cat(
-            [
-                torch.tensor([0.0]).cpu(),
-                recall,
-                torch.tensor([1.0]).cpu(),
-            ]
-        )
-        # Here the padding is 0 as min but the second there is not max and gets replaced by the max prec.
-        padded_precision = torch.cat(
-            [
-                torch.tensor([0.0]).cpu(),
-                precision,
-                torch.tensor([0.0]).cpu(),
-            ]
-        )
-        # Here we replace the max value with the max value of the precision values y axis
-        for i in range(padded_precision.numel() - 2, -1, -1):
-            padded_precision[i] = torch.maximum(
-                padded_precision[i],
-                padded_precision[i + 1],
-            )
-        # Here we now compute the integration
-        # Only the values where have a change since if not we would have width = 0 which results in empty area
-        recall_change_indices = torch.where(padded_recall[1:] != padded_recall[:-1])[0]
-        # This defines the widht of the rectangles for integration
-        padded_recall_diff = padded_recall[recall_change_indices + 1] - padded_recall[recall_change_indices]
-        # Here we compute the surface area meaning width_1 * height_2 + ... + width_n * height_n
-        ap = torch.sum(padded_recall_diff * padded_precision[recall_change_indices + 1])
-        return ap
+        metric = AveragePrecision3D()
+        metric.update(
+                precision=precision,
+                recall=recall)
+        return metric.compute()
