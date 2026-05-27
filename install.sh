@@ -178,16 +178,16 @@ else
   echo "Skipping detectron2 installation"
 fi
 
+echo "Installing PyTorch3D for MMDetection3D"
+if [[ "$(uname -s)" == "Darwin" ]]; then
+   MACOSX_DEPLOYMENT_TARGET=10.14 CC=clang CXX=clang++ \
+     python -m pip install "git+https://github.com/facebookresearch/pytorch3d.git@stable"
+else
+   conda install -c pytorch3d -c conda-forge pytorch3d -y
+fi
+
 if [[ "${INSTALL_MMDET3D}" == "1" ]]; then
   echo "WARNING - MMDetection3D needs gpu, use gcc 13.2.0 and nvcc 11.8.0"
-
-  echo "Installing PyTorch3D for MMDetection3D"
-  if [[ "$(uname -s)" == "Darwin" ]]; then
-    MACOSX_DEPLOYMENT_TARGET=10.14 CC=clang CXX=clang++ \
-      python -m pip install "git+https://github.com/facebookresearch/pytorch3d.git@stable"
-  else
-    conda install -c pytorch3d -c conda-forge pytorch3d -y
-  fi
 
   echo "Installing OpenMMLab package manager"
   python -m pip install -U openmim

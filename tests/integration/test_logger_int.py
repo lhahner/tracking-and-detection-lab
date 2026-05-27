@@ -26,6 +26,6 @@ class TestLoggerInt(unittest.TestCase):
             os.stat(path).st_size != 0
         )
         # clean up 
-        os.remove(path)
+        os.remove(file)
 
          
