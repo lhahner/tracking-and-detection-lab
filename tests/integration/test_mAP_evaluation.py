@@ -88,8 +88,8 @@ class TestmAPEvaluation(unittest.TestCase):
         classes = torch.tensor([2])
 
         evaluation = Evaluation()
-        with self.assertRaises(ValueError):
-            evaluation.compute_mAP_3D(
+        result = evaluation.compute_mAP_3D(
                     predicted_detections=predictions,
                     ground_truth=ground_truth,
                     classes=classes)
+        self.assertEquals(result, torch.tensor([0]))

@@ -9,7 +9,8 @@ from pathlib import Path
 from util.settings_loader import SettingsLoader
 
 class LoggingConfig:
-      def __init__(self, routine="infer", log_level=logging.INFO):
+      def __init__(self, routine="infer", log_level=logging.INFO, 
+                   log_filename=None):
           settings = SettingsLoader.load("settings.yaml")
           self.log_dir = Path(settings.paths.logging_path)
           
@@ -17,8 +18,11 @@ class LoggingConfig:
             self.log_dir.mkdir(parents=True, exist_ok=True)
 
           self.root_logger = logging.getLogger()
-
-          self._log_filename = f"{str(datetime.datetime.now())}-{routine}"
+          
+          if log_filename is None:
+              self._log_filename = f"{str(datetime.datetime.now())}-{routine}"
+          else:
+              self._log_filename = log_filename
           self._log_level = self._resolve_level(log_level) 
           self._log_format = (
               "%(asctime)s | %(levelname)-8s | %(name)s | "

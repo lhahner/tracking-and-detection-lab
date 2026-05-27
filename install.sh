@@ -132,7 +132,6 @@ python -m pip install ninja "opencv-python==4.10.0.84"
 echo "Installing PyTorch ${PYTORCH_VERSION} and torchvision ${TORCHVISION_VERSION} from ${PYTORCH_INDEX_URL}"
 conda install "pytorch" "torchvision" -c pytorch
 conda install -c conda-forge fvcore iopath -y
-conda install -c pytorch3d -c conda-forge pytorch3d -y
 
 echo "Installing NumPy < 2 for motmetrics compatibility"
 python -m pip install "numpy<2"
@@ -159,30 +158,44 @@ else
 fi
 
 if [[ "${INSTALL_DETECTRON2}" == "1" ]]; then
-  echo "Installing Conda C/C++ toolchain for detectron2"
-  conda install -n "${ENV_NAME}" -c conda-forge gcc_linux-64 gxx_linux-64 -y
+  if [[ "$(uname -s)" == "Darwin" ]]; then
+    echo "Skipping detectron2 installation on macOS because this project does not currently support that build path."
+  else
+    echo "Installing Conda C/C++ toolchain for detectron2"
+    conda install -n "${ENV_NAME}" -c conda-forge gcc_linux-64 gxx_linux-64 -y
 
-  CONDA_BIN_DIR="$(python - <<'PY'
-import sys
-from pathlib import Path
+    CONDA_BIN_DIR="$(python - <<EOF
+		import sys
+		from pathlib import Path
 
-print(Path(sys.prefix) / "bin")
-PY
-)"
-  export CC="${CONDA_BIN_DIR}/x86_64-conda-linux-gnu-gcc"
-  export CXX="${CONDA_BIN_DIR}/x86_64-conda-linux-gnu-g++"
+		print(Path(sys.prefix) / "bin")
+EOF
+)
+    export CC="${CONDA_BIN_DIR}/x86_64-conda-linux-gnu-gcc"
+    export CXX="${CONDA_BIN_DIR}/x86_64-conda-linux-gnu-g++"
+  fi
 
-  echo "Using CC=${CC}"
-  echo "Using CXX=${CXX}"
-  echo "Installing detectron2 from source"
-  python -m pip install --no-build-isolation \
-    "detectron2 @ git+https://github.com/facebookresearch/detectron2.git"
+    echo "Using CC=${CC}"
+    echo "Using CXX=${CXX}"
+    echo "Installing detectron2 from source"
+    python -m pip install --no-build-isolation \
+      "detectron2 @ git+https://github.com/facebookresearch/detectron2.git"
+  fi
 else
   echo "Skipping detectron2 installation"
 fi
 
 if [[ "${INSTALL_MMDET3D}" == "1" ]]; then
   echo "WARNING - MMDetection3D needs gpu, use gcc 13.2.0 and nvcc 11.8.0"
+
+  echo "Installing PyTorch3D for MMDetection3D"
+  if [[ "$(uname -s)" == "Darwin" ]]; then
+    MACOSX_DEPLOYMENT_TARGET=10.14 CC=clang CXX=clang++ \
+      python -m pip install "git+https://github.com/facebookresearch/pytorch3d.git@stable"
+  else
+    conda install -c pytorch3d -c conda-forge pytorch3d -y
+  fi
+
   echo "Installing OpenMMLab package manager"
   python -m pip install -U openmim
 
@@ -224,9 +237,11 @@ else
 fi
 
 echo "Verifying GLIBCXX version"
-if [[ $CONDA_DEFAULT_ENV == track-lab ]]; then
-	conda install -c conda-forge libstdcxx-ng libgcc-ng
-	conda install -c conda-forge gxx_linux-64 gcc_linux-64
+if [[ "$(uname -s)" == "Linux" && $CONDA_DEFAULT_ENV == track-lab ]]; then
+  conda install -c conda-forge libstdcxx-ng libgcc-ng -y
+  conda install -c conda-forge gxx_linux-64 gcc_linux-64 -y
+else
+  echo "Skipping Linux GLIBCXX package verification on $(uname -s)"
 fi
 
 echo "Verifying installed packages"
