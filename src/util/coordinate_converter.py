@@ -45,22 +45,22 @@ class CoordinateConverter:
 
         x_corners = torch.stack(
             [
-                dx / 2, dx / 2, -dx / 2, -dx / 2,
-                dx / 2, dx / 2, -dx / 2, -dx / 2,
+                -dx / 2, dx / 2, dx / 2, -dx / 2,
+                -dx / 2, dx / 2, dx / 2, -dx / 2,
             ],
             dim=1,
         )
         y_corners = torch.stack(
             [
-                dy / 2, -dy / 2, -dy / 2, dy / 2,
-                dy / 2, -dy / 2, -dy / 2, dy / 2,
+                -dy / 2, -dy / 2, dy / 2, dy / 2,
+                -dy / 2, -dy / 2, dy / 2, dy / 2,
             ],
             dim=1,
         )
         z_corners = torch.stack(
             [
-                dz / 2, dz / 2, dz / 2, dz / 2,
                 -dz / 2, -dz / 2, -dz / 2, -dz / 2,
+                dz / 2, dz / 2, dz / 2, dz / 2,
             ],
             dim=1,
         )

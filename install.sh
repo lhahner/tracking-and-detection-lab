@@ -170,10 +170,9 @@ if [[ "${INSTALL_DETECTRON2}" == "1" ]]; then
 
 		print(Path(sys.prefix) / "bin")
 EOF
-)
+)"
     export CC="${CONDA_BIN_DIR}/x86_64-conda-linux-gnu-gcc"
     export CXX="${CONDA_BIN_DIR}/x86_64-conda-linux-gnu-g++"
-  fi
 
     echo "Using CC=${CC}"
     echo "Using CXX=${CXX}"
