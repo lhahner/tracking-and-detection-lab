@@ -189,6 +189,14 @@ if [[ "${INSTALL_MMDET3D}" == "1" ]]; then
   echo "Installing MMEngine"
   mim install mmengine
 
+  echo "Restoring packaging tool versions for mmcv"
+  python -m pip install --upgrade --force-reinstall "setuptools>=65.5,<81" wheel
+  python - <<'PY'
+import setuptools
+
+print(f"setuptools={setuptools.__version__}")
+PY
+
   echo "Installing mmcv"
   python -m pip install --no-build-isolation "mmcv==2.1.0"
 
