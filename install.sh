@@ -164,7 +164,7 @@ if [[ "${INSTALL_DETECTRON2}" == "1" ]]; then
     echo "Installing Conda C/C++ toolchain for detectron2"
     conda install -n "${ENV_NAME}" -c conda-forge gcc_linux-64 gxx_linux-64 -y
 
-    CONDA_BIN_DIR="$(python - << import sys; from pathlib import Path; print(Path(sys.prefix) / "bin"))"
+    CONDA_BIN_DIR="$(python -c 'import sys; from pathlib import Path; print(Path(sys.prefix) / "bin")')"
     export CC="${CONDA_BIN_DIR}/x86_64-conda-linux-gnu-gcc"
     export CXX="${CONDA_BIN_DIR}/x86_64-conda-linux-gnu-g++"
 
