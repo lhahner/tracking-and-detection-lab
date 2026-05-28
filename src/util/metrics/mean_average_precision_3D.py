@@ -132,7 +132,7 @@ class MeanAveragePrecision3D(Metric):
         class_predictions_tensor = torch.stack(class_predictions)
         score_order = torch.argsort(class_predictions_tensor[:, 7], descending=True)
         sorted_class_predictions = class_predictions_tensor[score_order]
-        return sorted_class_predictions, torch.stack(class_ground_truths)
+        return sorted_class_predictions, torch.stack(class_ground_truths.cpu())
 
     def __compute_average_precision(self, precision, recall: torch.Tensor):
         metric = AveragePrecision3D()
