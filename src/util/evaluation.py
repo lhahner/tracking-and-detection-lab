@@ -4,13 +4,18 @@ import torch
 from torch.autograd import grad
 import motmetrics as mm
 import torchmetrics
-from pytorch3d.ops import box3d_overlap
 import datetime
+from util.logging_config import LoggingConfig
+
+logging_config = LoggingConfig()
+logger = logging_config.get_logger(__name__)
 
 
 class Evaluation:
-    """Compute and persist MOT-style tracking benchmark metrics."""
-
+    """
+    API for evaluation of various metrics based on
+    torchmetrics or motmetrics package.
+    """
     def __init__(self, iou_threshold=0.5):
         """Create an evaluation helper for MOT-style tracking metrics.
 
@@ -249,15 +254,27 @@ class Evaluation:
         return benchmark_file_path
 
     def compute_IoU_3D(self, predicted_detections: list, ground_truth: list):
-        if predicted_detections.numel() == 0 or ground_truth.numel() == 0:
-            raise ValueError("Prediction or Ground truth empty can compute IoU.")
+        """
+        Standalone wrapper for PyTorch3D IoU computation. PyTorch3D Requires Linux.
+        """
+        try: 
+            from pytorch3d.ops import box3d_overlap
+            if predicted_detections.numel() == 0 or ground_truth.numel() == 0:
+                raise ValueError("Prediction or Ground truth empty can compute IoU.")
         
-        return box3d_overlap(predicted_detections, ground_truth)
+            return box3d_overlap(predicted_detections, ground_truth)
+        except ImportError as e:
+            logger.error("PyTorch3D not installed, either install or try to bypass", e)
+
+            
 
     def compute_precision_and_recall(self,
                                      predicted_detection_classes: torch.tensor,
                                      ground_truth: torch.tensor,
                                      num_classes) -> tuple[torch.tensor, torch.tensor]:
+        """
+        Standalone wrapper for torchmetrics recall and precision computations.
+        """
         if predicted_detection_classes.shape[0] == ground_truth.shape[0]:
             precision = torchmetrics.Precision(task="multiclass", average="macro", num_classes=num_classes)
             recall = torchmetrics.Recall(task="multiclass", average="macro", num_classes=num_classes)
@@ -270,38 +287,23 @@ class Evaluation:
             raise ValueError("Predicted detections classes do not match with ground truth")
 
     def compute_average_precision(self,
-                                  predicted_detection_scores: torch.tensor,
-                                  ground_truth: torch.tensor,
-                                  num_classes,
-                                  thresholds: torch.tensor = None):
-        # TODO create a separate metric here.
-        if predicted_detection_scores.shape[0] == ground_truth.shape[0]:
-            if thresholds is None:
-                thresholds = torch.tensor.from_numpy(np.arange(start=0.2, stop=0.7, step=0.05))
-            precisions, recalls = []
-
-            for threshold in thresholds:
-                predictions: torch.tensor = [0 if score >= threshold else 1 for score in predicted_detection_scores]
-                precision, recall = self.compute_precision_and_recall(
-                        predicted_detection_classes=predictions,
-                        ground_truth=ground_truth,
-                        num_classes=num_classes)
-                precisions.append(precision)
-                recalls.append(recall)
-            precisions.append(1)
-            recalls.append(0)
-
-            precisions_tensor = torch.stack(precisions)
-            recalls_tensor = torch.stack(recalls)
-
-            return torch.sum((recalls_tensor[:-1] - recalls_tensor[1:]) * precisions_tensor[:-1])
-        else:
-            raise ValueError("Predicted detections classes do not match with ground truth")
+                                  recall: torch.tensor,
+                                  precision: torch.tensor):
+        """
+        Standalone Average Precision interaction.
+        """
+        from util.metrcs.average_precision_3D import AveragePrecision3D
+        metric = AveragePrecision3D()
+        metric.update(recall, precision)
+        return metric.compute()
 
     def compute_mAP_3D(self,
                        predicted_detections: torch.tensor,
                        ground_truth: torch.tensor,
                        classes):
+        """
+        Frame-wise standalone mAP interaction.
+        """
         if predicted_detections.numel() == 0 or ground_truth.numel() == 0 or classes.numel() == 0:
             return torch.tensor([0])
         from util.metrics.mean_average_precision_3D import MeanAveragePrecision3D
