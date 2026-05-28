@@ -120,9 +120,11 @@ case "${PYTHON_MAJOR_MINOR}" in
 esac
 
 echo "Installing packaging tools"
-# Detectron2 still imports pkg_resources, which is no longer present in setuptools 81+.
+# Detectron2 still imports pkg_resources, which is no longer present in
+# setuptools 81+. MMCV's metadata build also expects setuptools.command.build,
+# which is available in modern setuptools releases.
 python -m pip install --upgrade pip wheel
-python -m pip install "setuptools<81"
+python -m pip install "setuptools>=65.5,<81"
 
 echo "Installing helper build/runtime packages"
 python -m pip install ninja "opencv-python==4.10.0.84"
@@ -130,7 +132,6 @@ python -m pip install ninja "opencv-python==4.10.0.84"
 echo "Installing PyTorch ${PYTORCH_VERSION} and torchvision ${TORCHVISION_VERSION} from ${PYTORCH_INDEX_URL}"
 conda install "pytorch" "torchvision" -c pytorch
 conda install -c conda-forge fvcore iopath -y
-conda install -c pytorch3d -c conda-forge pytorch3d -y
 
 echo "Installing NumPy < 2 for motmetrics compatibility"
 python -m pip install "numpy<2"
@@ -157,35 +158,50 @@ else
 fi
 
 if [[ "${INSTALL_DETECTRON2}" == "1" ]]; then
-  echo "Installing Conda C/C++ toolchain for detectron2"
-  conda install -n "${ENV_NAME}" -c conda-forge gcc_linux-64 gxx_linux-64 -y
+  if [[ "$(uname -s)" == "Darwin" ]]; then
+    echo "Skipping detectron2 installation on macOS because this project does not currently support that build path."
+  else
+    echo "Installing Conda C/C++ toolchain for detectron2"
+    conda install -n "${ENV_NAME}" -c conda-forge gcc_linux-64 gxx_linux-64 -y
 
-  CONDA_BIN_DIR="$(python - <<'PY'
-import sys
-from pathlib import Path
+    CONDA_BIN_DIR="$(python -c 'import sys; from pathlib import Path; print(Path(sys.prefix) / "bin")')"
+    export CC="${CONDA_BIN_DIR}/x86_64-conda-linux-gnu-gcc"
+    export CXX="${CONDA_BIN_DIR}/x86_64-conda-linux-gnu-g++"
 
-print(Path(sys.prefix) / "bin")
-PY
-)"
-  export CC="${CONDA_BIN_DIR}/x86_64-conda-linux-gnu-gcc"
-  export CXX="${CONDA_BIN_DIR}/x86_64-conda-linux-gnu-g++"
-
-  echo "Using CC=${CC}"
-  echo "Using CXX=${CXX}"
-  echo "Installing detectron2 from source"
-  python -m pip install --no-build-isolation \
-    "detectron2 @ git+https://github.com/facebookresearch/detectron2.git"
+    echo "Using CC=${CC}"
+    echo "Using CXX=${CXX}"
+    echo "Installing detectron2 from source"
+    python -m pip install --no-build-isolation \
+      "detectron2 @ git+https://github.com/facebookresearch/detectron2.git"
+  fi
 else
   echo "Skipping detectron2 installation"
 fi
 
+echo "Installing PyTorch3D for MMDetection3D"
+if [[ "$(uname -s)" == "Darwin" ]]; then
+   MACOSX_DEPLOYMENT_TARGET=10.14 CC=clang CXX=clang++ \
+     python -m pip install "git+https://github.com/facebookresearch/pytorch3d.git@stable"
+else
+   conda install -c pytorch3d -c conda-forge pytorch3d -y
+fi
+
 if [[ "${INSTALL_MMDET3D}" == "1" ]]; then
   echo "WARNING - MMDetection3D needs gpu, use gcc 13.2.0 and nvcc 11.8.0"
+
   echo "Installing OpenMMLab package manager"
   python -m pip install -U openmim
 
   echo "Installing MMEngine"
   mim install mmengine
+
+  echo "Restoring packaging tool versions for mmcv"
+  python -m pip install --upgrade --force-reinstall "setuptools>=65.5,<81" wheel
+  python - <<'PY'
+import setuptools
+
+print(f"setuptools={setuptools.__version__}")
+PY
 
   echo "Installing mmcv"
   python -m pip install --no-build-isolation "mmcv==2.1.0"
@@ -214,9 +230,11 @@ else
 fi
 
 echo "Verifying GLIBCXX version"
-if [[ $CONDA_DEFAULT_ENV == track-lab ]]; then
-	conda install -c conda-forge libstdcxx-ng libgcc-ng
-	conda install -c conda-forge gxx_linux-64 gcc_linux-64
+if [[ "$(uname -s)" == "Linux" && $CONDA_DEFAULT_ENV == track-lab ]]; then
+  conda install -c conda-forge libstdcxx-ng libgcc-ng -y
+  conda install -c conda-forge gxx_linux-64 gcc_linux-64 -y
+else
+  echo "Skipping Linux GLIBCXX package verification on $(uname -s)"
 fi
 
 echo "Verifying installed packages"
@@ -246,6 +264,6 @@ PY
 
 echo
 echo "Installation complete."
-echo "Note: detectron2 may emit a pkg_resources deprecation warning with setuptools<81."
+echo "Note: detectron2 may emit a pkg_resources deprecation warning with setuptools>=65.5,<81."
 echo "Activate with: conda activate ${ENV_NAME}"
 echo "Run the app with: PYTHONPATH=src python src/app.py"

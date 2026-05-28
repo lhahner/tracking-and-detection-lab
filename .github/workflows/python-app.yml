@@ -33,7 +33,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         chmod a+x ./install.sh
-        ./install.sh --with-mmdet3d
-    - name: Test with unittest
+        ./install.sh
+    - name: Test with pytest
       run: |
-        conda run -n track-lab python -m unittest discover -s tests
+        conda run -n track-lab pytest
