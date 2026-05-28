@@ -292,9 +292,10 @@ class Evaluation:
         """
         Standalone Average Precision interaction.
         """
-        from util.metrcs.average_precision_3D import AveragePrecision3D
+        from util.metrics.average_precision_3D import AveragePrecision3D
         metric = AveragePrecision3D()
-        metric.update(recall, precision)
+        metric.update(recall=recall, 
+                      precision=precision)
         return metric.compute()
 
     def compute_mAP_3D(self,
