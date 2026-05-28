@@ -72,7 +72,7 @@ class MeanAveragePrecision3D(Metric):
                                                                                  self.ground_truths,
                                                                                  class_.item())
             if class_predictions.numel() == 0 or class_ground_truths.numel() == 0:
-                class_wise_average_precision.append(torch.tensor(0.0))
+                class_wise_average_precision.append(torch.tensor(0.0).cpu())
                 continue
             # Coordinate convertion need since pytorch3d iou computation needs corner boxes
             prediction_corner_boxes = self.coordinate_converter.boxes_3d_to_corners(
@@ -104,7 +104,7 @@ class MeanAveragePrecision3D(Metric):
             recall = cumulative_tp / len(class_ground_truths)  # total number of ground_truth_classes
             # Compute AP, initally the integration of the trade-off curve between recall and precision
             class_wise_average_precision.append(self.__compute_average_precision(precision, recall))
-        return torch.stack(class_wise_average_precision).mean()
+        return torch.stack(class_wise_average_precision).cpu().mean()
 
     def __collect_class_values(self, predictions, ground_truths, req_class):
         """
@@ -132,7 +132,7 @@ class MeanAveragePrecision3D(Metric):
         class_predictions_tensor = torch.stack(class_predictions)
         score_order = torch.argsort(class_predictions_tensor[:, 7], descending=True)
         sorted_class_predictions = class_predictions_tensor[score_order]
-        return sorted_class_predictions, torch.stack(class_ground_truths.cpu())
+        return sorted_class_predictions, torch.stack(class_ground_truths)
 
     def __compute_average_precision(self, precision, recall: torch.Tensor):
         metric = AveragePrecision3D()
