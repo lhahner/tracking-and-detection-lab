@@ -31,8 +31,8 @@ jobs:
 
       - name: Generate coverage report
         run: |
-          coverage run -m unittest discover -s tests
-          coverage xml
+          conda run -n track-lab coverage run -m pytest
+          conda run -n track-lab coverage xml
 
       - name: Report coverage
         uses: orgoro/coverage@v3.2
