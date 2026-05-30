@@ -22,8 +22,8 @@ class TestPointRCNNmmDetections3D(unittest.TestCase):
         with patch("detector.pointrcnn.pointrcnn_mmdetection3d.init_model", return_value=fake_model):
             pointrcnnmmdetections3D = PointRCNNmmDetections3D(
                     dataset=mock_kitti3D,
-                    config_file=f"{SRC_ROOT}/detector/pointrcnn/point_rcnn_2x8_kitti-3d-3classes.py",
-                    checkpoint_file=f"{SRC_ROOT}/detector/pointrcnn/point_rcnn_2x8_kitti-3d-3classes_20211208_151344.pth",
+                    config_file=f"{SRC_ROOT}/detector/pointrcnn/model/point-rcnn_2x8_kitti-3d-3class_legacyckpt.py",
+                    checkpoint_file=f"{SRC_ROOT}/detector/pointrcnn/model/point_rcnn_2x8_kitti-3d-3classes_20211208_151344.pth",
                     classes={0: "Car", 1: "Pedestrian"})
         # object_type,truncation,occlusion,alpha,left,top,right,bottom,height,width,length,x,y,z,rotation_y 
         # Pedestrian 0.00 0 -0.20 712.40 143.00 810.73 307.92 1.89 0.48 1.20 1.84 1.47 8.41 0.01

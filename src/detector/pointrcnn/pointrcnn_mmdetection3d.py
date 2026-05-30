@@ -17,12 +17,7 @@ from util.logging_config import LoggingConfig
 logging_config = LoggingConfig()
 logger = logging_config.get_logger(__name__)
 
-DET_PATH = ""  # TODO
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
-
-# TODO consider that in Kitti the labels Car and pedestrian are evaluated,
-# therefor it would make sense to filter out other in either the format or
-# other.
 
 
 class PointRCNNmmDetections3D(Detector):
