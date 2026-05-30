@@ -54,7 +54,7 @@ class TestPointRCNNMMDetection3DInference(unittest.TestCase):
             kitti3d: Kitti3D = Kitti3D(KITTI3D_DUMMY_PATH, logger=logger)
             pointrcnn: PointRCNNmmDetections3D = PointRCNNmmDetections3D(
                 dataset=kitti3d,
-                config_file=f"{SRC_ROOT}/src/detector/pointrcnn/model/point-rcnn_8xb2_kitti-3d-3class.py",
+                config_file=f"{SRC_ROOT}/detector/pointrcnn/model/point-rcnn_8xb2_kitti-3d-3class_legacyckpt.py",
                 classes=CLASSES)
             out: list = pointrcnn.detect(serialize=False)
             self.assertTrue(len(out) > 0)

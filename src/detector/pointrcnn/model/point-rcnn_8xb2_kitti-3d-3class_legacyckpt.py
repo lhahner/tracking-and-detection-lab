@@ -1,15 +1,8 @@
-import os
-# Project path
-MODEL_DIR = os.path.dirname(__file__)
-POINTRCNN_DIR = os.path.dirname(MODEL_DIR)
-DETECTOR_DIR = os.path.dirname(POINTRCNN_DIR)
-SRC_DIR = os.path.dirname(DETECTOR_DIR)
-PROJECT_ROOT = os.path.dirname(SRC_DIR)
-
-# mmdetection model path if mmdetection submodule was fetched
 _base_ = [
-    f'{PROJECT_ROOT}/configs/_base_/datasets/kitti-3d-car.py', f'{PROJECT_ROOT}/configs/_base_/models/point_rcnn.py',
-    f'{PROJECT_ROOT}/configs/_base_/default_runtime.py', f'{PROJECT_ROOT}/configs/_base_/schedules/cyclic-40e.py'
+    '../../../../mmdetection3d/configs/_base_/datasets/kitti-3d-car.py',
+    '../../../../mmdetection3d/configs/_base_/models/point_rcnn.py',
+    '../../../../mmdetection3d/configs/_base_/default_runtime.py',
+    '../../../../mmdetection3d/configs/_base_/schedules/cyclic-40e.py'
 ]
 
 # dataset settings

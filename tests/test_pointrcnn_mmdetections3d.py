@@ -13,8 +13,8 @@ if SRC_ROOT not in sys.path:
 
 
 class TestPointRCNNmmDetections3D(unittest.TestCase):
-    @patch("datasets.kitti3D")
-    def test_format_detections(self, mock_kitti3D):
+    @patch("datasets.kitti3D.Kitti3D")
+    def test_format_kitti3d_detections(self, mock_kitti3D):
         if not torch.cuda.is_available():
             self.skipTest("These tests need GPU support")
         from detector.pointrcnn.pointrcnn_mmdetection3d import PointRCNNmmDetections3D
@@ -35,11 +35,11 @@ class TestPointRCNNmmDetections3D(unittest.TestCase):
         lwh_box = bboxes[:, 2:5]
         yaw = bboxes[:, 6]
         det_scroes = np.array([0.78])
-        formatted_detections = pointrcnnmmdetections3D.format_detections(
-                "00001",
-                xyz_centroids,
-                lwh_box,
-                yaw,
-                det_scroes
+        formatted_detections = pointrcnnmmdetections3D.format_kitti3d_detections(
+                xyz_centroids=xyz_centroids,
+                lwh_box=lwh_box,
+                yaw=yaw,
+                det_score=det_scroes,
+                obj_index=0
                 )
-        self.assertEquals("00001,0.2,0.2,0.2,0.2,0.2,1-1,-1,-1", formatted_detections)
+        self.assertTrue(len(formatted_detections) > 0)

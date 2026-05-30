@@ -4,7 +4,6 @@ import numpy as np
 from detector.detector import Detector
 from torch.utils.data import DataLoader, dataloader
 from util.file_handler import write_output
-from pytorch3d.structures import Pointclouds
 import torch.nn.functional as Functional
 
 if torch.cuda.is_available():
@@ -177,6 +176,7 @@ class PointRCNNmmDetections3D(Detector):
             ])
         # The coordiantes of the bounding box in world coordinates
         world_bbox: torch.tensor = (xyz_centroids + local_box_corner @ rotation_matrix).unsqueeze(0)
+        from pytorch3d.structures import Pointclouds
         bboxes: torch.tensor = Pointclouds(points=world_bbox).get_bounding_boxes()
         return f"{frame_index},{bboxes.flatten()},{det_score},1,-1,-1,-1"
 
@@ -206,9 +206,9 @@ class PointRCNNmmDetections3D(Detector):
         alpha = 0
         bbox_2d: np.array = np.array([0, 0, 0, 0])
         dimensions: np.array = np.array([
-                                        lwh_box.cpu().numpy()[1],
-                                        lwh_box.cpu().numpy()[0],
-                                        lwh_box.cpu().numpy()[2]])
+                                        lwh_box[:][1].cpu().item(),
+                                        lwh_box[:][0].cpu().item(),
+                                        lwh_box[:][2].cpu().item()])
         location: np.array = xyz_centroids.cpu().numpy()
         rotation_y: float = yaw
         score: float = det_score
@@ -234,8 +234,8 @@ class PointRCNNmmDetections3D(Detector):
             rotation_y: float,
             score: float
             ) -> str:
-        """
-        Format one KITTI 3D detection line.
+        r"""
+        Format one KITTI3D detection line.
 
         KITTI result format:
         type truncated occluded alpha left top right bottom h w l x y z rotation_y score
@@ -248,13 +248,13 @@ class PointRCNNmmDetections3D(Detector):
             occluded:
                 (0,1,2,3) indicating occlusion state 0=fully visible,...,3=unknown
             alpha:
-                2D bounding box of object, ranging [-pi..pi]
+                Dim-2D-bounding box of object, ranging [-pi..pi]
             bbox_2d:
-                2D bounding box of object in the image. Left, top, right bottom pixels.
+                Dim-2D-bounding box of object in the image. Left, top, right bottom pixels.
             dimensions:
-                3D object dimensions: height, width, length
+                Dim-3D-object dimensions: height, width, length
             location:
-                3D object location x,y,z in camera coordinates
+                Dim-3D-object location x,y,z in camera coordinates
             rotation_y:
                 Rotation r_y around Y-axis in camera coordinates.
             score:
@@ -268,8 +268,8 @@ class PointRCNNmmDetections3D(Detector):
     def __build_detections_tensor(self,
                                   frame: int,
                                   obj_type: int,
-                                  dimensions: np.array | torch.tensor,
-                                  location: np.array | torch.tensor,
+                                  dimensions: torch.tensor,
+                                  location: torch.tensor,
                                   score: float):
         """
         Builds a tensor that includes the required detections
