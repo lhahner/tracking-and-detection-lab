@@ -17,6 +17,8 @@ if MMDET3D_SRC_ROOT not in sys.path:
 
 class TestMMDetection3DCompatability(unittest.TestCase):
     def test_cpu_only_compatability(self):
+        if not torch.cuda.is_available():
+            self.skipTest("Test needs GPU")
         if importlib.util.find_spec("mmdet3d") is None:
             self.skipTest("mmdet3d is not installed.")
 

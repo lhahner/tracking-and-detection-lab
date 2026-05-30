@@ -13,18 +13,19 @@ from util.logging_config import LoggingConfig
 
 class TestLoggerInt(unittest.TestCase):
     def test_basic_logging(self):
-        logging_config = LoggingConfig()
+        logging_config = LoggingConfig(log_filename="app.log")
         logger = logging_config.get_logger(__name__)
         
         logger.info("test logging")
-        path = os.path.join(PROJECT_ROOT, 'logs/app.log')
+        path = os.path.join(PROJECT_ROOT, "logs")
+        file = f"{path}/app.log" 
         self.assertTrue(
-            os.path.exists(path)
+            os.path.isfile(file)
         )
         self.assertTrue(
             os.stat(path).st_size != 0
         )
         # clean up 
-        os.remove(path)
+        os.remove(file)
 
          

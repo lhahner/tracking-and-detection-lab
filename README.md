@@ -1,4 +1,5 @@
 [![Python application](https://github.com/lhahner/tracking-and-detection-lab/actions/workflows/python-app.yml/badge.svg)](https://github.com/lhahner/tracking-and-detection-lab/actions/workflows/python-app.yml) [![Pylint](https://github.com/lhahner/tracking-and-detection-lab/actions/workflows/pylint.yml/badge.svg)](https://github.com/lhahner/tracking-and-detection-lab/actions/workflows/pylint.yml) [![Dependency Graph](https://github.com/lhahner/tracking-and-detection-lab/actions/workflows/dependabot/update-graph/badge.svg)](https://github.com/lhahner/tracking-and-detection-lab/actions/workflows/dependabot/update-graph) [![CodeQL Advanced](https://github.com/lhahner/tracking-and-detection-lab/actions/workflows/codeql.yml/badge.svg)](https://github.com/lhahner/tracking-and-detection-lab/actions/workflows/codeql.yml)
+[![coverage](https://github.com/lhahner/tracking-and-detection-lab/actions/workflows/coverage.yml/badge.svg)](https://github.com/lhahner/tracking-and-detection-lab/actions/workflows/coverage.yml)
 # Tracking and Detection Lab
 
 This project benchmarks object detection and multi-object tracking pipelines on MOT-style datasets such as `MOT15`, `KITTI-17`, and `MOT20-01`. It combines detector backends, tracker backends, visualization utilities, and MOT metric evaluation in one repository.
@@ -64,7 +65,7 @@ These cover the current runtime code in [src/app.py](/home/lennart/Dokumente/gau
 
 ## Recommended environment setup
 
-The repository includes a setup script that creates a fresh conda environment, installs a compatible PyTorch build, pins `numpy<2` for `motmetrics`, keeps `setuptools<81` for `detectron2`, installs the project requirements, and optionally installs `detectron2`.
+The repository includes a setup script that creates a fresh conda environment, installs a compatible PyTorch build, pins `numpy<2` for `motmetrics`, keeps `setuptools>=65.5,<81` for `detectron2` and `mmcv`, installs the project requirements, and optionally installs `detectron2`.
 
 From the repository root, run one of:
 
@@ -86,7 +87,7 @@ The script defaults to:
 If you want to install manually instead of using the script, follow the same order:
 
 1. Create and activate a conda environment with Python `3.10`.
-2. Install `pip`, `wheel`, and `setuptools<81`.
+2. Install `pip`, `wheel`, and `setuptools>=65.5,<81`.
 3. Install `torch`, `torchvision`, and `torchaudio` from the official PyTorch index for your CPU/CUDA target.
 4. Install `numpy<2`.
 5. Install `-r requirements.txt`.
@@ -101,7 +102,7 @@ PYTHONPATH=src python src/app.py
 
 Notes:
 
-- `detectron2` may print a `pkg_resources` deprecation warning. With the pinned `setuptools<81`, this is expected and non-fatal.
+- `detectron2` may print a `pkg_resources` deprecation warning. With the pinned `setuptools>=65.5,<81`, this is expected and non-fatal.
 - The DETR backend downloads model files from Hugging Face on first use. Without `HF_TOKEN`, downloads still work but may be slower or rate-limited.
 - Don't try to use the configs of MMDetection3D outside of the project.
   Clone `https://github.com/open-mmlab/mmdetection3d.git` to a local directory where you can find it.
