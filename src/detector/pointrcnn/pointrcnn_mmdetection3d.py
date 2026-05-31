@@ -117,7 +117,7 @@ class PointRCNNmmDetections3D(Detector):
             if format_option == "kitti":
                 formatted_detections.append(self.format_kitti3d_detections(xyz_centroids=bboxes[highest_score_index, :3],
                                                                            lwh_box=bboxes[highest_score_index, 3:6],
-                                                                           yaw=bboxes[:, 6],
+                                                                           yaw=bboxes[highest_score_index, 6],
                                                                            det_score=scores[highest_score_index],
                                                                            obj_index=labels[highest_score_index].detach().item()
                                                                            ))
@@ -265,8 +265,11 @@ class PointRCNNmmDetections3D(Detector):
         Returns:
             Formatted string as Kitti3D evaluation requires.
         """
-        arr_str: str = " ".join(map(str, zip(bbox_2d, dimensions, location)))
-        return f"{obj_type} {truncated} {occluded} {alpha} {arr_str} {rotation_y} {score}"
+        bbox_2d_str = " ".join(str(round(i, 2)) for i in bbox_2d)
+        dimensions_str = " ".join(str(round(i, 2)) for i in dimensions)
+        location_str = " ".join(str(round(i, 2)) for i in location.numpy())
+        arr_str: str = " ".join([bbox_2d_str, dimensions_str, location_str])
+        return f"{obj_type} {truncated} {occluded} {alpha} {arr_str} {round(rotation_y.item(), 2)} {round(score.item(), 2)}"
 
     def __build_detections_tensor(self,
                                   frame: int,

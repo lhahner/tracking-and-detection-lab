@@ -28,11 +28,11 @@ class TestPointRCNNmmDetections3D(unittest.TestCase):
         # object_type,truncation,occlusion,alpha,left,top,right,bottom,height,width,length,x,y,z,rotation_y 
         # Pedestrian 0.00 0 -0.20 712.40 143.00 810.73 307.92 1.89 0.48 1.20 1.84 1.47 8.41 0.01
         bboxes = torch.tensor([
-            [0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2],
+            [0.1, 0.2, 0.3, 0.5, 0.5, 0.5, 0.1],
             ]).squeeze(0)
 
         xyz_centroids = bboxes[:][:3]
-        lwh_box = bboxes[:][2:5]
+        lwh_box = bboxes[:][3:6]
         yaw = bboxes[:][6]
         det_scroes = np.array([0.78])
         formatted_detections = pointrcnnmmdetections3D.format_kitti3d_detections(
@@ -42,4 +42,6 @@ class TestPointRCNNmmDetections3D(unittest.TestCase):
                 det_score=det_scroes,
                 obj_index=0
                 )
+        kitti_string = f"Car 0 -1 0 0 0 0 0 0.5 0.5 0.5 0.1 0.2 0.3 0.1 0.78"
         self.assertTrue(len(formatted_detections) > 0)
+        self.assertEquals(kitti_string, formatted_detections)
