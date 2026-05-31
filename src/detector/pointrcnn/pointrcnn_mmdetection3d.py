@@ -110,15 +110,15 @@ class PointRCNNmmDetections3D(Detector):
             scores_tensor: torch.tensor = torch.stack(all_scores)
 
             bboxes_mean: torch.tensor = self.__mean_nonzero(tensor=bboxes_tensor)
-            scores: torch.tensor = self.__mean_nonzero(tensor=scores_tensor)
+            scores: torch.tensor = self.__mean_nonzero(tensor=scores_tensor).squeeze(0)
             labels: torch.tensor = labels_reference
             highest_score_index: int = scores.argmax()
-            bboxes: torch.tensor = Box3DMode.convert(bboxes_mean, Box3DMode.LIDAR, Box3DMode.CAM)
+            bboxes: torch.tensor = Box3DMode.convert(bboxes_mean, Box3DMode.LIDAR, Box3DMode.CAM).squeeze(0)
             if format_option == "kitti":
-                formatted_detections.append(self.format_kitti3d_detections(xyz_centroids=bboxes[0, highest_score_index, :3],
-                                                                           lwh_box=bboxes[0, highest_score_index, 3:6],
-                                                                           yaw=bboxes[0, :, 6],
-                                                                           det_score=scores[0, highest_score_index],
+                formatted_detections.append(self.format_kitti3d_detections(xyz_centroids=bboxes[highest_score_index, :3],
+                                                                           lwh_box=bboxes[highest_score_index, 3:6],
+                                                                           yaw=bboxes[:, 6],
+                                                                           det_score=scores[highest_score_index],
                                                                            obj_index=labels[highest_score_index].detach().item()
                                                                            ))
             elif format_option == "sort":
@@ -205,11 +205,14 @@ class PointRCNNmmDetections3D(Detector):
         occluded = -1
         alpha = 0
         bbox_2d: np.array = np.array([0, 0, 0, 0])
-        dimensions: np.array = np.array([
+        if lwh_box.shape == (3,):
+            dimensions: np.array = np.array([
                                         lwh_box[:][1].cpu().item(),
                                         lwh_box[:][0].cpu().item(),
                                         lwh_box[:][2].cpu().item()])
-        location: np.array = xyz_centroids.cpu().numpy()
+        else:
+            raise IndexError(f"To format the given shape does not match (N, 3) as {lwh_box.shape}")
+        location: np.array = xyz_centroids.cpu()
         rotation_y: float = yaw
         score: float = det_score
         return self.__build_kitti_gt_string(obj_type=obj_type,
