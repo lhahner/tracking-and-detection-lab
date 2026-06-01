@@ -4,7 +4,6 @@ import numpy as np
 from detector.detector import Detector
 from torch.utils.data import DataLoader, dataloader
 from util.file_handler import write_output
-from pytorch3d.structures import Pointclouds
 import torch.nn.functional as Functional
 
 if torch.cuda.is_available():
@@ -17,12 +16,7 @@ from util.logging_config import LoggingConfig
 logging_config = LoggingConfig()
 logger = logging_config.get_logger(__name__)
 
-DET_PATH = ""  # TODO
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
-
-# TODO consider that in Kitti the labels Car and pedestrian are evaluated,
-# therefor it would make sense to filter out other in either the format or
-# other.
 
 
 class PointRCNNmmDetections3D(Detector):
@@ -116,15 +110,15 @@ class PointRCNNmmDetections3D(Detector):
             scores_tensor: torch.tensor = torch.stack(all_scores)
 
             bboxes_mean: torch.tensor = self.__mean_nonzero(tensor=bboxes_tensor)
-            scores: torch.tensor = self.__mean_nonzero(tensor=scores_tensor)
+            scores: torch.tensor = self.__mean_nonzero(tensor=scores_tensor).squeeze(0)
             labels: torch.tensor = labels_reference
             highest_score_index: int = scores.argmax()
-            bboxes: torch.tensor = Box3DMode.convert(bboxes_mean, Box3DMode.LIDAR, Box3DMode.CAM)
+            bboxes: torch.tensor = Box3DMode.convert(bboxes_mean, Box3DMode.LIDAR, Box3DMode.CAM).squeeze(0)
             if format_option == "kitti":
-                formatted_detections.append(self.format_kitti3d_detections(xyz_centroids=bboxes[0, highest_score_index, :3],
-                                                                           lwh_box=bboxes[0, highest_score_index, 3:6],
-                                                                           yaw=bboxes[0, :, 6],
-                                                                           det_score=scores[0, highest_score_index],
+                formatted_detections.append(self.format_kitti3d_detections(xyz_centroids=bboxes[highest_score_index, :3],
+                                                                           lwh_box=bboxes[highest_score_index, 3:6],
+                                                                           yaw=bboxes[highest_score_index, 6],
+                                                                           det_score=scores[highest_score_index],
                                                                            obj_index=labels[highest_score_index].detach().item()
                                                                            ))
             elif format_option == "sort":
@@ -182,6 +176,7 @@ class PointRCNNmmDetections3D(Detector):
             ])
         # The coordiantes of the bounding box in world coordinates
         world_bbox: torch.tensor = (xyz_centroids + local_box_corner @ rotation_matrix).unsqueeze(0)
+        from pytorch3d.structures import Pointclouds
         bboxes: torch.tensor = Pointclouds(points=world_bbox).get_bounding_boxes()
         return f"{frame_index},{bboxes.flatten()},{det_score},1,-1,-1,-1"
 
@@ -210,11 +205,14 @@ class PointRCNNmmDetections3D(Detector):
         occluded = -1
         alpha = 0
         bbox_2d: np.array = np.array([0, 0, 0, 0])
-        dimensions: np.array = np.array([
-                                        lwh_box.cpu().numpy()[1],
-                                        lwh_box.cpu().numpy()[0],
-                                        lwh_box.cpu().numpy()[2]])
-        location: np.array = xyz_centroids.cpu().numpy()
+        if lwh_box.shape == (3,):
+            dimensions: np.array = np.array([
+                                        lwh_box[:][1].cpu().item(),
+                                        lwh_box[:][0].cpu().item(),
+                                        lwh_box[:][2].cpu().item()])
+        else:
+            raise IndexError(f"To format the given shape does not match (N, 3) as {lwh_box.shape}")
+        location: np.array = xyz_centroids.cpu()
         rotation_y: float = yaw
         score: float = det_score
         return self.__build_kitti_gt_string(obj_type=obj_type,
@@ -239,8 +237,8 @@ class PointRCNNmmDetections3D(Detector):
             rotation_y: float,
             score: float
             ) -> str:
-        """
-        Format one KITTI 3D detection line.
+        r"""
+        Format one KITTI3D detection line.
 
         KITTI result format:
         type truncated occluded alpha left top right bottom h w l x y z rotation_y score
@@ -253,13 +251,13 @@ class PointRCNNmmDetections3D(Detector):
             occluded:
                 (0,1,2,3) indicating occlusion state 0=fully visible,...,3=unknown
             alpha:
-                2D bounding box of object, ranging [-pi..pi]
+                Dim-2D-bounding box of object, ranging [-pi..pi]
             bbox_2d:
-                2D bounding box of object in the image. Left, top, right bottom pixels.
+                Dim-2D-bounding box of object in the image. Left, top, right bottom pixels.
             dimensions:
-                3D object dimensions: height, width, length
+                Dim-3D-object dimensions: height, width, length
             location:
-                3D object location x,y,z in camera coordinates
+                Dim-3D-object location x,y,z in camera coordinates
             rotation_y:
                 Rotation r_y around Y-axis in camera coordinates.
             score:
@@ -267,14 +265,17 @@ class PointRCNNmmDetections3D(Detector):
         Returns:
             Formatted string as Kitti3D evaluation requires.
         """
-        arr_str: str = " ".join(map(str, zip(bbox_2d, dimensions, location)))
-        return f"{obj_type} {truncated} {occluded} {alpha} {arr_str} {rotation_y} {score}"
+        bbox_2d_str = " ".join(str(round(i, 2)) for i in bbox_2d)
+        dimensions_str = " ".join(str(round(i, 2)) for i in dimensions)
+        location_str = " ".join(str(round(i, 2)) for i in location.numpy())
+        arr_str: str = " ".join([bbox_2d_str, dimensions_str, location_str])
+        return f"{obj_type} {truncated} {occluded} {alpha} {arr_str} {round(rotation_y.item(), 2)} {round(score.item(), 2)}"
 
     def __build_detections_tensor(self,
                                   frame: int,
                                   obj_type: int,
-                                  dimensions: np.array | torch.tensor,
-                                  location: np.array | torch.tensor,
+                                  dimensions: torch.tensor,
+                                  location: torch.tensor,
                                   score: float):
         """
         Builds a tensor that includes the required detections
