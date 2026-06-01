@@ -21,6 +21,16 @@ class PathsConfig:
     logging_path: str | None
     mmdetection3d_path: str | None
 
+@dataclass(frozen=True)
+class BenchmarkConfig:
+    """Propreties which define benchmark hyperparameters"""
+    iou_threshold: int
+    class_filter: list 
+
+@dataclass(frozen=True)
+class VisualizerConfig:
+    """Define some stuff on how to visualize"""
+    colours: str
 
 @dataclass(frozen=True)
 class RuntimeConfig:
@@ -33,6 +43,11 @@ class RuntimeConfig:
     datatype: str
     benchmark: bool
 
+@dataclass(frozen=True)
+class TrackerConfig:
+    max_age: float
+    min_hits: float
+    iou_threshold: float
 
 @dataclass(frozen=True)
 class Settings:
@@ -41,6 +56,9 @@ class Settings:
     seed: int
     paths: PathsConfig
     runtime: RuntimeConfig
+    benchmark: BenchmarkConfig
+    tracker: TrackerConfig
+    visualizer: VisualizerConfig
     raw: dict[str, Any]
 
 
@@ -64,6 +82,9 @@ class SettingsLoader:
         project = data.get("project", {})
         paths = data.get("paths", {})
         runtime = data.get("runtime", {})
+        benchmark = data.get("benchmark", {})        
+        tracker = data.get("tracker", {})        
+        visualizer = data.get("visualizer", {})
 
         base = cfg_path.parent
         resolved_paths = PathsConfig(
@@ -74,10 +95,8 @@ class SettingsLoader:
             detection_path=paths.get("detection_path", "data/*/*/det/det.txt"),
             ground_truth_path=paths.get("ground_truth_path"),
             tracking_path=paths.get("tracking_path"),
-            logging_path=paths.get("logging_path"),
-            mmdetection3d_path=paths.get("mmdetection3d_path")
-        )
-
+            logging_path=paths.get("logging_path"))
+            
         settings = Settings(
             project_name=project.get("name", "tracking-and-detection-lab"),
             seed=int(project.get("seed", 0)),
@@ -90,6 +109,18 @@ class SettingsLoader:
                 tracker=runtime.get("tracker", "sort"),
                 datatype=runtime.get("datatype"),
                 benchmark=bool(runtime.get("benchmark", False))
+            ),
+            benchmark=BenchmarkConfig(
+            iou_threshold=benchmark.get("iou_threshold"),
+            class_filter=benchmark.get("class_filter")
+            ),
+            tracker=TrackerConfig(
+                max_age=tracker.get("max_age"),
+                min_hits=tracker.get("min_hits"),
+                iou_threshold=tracker.get("iou_threshold")
+            ),
+            visualizer=VisualizerConfig(
+                colours=visualizer.get("colour")
             ),
             raw=data,
         )

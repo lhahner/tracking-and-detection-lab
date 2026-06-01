@@ -23,16 +23,16 @@ class InferenceEngine:
     def __init__(self, settings):
         self.settings = settings
         self.visualizer = Visualizer(
-            self.settings.datatype
-        )  # TODO read datatype from settings
+            self.settings.runtime.datatype
+        )  
         self.evaluation_runner = Evaluation(
-            iou_threshold=settings.evaluation.iou_threshold
-        )  # TODO eval settings
+            iou_threshold=settings.benchmark.iou_threshold
+        )  
         self.detection_path = os.path.join(settings.paths.detection_path, "det.txt")
         self.tracker = Sort(
-            max_age=self.settings.tracker.max_age,  # TODO integrate
-            min_hits=self.settings.tracker.min_hits,  # TODO integrate
-            iou_threshold=self.settings.tracker.iou_threshold,  # TODO integrate
+            max_age=self.settings.tracker.max_age, 
+            min_hits=self.settings.tracker.min_hits,
+            iou_threshold=self.settings.tracker.iou_threshold,
         )
 
     def update_tracker(self):
@@ -56,7 +56,7 @@ class InferenceEngine:
                 ground_truth_by_frame = evaluation_runner.read_mot_file(
                     sequence_ground_truth_path,
                     filter_ground_truth_by_confidence=True,
-                    allowed_class_ids=self.settings.evaluation.class_filter,  # TODO
+                    allowed_class_ids=self.settings.benchmark.class_filter,
                 )
                 mot_accumulator = evaluation_runner.create_mot_accumulator()
             elif should_visualize_metrics:
@@ -142,9 +142,9 @@ class InferenceEngine:
     def __init_tracker(self):
         if self.settings.runtime.tracker.lower() == "deepsort":
             self.mot_tracker = DeepSortTracker(
-                max_age=settings.tracker.max_age,  # TODO integrate
-                min_hits=settings.tracker.min_hits,  # TODO integrate
-                iou_threshold=settings.tracker.iou_threshold,  # TODO integrate
+                max_age=settings.tracker.max_age,  
+                min_hits=settings.tracker.min_hits,  
+                iou_threshold=settings.tracker.iou_threshold, 
                 bgr=False,  # skimage.io.imread returns RGB
             )
 
@@ -191,6 +191,6 @@ class InferenceEngine:
             frame=frame,
             filetype=self.settings.runtime.datatype,
             trackers=trackers,
-            colours=self.settings.visualizer.colours,  # TODO
+            colours=self.settings.visualizer.colours, 
             metrics_history=metrics_history,
         )
