@@ -13,7 +13,7 @@ from util.settings_loader import SettingsLoader
 from util.visualizer import Visualizer
 
 if importlib.util.find_spec("tkinter") is not None:
-    matplotlib.use("TkAgg")
+    matplotlib.use("Agg")
 
 from tracker.DeepSORT.deepSort import DeepSort as DeepSortTracker
 from tracker.SORT.sort import Sort
