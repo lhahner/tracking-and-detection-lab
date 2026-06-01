@@ -3,6 +3,7 @@ import time
 from pathlib import Path
 
 import matplotlib
+import importlib.util
 import numpy as np
 from skimage import io
 
@@ -11,9 +12,9 @@ from util.evaluation import Evaluation
 from util.settings_loader import SettingsLoader
 from util.visualizer import Visualizer
 
-matplotlib.use("TkAgg")
+if importlib.util.find_spec("tkinter") is not None:
+    matplotlib.use("TkAgg")
 
-# Tracking systems
 from tracker.DeepSORT.deepSort import DeepSort as DeepSortTracker
 from tracker.SORT.sort import Sort
 

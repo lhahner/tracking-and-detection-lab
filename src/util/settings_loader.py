@@ -3,7 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+from definitions import ROOT_DIR
 import yaml
+import os
 
 
 @dataclass(frozen=True)
@@ -55,7 +57,7 @@ class SettingsLoader:
         Returns:
             Settings: Parsed and validated application settings.
         """
-        cfg_path = Path(path).resolve()
+        cfg_path = Path(os.path.join(ROOT_DIR, path)).resolve()
         with cfg_path.open("r", encoding="utf-8") as f:
             data = yaml.safe_load(f) or {}
 
