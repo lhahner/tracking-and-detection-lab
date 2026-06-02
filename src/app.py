@@ -35,7 +35,7 @@ from detector.frcnn.frcnn_detectron2 import FasterRCNNDetectron2Detector
 from detector.pointnet.pointnet_trainer import PointnetTrainer
 
 from datasets.kitti3D import Kitti3D
-from inference import inference
+from inference_engine import InferenceEngine
 from util.logging_config import LoggingConfig
 
 
@@ -47,6 +47,7 @@ class Application:
         """
         self.seed = np.random.seed(0)
         self.project_root = os.path.dirname(os.path.abspath(__file__))
+    
 
 if __name__ == "__main__":
     logging_config = LoggingConfig()
@@ -54,7 +55,12 @@ if __name__ == "__main__":
 
     settings = SettingsLoader.load("settings.yaml")
     if settings.runtime.mode == "inference":
-        inference(Application(), settings)
+        inference_engine = InferenceEngine(settings)
+        inference_engine.predict(detector_name=settings.runtime.detector_name,
+                                 dataset_path=settings.path.dataset_path,
+                                 detection_path=settings.path.detection_path,
+                                 model_path=settings.path.model_path)
+        inference_engine.update_tracker()
 
     elif settings.runtime.mode == "train":
         train_dataset = Kitti3D(

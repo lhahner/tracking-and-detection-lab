@@ -137,14 +137,17 @@ class InferenceEngine:
             detector = MaskFasterRCNNDetector(
                 input_path=dataset_path, output_path=detection_path, threshold=0.9
             )
+        if self.settings.benchmark:
+            self.evaluation_runner.compute_precision_and_recall(
+                    )
         detector.detect()
 
     def __init_tracker(self):
         if self.settings.runtime.tracker.lower() == "deepsort":
             self.mot_tracker = DeepSortTracker(
-                max_age=settings.tracker.max_age,  
-                min_hits=settings.tracker.min_hits,  
-                iou_threshold=settings.tracker.iou_threshold, 
+                max_age=settings.tracker.max_age,
+                min_hits=settings.tracker.min_hits,
+                iou_threshold=settings.tracker.iou_threshold,
                 bgr=False,  # skimage.io.imread returns RGB
             )
 
