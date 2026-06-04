@@ -17,10 +17,10 @@ if importlib.util.find_spec("tkinter") is not None:
 
 from tracker.DeepSORT.deepSort import DeepSort as DeepSortTracker
 from tracker.SORT.sort import Sort
-
+from torch.utils.data import Dataset
 
 class InferenceEngine:
-    def __init__(self, settings):
+    def __init__(self, settings, dataset: Dataset):
         self.settings = settings
         self.visualizer = Visualizer(
             self.settings.runtime.datatype
@@ -34,6 +34,47 @@ class InferenceEngine:
             min_hits=self.settings.tracker.min_hits,
             iou_threshold=self.settings.tracker.iou_threshold,
         )
+        self.dataset = dataset
+    
+    def load(self):
+        if self.settings.dataset.name == "kitti3d":
+            self.dataset = Kitti3D(
+                    data_root=self.settings.paths.dataset_path) 
+
+    def predict(self, detector_name, dataset_path, detection_path, model_path):
+        """Instantiate and run the configured detector implementation.
+
+        Args:
+            detector_name: Short name of the detector to execute.
+            dataset_path: Directory that contains the input frames.
+            detection_path: Directory where `det.txt` should be written.
+            model_path: Path to the detector model weights if required.
+        """
+        detector = None
+        if detector_name == "frcnn":
+            detector = FasterRCNNDetector(
+                input_path=dataset_path, output_path=detection_path, threshold=0.9
+            )
+        if detector_name == "detr":
+            detector = DetrHuggingFaceDetector(
+                input_path=dataset_path,
+                output_path=detection_path,
+            )
+        if detector_name == "yolo":
+            detector = YoloDetector(
+                input_path=dataset_path,
+                output_path=detection_path,
+                model_path=model_path,
+            )
+        if detector_name == "detectron2":
+            detector = MaskFasterRCNNDetector(
+                input_path=dataset_path, output_path=detection_path, threshold=0.9
+            )
+        if detector_name == "pointrcnn":
+            detector = PointRCNNmmDetections3D(dataset=self.dataset,
+                                               config_file=self.settings.paths.config_file,
+                                               classes=self.settings.dataset.classes)
+        return detector.detect()
 
     def update_tracker(self):
         if self.settings.runtime.display:
@@ -107,40 +148,6 @@ class InferenceEngine:
                     f"Ground truth file not found for {seq}: "
                     f"{sequence_ground_truth_path}"
                 )
-
-    def predict(self, detector_name, dataset_path, detection_path, model_path):
-        """Instantiate and run the configured detector implementation.
-
-        Args:
-            detector_name: Short name of the detector to execute.
-            dataset_path: Directory that contains the input frames.
-            detection_path: Directory where `det.txt` should be written.
-            model_path: Path to the detector model weights if required.
-        """
-        detector = None
-        if detector_name == "frcnn":
-            detector = FasterRCNNDetector(
-                input_path=dataset_path, output_path=detection_path, threshold=0.9
-            )
-        if detector_name == "detr":
-            detector = DetrHuggingFaceDetector(
-                input_path=dataset_path,
-                output_path=detection_path,
-            )
-        if detector_name == "yolo":
-            detector = YoloDetector(
-                input_path=dataset_path,
-                output_path=detection_path,
-                model_path=model_path,
-            )
-        if detector_name == "detectron2":
-            detector = MaskFasterRCNNDetector(
-                input_path=dataset_path, output_path=detection_path, threshold=0.9
-            )
-        if self.settings.benchmark:
-            self.evaluation_runner.compute_precision_and_recall(
-                    )
-        detector.detect()
 
     def __init_tracker(self):
         if self.settings.runtime.tracker.lower() == "deepsort":

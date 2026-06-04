@@ -56,10 +56,11 @@ if __name__ == "__main__":
     settings = SettingsLoader.load("settings.yaml")
     if settings.runtime.mode == "inference":
         inference_engine = InferenceEngine(settings)
-        inference_engine.predict(detector_name=settings.runtime.detector_name,
+        detections = inference_engine.predict(detector_name=settings.runtime.detector_name,
                                  dataset_path=settings.path.dataset_path,
                                  detection_path=settings.path.detection_path,
                                  model_path=settings.path.model_path)
+        Evaluation().evaluate_detection(detections_sequence)
         inference_engine.update_tracker()
 
     elif settings.runtime.mode == "train":

@@ -180,8 +180,7 @@ fi
 
 echo "Installing PyTorch3D for MMDetection3D"
 if [[ "$(uname -s)" == "Darwin" ]]; then
-   MACOSX_DEPLOYMENT_TARGET=10.14 CC=clang CXX=clang++ \
-     python -m pip install "git+https://github.com/facebookresearch/pytorch3d.git@stable"
+   echo "Skipping pytorch3d for MMDetection3D"
 else
    conda install -c pytorch3d -c conda-forge pytorch3d -y
 fi

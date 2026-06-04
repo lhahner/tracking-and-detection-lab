@@ -24,6 +24,13 @@ class Evaluation:
         """
         self.iou_threshold = iou_threshold
         self.metrics_handler = mm.metrics.create()
+    
+    def evaluate_detection(self, detection_sequence, classes):
+        for detection_frame in detection_sequence:
+            self.compute_mAP_3D(predicted_detections=detection_frame.dets, 
+                                ground_truths=deteiction_frame.targets,
+                                classes=classes)
+        
 
     def read_mot_file(self, file_path, filter_ground_truth_by_confidence=False, allowed_class_ids=None):
         """Read a MOT-format file and group detections by frame.

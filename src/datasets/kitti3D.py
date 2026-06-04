@@ -12,6 +12,7 @@ from util.kitti_boxes import (
     proposal_iou_bev,
 )
 from util.kitti_calib import parse_kitti_calibration
+from util.logging_config import LoggingConfig
 
 CLASSES = {
     "Background": 0,
@@ -28,6 +29,8 @@ for name in CLASSES:
 if len(SUPPORTED_OBJECT_TYPES) == 0:
     raise ValueError("Supported objects array is empty")
 
+logging_config = LoggingConfig()
+logger = logging_config.get_logger(__name__)
 
 class Kitti3D(Dataset):
     """Single KITTI dataset entry point for frame and object-crop access."""
@@ -41,11 +44,7 @@ class Kitti3D(Dataset):
         include_background=False,
         background_iou_threshold=0.1,
         transform=None,
-        logger=None,
     ):
-        if logger is None:
-            raise ValueError("Provide logger for KITTI3D Dataset class")
-
         if split not in ["training", "testing", "val"]:
             raise ValueError("Split name has to be training or testing")
 

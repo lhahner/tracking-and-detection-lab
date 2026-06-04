@@ -8,12 +8,12 @@ class Detection:
     label: int
     box: torch.tensor
 
-
 @dataclass(frozen=True)
 class FrameDetection:
     frame: int
     highest_score_index: int
     dets: list[Detection]
+    targets: list = field(default_factory=list)
 
 
 @dataclass(frozen=True)

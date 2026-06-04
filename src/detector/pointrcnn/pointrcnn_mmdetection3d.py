@@ -67,7 +67,7 @@ class PointRCNNmmDetections3D(Detector):
         test_dataloader: torch.utils.dataloader = DataLoader(dataset=self.dataset, batch_size=self.batch_size,
                                                              collate_fn=custom_collate)
         detection_sequence: DetectionSequence = DetectionSequence()
-        for point, sample in test_dataloader:
+        for point, targets, sample in test_dataloader:
             instance_data_reference = inference_detector(self.model, point)[0][0].pred_instances_3d
             labels_reference: torch.tensor = instance_data_reference.labels_3d
             num_obj: int = instance_data_reference.bboxes_3d.tensor.shape[0]
@@ -92,7 +92,8 @@ class PointRCNNmmDetections3D(Detector):
                                                                         score=score,
                                                                         label=label,
                                                                         box=box) for score, box, label in zip(scores, bboxes, labels)
-                                                                ]))
+                                                                ],
+                                                            targets=targets))
         return detection_sequence
 
     def __sample(self, point, num_obj):
@@ -164,8 +165,10 @@ def custom_collate(batch):
         :param batch:
     """
     filtered_data = []
+    filtered_targets = None
     filtered_samples = []
     for item in batch:
         filtered_data.append(item["points"])
+        filtered_targets = item["target"]
         filtered_samples.append(item["sample_id"])
-    return filtered_data, filtered_samples
+    return filtered_data, filtered_targets, filtered_samples
