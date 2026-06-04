@@ -1,20 +1,33 @@
-import np
-import dataclasses, json, functools, torch
+"""
+Basic serialization used to serialize object detection results to drive,
+counter part of deserializer.py
+"""
+import numpy as np
+import dataclasses, json, torch, functools
+import datetime
+from entities.detection import Detection, FrameDetection, DetectionSequence
 from util.file_handler import write_output
-
+from pathlib import Path
 
 class Serializer:
-    def __init__(self, settings, data_format="json"):
+    def __init__(self, settings=None, data_format="json", file_name=None):
         self.data_format = data_format
         self.settings = settings
+        self.detection_path = self.settings.paths.detection_path
+        if file_name is None:
+            file_name = f"detections"
+        self.file_name = file_name
 
     def serialize(self, data):
         """
         Args:
-            data: detection sequence to serialize
-
+            data: detection sequence to serialize, needs to
+            be of instance DetectionSequence.
         Returns:
-            The serialization
+            The serialization depending on the required format
+            specified in the class instance, either json, kitti 
+            format or other. Similarly the serialization path
+            is then defined by the serilization instance.
         Example:
             >>> serialize(detectionSequence)
             >>> [
@@ -32,13 +45,19 @@ class Serializer:
                 }]
         """
         if self.data_format == "json":
-            return json.dumps(data, default=self.__encode_value)
-        if self.data_format == "kitti":
+            json_str = json.dumps(data, default=self.__encode_value)
+            base = Path(self.detection_path)
+            base.mkdir(exist_ok=True)
+            jsonpath = base / (self.file_name + ".json")
+            jsonpath.write_text(json_str)
+            return json_str
+        if self.data_format == "kitti" and isinstance(data, DetectionSequence):
             self.format_kitti3d_detections(data)
-        if self.data_format == "sort":
+        if self.data_format == "sort" and isinstance(data, DetectionSequence):
             pass
 
     def format_sort_detections(self, detection_sequence) -> str:
+        """TOOD"""
         raise NotImplementedError()
 
     def format_kitti3d_detections(self, detection_sequence) -> str:
@@ -60,7 +79,7 @@ class Serializer:
         Returns:
             Formatted string for kitti3D evaluation
         """
-        for frame in detection_sequence:
+        for frame in detection_sequence.frames:
             for det in frame.dets:
                 obj_type: str = det.label
                 truncated = 0  # always 0 for 3D
@@ -68,7 +87,7 @@ class Serializer:
                 alpha = 0
                 bbox_2d: np.array = np.array([0, 0, 0, 0])
                 location: np.array = det.box[:3].cpu()
-                rotation_y: float = det.box[7].item()
+                rotation_y: float = det.box[7]
                 score: float = det.score
                 if det.box[3:6].shape == (3,):
                     dimensions: np.array = np.array([
@@ -77,7 +96,8 @@ class Serializer:
                                         det.box[6].cpu().item()])
                 else:
                     raise IndexError(f"To format the given shape does not match (N, 3) as {det.box[3:6].shape}")
-                write_output(self.settings.output_file_path,
+                det_file = (self.file_name + ".txt")
+                write_output((self.detection_path + det_file),
                              self.__build_kitti_gt_string(obj_type=obj_type,
                                                           truncated=truncated,
                                                           occluded=occluded,
@@ -128,19 +148,25 @@ class Serializer:
         Returns:
             Formatted string as Kitti3D evaluation requires.
         """
-        bbox_2d_str = " ".join(str(round(i, 2)) for i in bbox_2d)
-        dimensions_str = " ".join(str(round(i, 2)) for i in dimensions)
-        location_str = " ".join(str(round(i, 2)) for i in location.numpy())
+        bbox_2d_str = " ".join(str(self.__round_value(i)) for i in bbox_2d)
+        dimensions_str = " ".join(str(self.__round_value(i)) for i in dimensions)
+        location_str = " ".join(str(self.__round_value(i)) for i in location.numpy())
         arr_str: str = " ".join([bbox_2d_str, dimensions_str, location_str])
-        return f"{obj_type} {truncated} {occluded} {alpha} {arr_str} {round(rotation_y.item(), 2)} {round(score.item(), 2)}"
+        rotation_y_value = rotation_y.item() if hasattr(rotation_y, "item") else rotation_y
+        score_value = score.item() if hasattr(score, "item") else score
+        return f"{obj_type} {truncated} {occluded} {alpha} {arr_str} {round(rotation_y_value, 2)} {round(score_value, 2)}"
 
-
-    @functools.singledispatch
+    def __round_value(self, value):
+        if hasattr(value, "item"):
+            value = value.item()
+        return round(value, 2)
+    
+    @functools.singledispatchmethod
     def __encode_value(self, data):
         if dataclasses.is_dataclass(data):
             return dataclasses.asdict(data)
-        raise ValueError(f"Object of type {type(data).__name__} is not JSON serializable")
+        raise ValueError("Dataclass not supported")
 
     @__encode_value.register(torch.Tensor)
-    def _(self, data: torch.Tensor):
+    def _(self, data: torch.tensor):
         return data.tolist()

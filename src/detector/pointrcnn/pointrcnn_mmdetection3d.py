@@ -5,6 +5,7 @@ from detector.detector import Detector
 from torch.utils.data import DataLoader
 from entities.detection import Detection, DetectionSequence, FrameDetection
 from util.serializer import Serializer
+from util.settings_loader import SettingsLoader
 import torch.nn.functional as Functional
 
 if torch.cuda.is_available():
@@ -37,8 +38,10 @@ class PointRCNNmmDetections3D(Detector):
                  dataset,
                  config_file,
                  classes,
+                 settings,
                  checkpoint_file=f"{PROJECT_DIR}/model/point_rcnn_2x8_kitti-3d-3classes_20211208_151344.pth",
-                 batch_size=16, num_inference_samples=50):
+                 batch_size=16, num_inference_samples=50.
+                 ):
         self.dataset = dataset
         self.config_file = config_file
         self.checkpoint_file = checkpoint_file
@@ -46,7 +49,8 @@ class PointRCNNmmDetections3D(Detector):
         self.num_inference_samples = num_inference_samples
         self.classes = classes
         self.batch_size = batch_size
-        self.serializer = Serializer()
+        self.settings = settings
+        self.serializer = Serializer(settings=self.settings)
 
     def detect(self):
         """

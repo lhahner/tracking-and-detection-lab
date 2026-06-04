@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import torch
 
 
@@ -18,4 +18,4 @@ class FrameDetection:
 
 @dataclass(frozen=True)
 class DetectionSequence:
-    frames: list[FrameDetection] = []
+    frames: list[FrameDetection] = field(default_factory=list) # makes frames optional

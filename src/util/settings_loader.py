@@ -95,7 +95,8 @@ class SettingsLoader:
             detection_path=paths.get("detection_path", "data/*/*/det/det.txt"),
             ground_truth_path=paths.get("ground_truth_path"),
             tracking_path=paths.get("tracking_path"),
-            logging_path=paths.get("logging_path"))
+            logging_path=paths.get("logging_path"),
+            mmdetection3d_path=paths.get("mmdetection3d_path"))
             
         settings = Settings(
             project_name=project.get("name", "tracking-and-detection-lab"),
