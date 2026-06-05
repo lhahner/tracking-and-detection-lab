@@ -24,13 +24,6 @@ class Evaluation:
         """
         self.iou_threshold = iou_threshold
         self.metrics_handler = mm.metrics.create()
-    
-    def evaluate_detection(self, detection_sequence, classes):
-        for detection_frame in detection_sequence:
-            self.compute_mAP_3D(predicted_detections=detection_frame.dets, 
-                                ground_truths=deteiction_frame.targets,
-                                classes=classes)
-        
 
     def read_mot_file(self, file_path, filter_ground_truth_by_confidence=False, allowed_class_ids=None):
         """Read a MOT-format file and group detections by frame.
@@ -74,14 +67,14 @@ class Evaluation:
             bool: `True` when the sequence belongs to a pedestrian benchmark.
         """
         pedestrian_sequences = (
-            "KITTI-",
-            "MOT",
-            "ETH-",
-            "TUD-",
-            "PETS",
-            "ADL-",
-            "VENICE-",
-        )
+                "KITTI-",
+                "MOT",
+                "ETH-",
+                "TUD-",
+                "PETS",
+                "ADL-",
+                "VENICE-",
+                )
         normalized_name = str(sequence_name).upper()
         return normalized_name.startswith(pedestrian_sequences)
 
@@ -153,24 +146,24 @@ class Evaluation:
 
         maximum_iou_distance = 1.0 - self.iou_threshold
         iou_distance_matrix = mm.distances.iou_matrix(
-            ground_truth_boxes_xywh,
-            predicted_boxes_xywh,
-            max_iou=maximum_iou_distance,
-        )
+                ground_truth_boxes_xywh,
+                predicted_boxes_xywh,
+                max_iou=maximum_iou_distance,
+                )
 
         mot_accumulator.update(
-            ground_truth_ids,
-            predicted_ids,
-            iou_distance_matrix,
-            frameid=frame_number,
-        )
+                ground_truth_ids,
+                predicted_ids,
+                iou_distance_matrix,
+                frameid=frame_number,
+                )
 
         metrics = ["idf1", "mota", "motp"]
         summary = self.metrics_handler.compute(
-            mot_accumulator,
-            metrics=metrics,
-            name=sequence_name,
-        )
+                mot_accumulator,
+                metrics=metrics,
+                name=sequence_name,
+                )
 
         metric_row = summary.loc[sequence_name]
         return {metric: metric_row[metric] for metric in metrics}
@@ -195,10 +188,10 @@ class Evaluation:
 
         allowed_ground_truth_class_ids = {1} if self.should_filter_ground_truth_to_pedestrians(sequence_name) else None
         ground_truth_by_frame = self.read_mot_file(
-            ground_truth_file_path,
-            filter_ground_truth_by_confidence=True,
-            allowed_class_ids=allowed_ground_truth_class_ids,
-        )
+                ground_truth_file_path,
+                filter_ground_truth_by_confidence=True,
+                allowed_class_ids=allowed_ground_truth_class_ids,
+                )
         predicted_tracks_by_frame = self.read_mot_file(predicted_tracking_file_path, filter_ground_truth_by_confidence=False)
         mot_accumulator = mm.MOTAccumulator(auto_id=False)  # MotMetric setup
         maximum_iou_distance = 1.0 - self.iou_threshold  # default to 0.5
@@ -213,10 +206,10 @@ class Evaluation:
                                                           predicted_boxes_xywh,
                                                           max_iou=maximum_iou_distance)
             mot_accumulator.update(
-                ground_truth_ids,
-                predicted_ids,
-                iou_distance_matrix,
-                frameid=frame_number)
+                    ground_truth_ids,
+                    predicted_ids,
+                    iou_distance_matrix,
+                    frameid=frame_number)
         return self.metrics_handler.compute(mot_accumulator,
                                             metrics,
                                             name=sequence_name
@@ -268,12 +261,12 @@ class Evaluation:
             from pytorch3d.ops import box3d_overlap
             if predicted_detections.numel() == 0 or ground_truth.numel() == 0:
                 raise ValueError("Prediction or Ground truth empty can compute IoU.")
-        
+
             return box3d_overlap(predicted_detections, ground_truth)
         except ImportError as e:
             logger.error("PyTorch3D not installed, either install or try to bypass", e)
 
-            
+
 
     def compute_precision_and_recall(self,
                                      predicted_detection_classes: torch.tensor,
@@ -288,8 +281,8 @@ class Evaluation:
             return precision(
                     predicted_detection_classes, ground_truth
                     ), recall(
-                    predicted_detection_classes, ground_truth
-                    )
+                            predicted_detection_classes, ground_truth
+                            )
         else:
             raise ValueError("Predicted detections classes do not match with ground truth")
 
@@ -318,7 +311,7 @@ class Evaluation:
 
         metric = MeanAveragePrecision3D()
         metric.update(
-            preds=predicted_detections,
-            target=ground_truth,
-            classes=classes)
+                preds=predicted_detections,
+                target=ground_truth,
+                classes=classes)
         return metric.compute()

@@ -107,7 +107,7 @@ class PointRCNNmmDetections3D(Detector):
         all_bboxes: list = []
         all_scores: list = []
 
-        for i in range(0, self.num_inference_samples):
+        for i in range(0, int(self.num_inference_samples)):
             instance_data = inference_detector(self.model, point)[0][0].pred_instances_3d
             scores_tensor_infered: torch.tensor = instance_data.scores_3d
             bboxes_tensor_infered: torch.tensor = instance_data.bboxes_3d.tensor

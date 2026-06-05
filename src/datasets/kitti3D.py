@@ -2,6 +2,7 @@ import os
 from typing import Any
 
 import numpy as np
+import torch
 from PIL import Image
 from torch.utils.data import Dataset
 
@@ -305,3 +306,25 @@ class Kitti3D(Dataset):
                     }
                 )
         return objects, path
+
+    def convert_ground_truth(self, ground_truth_dicts):
+        tmp_list = []
+        for ground_truth_dict in ground_truth_dicts:
+            if ground_truth_dict["type"] not in CLASSES:
+                continue
+
+            gt_tensor = torch.tensor([
+                ground_truth_dict["location"][0],
+                ground_truth_dict["location"][1],
+                ground_truth_dict["location"][2],
+                ground_truth_dict["dimensions"][0],
+                ground_truth_dict["dimensions"][1],
+                ground_truth_dict["dimensions"][2],
+                ground_truth_dict["rotation_y"],
+                0,
+                list(CLASSES.values())[list(CLASSES.keys()).index(ground_truth_dict["type"])]
+                ])
+            tmp_list.append(gt_tensor)
+        if len(tmp_list) == 0:
+            return torch.empty((0, 9))
+        return torch.stack(tmp_list)

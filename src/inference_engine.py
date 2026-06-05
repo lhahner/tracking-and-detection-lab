@@ -18,9 +18,10 @@ if importlib.util.find_spec("tkinter") is not None:
 from tracker.DeepSORT.deepSort import DeepSort as DeepSortTracker
 from tracker.SORT.sort import Sort
 from torch.utils.data import Dataset
+from entities.detection import convert_to_tensor, convert_classes_to_tensor
 
 class InferenceEngine:
-    def __init__(self, settings, dataset: Dataset):
+    def __init__(self, settings):
         self.settings = settings
         self.visualizer = Visualizer(
             self.settings.runtime.datatype
@@ -34,12 +35,14 @@ class InferenceEngine:
             min_hits=self.settings.tracker.min_hits,
             iou_threshold=self.settings.tracker.iou_threshold,
         )
-        self.dataset = dataset
+        self.dataset = None 
     
     def load(self):
-        if self.settings.dataset.name == "kitti3d":
+        dataset_name = self.settings.runtime.dataset.lower()
+        if dataset_name == "kitti3d":
             self.dataset = Kitti3D(
                     data_root=self.settings.paths.dataset_path) 
+        return self.dataset
 
     def predict(self, detector_name, dataset_path, detection_path, model_path):
         """Instantiate and run the configured detector implementation.
@@ -73,8 +76,35 @@ class InferenceEngine:
         if detector_name == "pointrcnn":
             detector = PointRCNNmmDetections3D(dataset=self.dataset,
                                                config_file=self.settings.paths.config_file,
-                                               classes=self.settings.dataset.classes)
+                                               classes=self.settings.dataset.classes,
+                                               settings=self.settings)
         return detector.detect()
+    
+    def evaluate_detection(self, detections, classes):
+        """
+        Run evaluation for detections.
+
+        Args:
+            detections: A tensor of detections 
+
+        Returns:
+            List of mAP evaluations
+        """
+        results = []
+        class_tensor = convert_classes_to_tensor(classes)
+        for detection_frame in detections.frames:
+            results.append(
+                {
+                    "frame": detection_frame.frame,
+                    "mAP":
+                       Evaluation().compute_mAP_3D(
+                           predicted_detections=convert_to_tensor(detection_frame.dets),
+                           ground_truth=self.dataset.convert_ground_truth(detection_frame.targets),
+                           classes=class_tensor,
+                           )
+                }
+            )
+        return results
 
     def update_tracker(self):
         if self.settings.runtime.display:

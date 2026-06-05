@@ -34,20 +34,10 @@ from detector.maskfrcnn.maskfrcnn_detectron2 import MaskFasterRCNNDetectron2Dete
 from detector.frcnn.frcnn_detectron2 import FasterRCNNDetectron2Detector
 from detector.pointnet.pointnet_trainer import PointnetTrainer
 
-from datasets.kitti3D import Kitti3D
+from datasets.kitti3D import Kitti3D, CLASSES
 from inference_engine import InferenceEngine
 from util.logging_config import LoggingConfig
-
-
-class Application:
-    """Coordinate detector execution, tracking, visualization, and evaluation."""
-
-    def __init__(self):
-        """Initialize the application state used during detection and tracking.
-        """
-        self.seed = np.random.seed(0)
-        self.project_root = os.path.dirname(os.path.abspath(__file__))
-    
+from entities.detection import convert_to_tensor
 
 if __name__ == "__main__":
     logging_config = LoggingConfig()
@@ -56,11 +46,15 @@ if __name__ == "__main__":
     settings = SettingsLoader.load("settings.yaml")
     if settings.runtime.mode == "inference":
         inference_engine = InferenceEngine(settings)
+        dataset = inference_engine.load()
+        # Object Detection
         detections = inference_engine.predict(detector_name=settings.runtime.detector_name,
                                  dataset_path=settings.path.dataset_path,
                                  detection_path=settings.path.detection_path,
                                  model_path=settings.path.model_path)
-        Evaluation().evaluate_detection(detections_sequence)
+        inference_engine.evaluate_detection(detections=detections,
+                                            classes=CLASSES) 
+        # Object Tracking
         inference_engine.update_tracker()
 
     elif settings.runtime.mode == "train":
