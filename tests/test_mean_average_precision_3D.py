@@ -47,6 +47,9 @@ class TestMeanAveragePrecision3D(unittest.TestCase):
                     req_class=2)
 
     def test__compute_average_precision_result_correct(self):
+        if importlib.util.find_spec(name="pytorch3d") is None:
+            self.skipTest("Pytorch3D is required.")
+
         precisions = torch.tensor([1.0, 1.0, 0.6667])
         recalls = torch.tensor([0.5, 1.0, 1.0])
         metric = MeanAveragePrecision3D()

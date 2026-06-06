@@ -63,7 +63,7 @@ class TestPointRCNNmmDetections3D(unittest.TestCase):
 
     def make_detector_without_init(self, **overrides):
         detector = self.module.PointRCNNmmDetections3D.__new__(self.module.PointRCNNmmDetections3D)
-        detector.dataset = [{"points": "point-cloud-1", "sample_id": 42}]
+        detector.dataset = [{"points": "point-cloud-1", "sample_id": 42, "target": "target-1"}]
         detector.batch_size = 1
         detector.model = "model"
         detector.num_inference_samples = 1
@@ -181,17 +181,18 @@ class TestPointRCNNmmDetections3D(unittest.TestCase):
 
     def test_custom_collate_returns_points_and_sample_ids(self):
         batch = [
-            {"points": "point-cloud-1", "sample_id": "000001"},
-            {"points": "point-cloud-2", "sample_id": "000002"},
+                {"points": "point-cloud-1", "sample_id": "000001", "target": "target-1"},
+                {"points": "point-cloud-2", "sample_id": "000002", "target": "target-2"},
         ]
 
-        points, sample_ids = self.module.custom_collate(batch)
+        points, targets, sample_ids = self.module.custom_collate(batch)
 
         self.assertEqual(points, ["point-cloud-1", "point-cloud-2"])
         self.assertEqual(sample_ids, ["000001", "000002"])
 
     def test_custom_collate_rejects_missing_sample_id(self):
-        batch = [{"points": "point-cloud-1"}]
+        batch = [{"points": "point-cloud-1"},
+                 {"targets": "point-cloud-2"}]
 
         with self.assertRaises(KeyError):
             self.module.custom_collate(batch)
