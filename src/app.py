@@ -76,7 +76,7 @@ if __name__ == "__main__":
         trainer = PointnetTrainer(
             train_dataset=train_dataset,
             val_dataset=val_dataset,
-            output_checkpoint=settings.paths.models_root,
+            output_checkpoint=settings.paths.model_path,
             epochs=20,
             batch_size=16,
             num_points=1024,

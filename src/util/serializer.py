@@ -87,7 +87,7 @@ class Serializer:
                 alpha = 0
                 bbox_2d: np.array = np.array([0, 0, 0, 0])
                 location: np.array = det.box[:3].cpu()
-                rotation_y: float = det.box[7]
+                rotation_y: float = det.box[6]
                 score: float = det.score
                 if det.box[3:6].shape == (3,):
                     dimensions: np.array = np.array([

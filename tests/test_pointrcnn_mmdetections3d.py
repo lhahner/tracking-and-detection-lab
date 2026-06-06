@@ -120,7 +120,7 @@ class TestPointRCNNmmDetections3D(unittest.TestCase):
 
         self.assertEqual(len(detection_sequence.frames), 1)
         frame = detection_sequence.frames[0]
-        self.assertEqual(frame.frame, [42])
+        self.assertEqual(frame.frame, 42)
         self.assertEqual(frame.highest_score_index.item(), 0)
         self.assertEqual(len(frame.dets), 1)
         self.assertTrue(torch.equal(frame.dets[0].score, torch.tensor(0.7)))
