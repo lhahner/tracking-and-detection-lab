@@ -8,6 +8,7 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from util.settings_loader import SettingsLoader
 
+
 class LoggingConfig:
       def __init__(self, routine="infer", log_level=logging.INFO, 
                    log_filename=None):

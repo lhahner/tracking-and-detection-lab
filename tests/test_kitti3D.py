@@ -1,6 +1,7 @@
 import os
 import sys
 import unittest
+import torch
 from unittest.mock import MagicMock, patch
 
 TESTS_DIR = os.path.dirname(__file__)
@@ -19,7 +20,7 @@ logger = logging_config.get_logger(__name__)
 
 class Kitti3DTest(unittest.TestCase):
     def test_dataset_loaded_and_get_item(self):
-        kitti3D = Kitti3D(BASE_DIR, split="training", logger=logger)
+        kitti3D = Kitti3D(BASE_DIR, split="training")
         first_frame = kitti3D[0]
         self.assertEqual(
             first_frame["sample_id"], "000000",
@@ -43,7 +44,7 @@ class Kitti3DTest(unittest.TestCase):
     @patch("datasets.kitti3D.Kitti3D._load_label")
     def test__load_label(self, mock_load_label):
         mock_load_label.return_value = ("1", "/fake/path")
-        kitti3D = Kitti3D(BASE_DIR, split="training", logger=logger)
+        kitti3D = Kitti3D(BASE_DIR, split="training")
         tmp = kitti3D._load_label(1)
         assert tmp == ("1", "/fake/path")
 
@@ -89,7 +90,7 @@ class Kitti3DTest(unittest.TestCase):
             (0, objects[0]),
             (1, objects[1]),
         ]
-        kitti3D = Kitti3D(BASE_DIR, split="training", logger=logger)
+        kitti3D = Kitti3D(BASE_DIR, split="training")
         kitti3D.sample_ids = ["000000", "000001", "000002"]
         object_index = kitti3D._build_object_index()
         self.assertEqual(
@@ -105,7 +106,33 @@ class Kitti3DTest(unittest.TestCase):
         )
         self.assertEqual(mock_load_label.call_count, 3)
         self.assertEqual(mock_filter_supported_objects.call_count, 3)
-
+    
+    def test_convert_ground_truth_of_kitti3d_to_required_evaluation_format(self):
+        ground_truth_dicts = [
+                    {
+                        "type": "Car",
+                        "truncated": 1.2,
+                        "occluded": 2,
+                        "alpha": 0.4,
+                        "bbox": [1, 2, 3],
+                        "dimensions": [1, 2, 3],
+                        "location": [1, 2, 3],
+                        "rotation_y": 0.5,
+                    },
+                    {
+                        "type": "Car",
+                        "truncated": 1.2,
+                        "occluded": 2,
+                        "alpha": 0.4,
+                        "bbox": [1, 2, 3],
+                        "dimensions": [1, 2, 3],
+                        "location": [1, 2, 3],
+                        "rotation_y": 0.5,
+                    },
+                ]
+        kitti3d = Kitti3D(data_root="tests/data/kitti3d_dummy")
+        res = kitti3d.convert_ground_truth(ground_truth_dicts=ground_truth_dicts)
+        self.assertTrue(isinstance(res, torch.Tensor))
 
 if __name__ == "__main__":
     unittest.main()

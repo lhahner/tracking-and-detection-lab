@@ -1,10 +1,15 @@
+import importlib
 import torch
 import unittest
-from util.metrics.mean_average_precision_3D import MeanAveragePrecision3D
-
 
 class TestMeanAveragePrecision3D(unittest.TestCase):
+    def setUp(self):
+        if importlib.util.find_spec(name="pytorch3d") is None:
+            self.skipTest("Pytorch3D is required.")
+
     def test__collect_class_values_correct_sorting_order(self):
+        from util.metrics.mean_average_precision_3D import MeanAveragePrecision3D
+
         # Input
         predictions = torch.tensor([
                                 [1.8, 2.7, 3.1, 2.2, 4.3, 1.1, 0.8, 0.1, 2],
@@ -30,6 +35,8 @@ class TestMeanAveragePrecision3D(unittest.TestCase):
         self.assertTrue(torch.equal(class_ground_truths, expected_ground_truth))
 
     def test__collect_class_values_empty_predictions_and_ground_truths(self):
+        from util.metrics.mean_average_precision_3D import MeanAveragePrecision3D
+
         predictions = torch.tensor([])
         ground_truth = torch.tensor([])
         metric = MeanAveragePrecision3D()
@@ -40,6 +47,10 @@ class TestMeanAveragePrecision3D(unittest.TestCase):
                     req_class=2)
 
     def test__compute_average_precision_result_correct(self):
+        if importlib.util.find_spec(name="pytorch3d") is None:
+            self.skipTest("Pytorch3D is required.")
+        
+        from util.metrics.mean_average_precision_3D import MeanAveragePrecision3D
         precisions = torch.tensor([1.0, 1.0, 0.6667])
         recalls = torch.tensor([0.5, 1.0, 1.0])
         metric = MeanAveragePrecision3D()

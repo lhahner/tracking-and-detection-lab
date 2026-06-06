@@ -1,8 +1,10 @@
 from __future__ import print_function
 
+import importlib.util    
 import numpy as np
 import matplotlib
-matplotlib.use('TkAgg')
+if importlib.util.find_spec("tkinter") is not None:
+    matplotlib.use('Agg')
 from filterpy.kalman import KalmanFilter
 
 class KalmanBoxTracker(object):

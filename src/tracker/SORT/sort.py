@@ -57,7 +57,7 @@ class Sort(object):
       x, y = linear_sum_assignment(cost_matrix)
       return np.array(list(zip(x, y)))
 
-  def update(self, dets=np.empty((0, 5))):
+  def update(self, dets=np.empty((0, 5)), frame=None):
     """Update active SORT tracks with detections from the current frame.
 
     Args:
