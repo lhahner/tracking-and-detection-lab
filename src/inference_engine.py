@@ -1,7 +1,7 @@
 import os
 import time
 from pathlib import Path
-
+import glob
 import matplotlib
 import importlib.util
 import numpy as np
@@ -58,7 +58,7 @@ class InferenceEngine:
             detector = FasterRCNNDetector(
                 input_path=dataset_path, output_path=detection_path, threshold=0.9
             )
-        if detector_name == "detr":
+        if detector_name == "detr"config_file:
             detector = DetrHuggingFaceDetector(
                 input_path=dataset_path,
                 output_path=detection_path,
@@ -76,7 +76,7 @@ class InferenceEngine:
         if detector_name == "pointrcnn":
             detector = PointRCNNmmDetections3D(dataset=self.dataset,
                                                config_file=self.settings.paths.config_file,
-                                               classes=self.settings.dataset.classes,
+                                               classes=self.settings.benchmark.class_filter,
                                                settings=self.settings)
         return detector.detect()
     

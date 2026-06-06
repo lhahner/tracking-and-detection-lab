@@ -20,6 +20,7 @@ class PathsConfig:
     tracking_path: str | None
     logging_path: str | None
     mmdetection3d_path: str | None
+    config_file: str | None
 
 @dataclass(frozen=True)
 class BenchmarkConfig:
@@ -96,7 +97,8 @@ class SettingsLoader:
             ground_truth_path=paths.get("ground_truth_path"),
             tracking_path=paths.get("tracking_path"),
             logging_path=paths.get("logging_path"),
-            mmdetection3d_path=paths.get("mmdetection3d_path"))
+            mmdetection3d_path=paths.get("mmdetection3d_path"),
+            config_file=paths.get("config_file"))
             
         settings = Settings(
             project_name=project.get("name", "tracking-and-detection-lab"),

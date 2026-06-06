@@ -48,10 +48,10 @@ if __name__ == "__main__":
         inference_engine = InferenceEngine(settings)
         dataset = inference_engine.load()
         # Object Detection
-        detections = inference_engine.predict(detector_name=settings.runtime.detector_name,
-                                 dataset_path=settings.path.dataset_path,
-                                 detection_path=settings.path.detection_path,
-                                 model_path=settings.path.model_path)
+        detections = inference_engine.predict(detector_name=settings.runtime.detector,
+                                 dataset_path=settings.paths.dataset_path,
+                                 detection_path=settings.paths.detection_path,
+                                 model_path=settings.paths.model_path)
         inference_engine.evaluate_detection(detections=detections,
                                             classes=CLASSES) 
         # Object Tracking
@@ -64,7 +64,6 @@ if __name__ == "__main__":
             mode="object",
             num_points=1024,
             include_background=True,
-            logger=logger,
         )
 
         val_dataset = Kitti3D(
@@ -73,7 +72,6 @@ if __name__ == "__main__":
             mode="object",
             num_points=1024,
             include_background=True,
-            logger=logger,
         )
         trainer = PointnetTrainer(
             train_dataset=train_dataset,

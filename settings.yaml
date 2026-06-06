@@ -12,6 +12,7 @@ paths:
   tracking_path: "/home/lennart/Dokumente/gau/advanced-research-training-applied-system-development/track-lab/src/output/KITTI-17.txt"
   logging_path: ./logs
   mmdetection3d_path: "/user/lennart.hahner/u25411/mmdetection3d/configs/point_rcnn/"
+  config_file: ""
 
 benchmark:
         iou_threshold: 0.5
