@@ -1,3 +1,4 @@
+
 import os
 import time
 from pathlib import Path
@@ -19,6 +20,16 @@ from tracker.DeepSORT.deepSort import DeepSort as DeepSortTracker
 from tracker.SORT.sort import Sort
 from torch.utils.data import Dataset
 from entities.detection import convert_to_tensor, convert_classes_to_tensor
+
+# Detection systems
+from detector.yolo.yolo_ultralytics import YoloUltralyticsDetector
+from detector.detr.detr_huggingface import DetrHuggingFaceDetector
+from detector.maskfrcnn.maskfrcnn_detectron2 import MaskFasterRCNNDetectron2Detector
+from detector.frcnn.frcnn_detectron2 import FasterRCNNDetectron2Detector
+from detector.pointnet.pointnet_trainer import PointnetTrainer
+
+# Datasets
+from datasets.kitti3D import Kitti3D, CLASSES
 
 class InferenceEngine:
     def __init__(self, settings):
