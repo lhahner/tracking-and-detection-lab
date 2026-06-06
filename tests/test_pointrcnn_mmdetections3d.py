@@ -112,8 +112,8 @@ class TestPointRCNNmmDetections3D(unittest.TestCase):
     def test_detect_returns_detection_sequence(self, _mock_dataloader):
         detector = self.make_detector_without_init()
         self.module.inference_detector.side_effect = [
-            make_prediction(scores=[0.9], bboxes=[[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 0.1]], labels=[2]),
-            make_prediction(scores=[0.7], bboxes=[[1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 0.2]], labels=[2]),
+            make_prediction(scores=[0.9], bboxes=[[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 0.1]], labels=[0]),
+            make_prediction(scores=[0.7], bboxes=[[1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 0.2]], labels=[0]),
         ]
 
         detection_sequence = detector.detect()
@@ -124,7 +124,7 @@ class TestPointRCNNmmDetections3D(unittest.TestCase):
         self.assertEqual(frame.highest_score_index.item(), 0)
         self.assertEqual(len(frame.dets), 1)
         self.assertTrue(torch.equal(frame.dets[0].score, torch.tensor(0.7)))
-        self.assertEqual(frame.dets[0].label.item(), 2)
+        self.assertEqual(frame.dets[0].label.item(), 3)
         self.assertTrue(torch.equal(frame.dets[0].box, torch.tensor([1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 0.2])))
 
     @patch("torch.utils.data.DataLoader", side_effect=lambda dataset, batch_size, collate_fn: [collate_fn(dataset)])

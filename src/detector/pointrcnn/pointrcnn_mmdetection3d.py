@@ -81,7 +81,7 @@ class PointRCNNmmDetections3D(Detector):
                 scores_tensor: torch.tensor = torch.stack(all_scores)
 
                 scores: torch.tensor = self.__mean_nonzero(tensor=scores_tensor).squeeze(0)
-                labels: torch.tensor = labels_reference
+                labels: torch.tensor = torch.tensor([3, 1, 2], device=labels_reference.device)[labels_reference]
                 bboxes: torch.tensor = Box3DMode.convert(
                     self.__mean_nonzero(tensor=bboxes_tensor),
                     Box3DMode.LIDAR,

@@ -51,7 +51,7 @@ if __name__ == "__main__":
         detections = inference_engine.predict(detector_name=settings.runtime.detector,
                                  dataset_path=settings.paths.dataset_path,
                                  detection_path=settings.paths.detection_path,
-                                 model_path=settings.paths.model_path)
+                                 model_path=settings.paths.model_root)
         inference_engine.evaluate_detection(detections=detections,
                                             classes=CLASSES) 
         # Object Tracking
