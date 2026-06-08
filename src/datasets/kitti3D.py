@@ -312,7 +312,6 @@ class Kitti3D(Dataset):
         for ground_truth_dict in ground_truth_dicts:
             if ground_truth_dict["type"] not in CLASSES:
                 continue
-
             gt_tensor = torch.tensor([
                 ground_truth_dict["location"][0],
                 ground_truth_dict["location"][1],
@@ -323,7 +322,7 @@ class Kitti3D(Dataset):
                 ground_truth_dict["rotation_y"],
                 0,
                 list(CLASSES.values())[list(CLASSES.keys()).index(ground_truth_dict["type"])]
-                ])
+            ])
             tmp_list.append(gt_tensor)
         if len(tmp_list) == 0:
             return torch.empty((0, 9))

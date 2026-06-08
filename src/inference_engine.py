@@ -1,6 +1,5 @@
 
 import os
-import time
 from pathlib import Path
 import glob
 import matplotlib
@@ -10,7 +9,6 @@ from skimage import io
 
 from util.coordinate_converter import CoordinateConverter
 from util.evaluation import Evaluation
-from util.settings_loader import SettingsLoader
 from util.visualizer import Visualizer
 
 if importlib.util.find_spec("tkinter") is not None:
@@ -18,19 +16,14 @@ if importlib.util.find_spec("tkinter") is not None:
 
 from tracker.DeepSORT.deepSort import DeepSort as DeepSortTracker
 from tracker.SORT.sort import Sort
-from torch.utils.data import Dataset
 from entities.detection import convert_to_tensor, convert_classes_to_tensor
 
 # Detection systems
-from detector.yolo.yolo_ultralytics import YoloUltralyticsDetector
 from detector.detr.detr_huggingface import DetrHuggingFaceDetector
-from detector.maskfrcnn.maskfrcnn_detectron2 import MaskFasterRCNNDetectron2Detector
-from detector.frcnn.frcnn_detectron2 import FasterRCNNDetectron2Detector
-from detector.pointnet.pointnet_trainer import PointnetTrainer
 from detector.pointpillars.pointpillars import Pointpillars
 
 # Datasets
-from datasets.kitti3D import Kitti3D, CLASSES
+from datasets.kitti3D import Kitti3D
 
 class InferenceEngine:
     def __init__(self, settings):

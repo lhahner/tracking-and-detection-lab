@@ -4,8 +4,9 @@ from detector.detector import Detector
 from third_party.pointpillars._ext_src.model.pointpillars import PointPillars
 from torch.utils.data import DataLoader
 from entities.detection import DetectionSequence, FrameDetection, Detection
+from definitions import ROOT_DIR
 
-CHECKPOINT_FILE = "third_party/_ext_src/pretrained/epoch_160.pth"
+CHECKPOINT_FILE = f"{ROOT_DIR}/third_party/pointpillars/_ext_src/pretrained/epoch_160.pth"
 
 
 class Pointpillars(Detector): 
@@ -14,8 +15,8 @@ class Pointpillars(Detector):
                  config_file,
                  classes,
                  settings,
-                 batch_size,
-                 num_inference_samples,
+                 batch_size=16,
+                 num_inference_samples=5,
                  checkpoint_file=CHECKPOINT_FILE,
                  device='cpu'):
         self.dataset = dataset
@@ -36,43 +37,40 @@ class Pointpillars(Detector):
         self.model.eval()
         with torch.no_grad():
             for points, targets, samples in test_dataloader:
-                for point, target, sample_id in zip(points, targets, samples):
-                    results = self.model(batched_pts=points,
-                                    mode='test')
-                    labels_reference: torch.tensor = torch.from_numpy(results[0]['labels'])
-                    num_obj: int = results[0]['lidar_bboxes'].shape[0]
-                    # Points can contain no  objects
-                    if num_obj == 0:
-                        continue
-                    all_bboxes, all_scores = self.__sample(point=points, num_obj=num_obj)
-                    
-                    if len(all_bboxes) <= 1 and len(all_scores) <= 1:
-                        bboxes_tensor: torch.tensor = torch.from_numpy(all_bboxes[0])
-                        scores_tensor: torch.tensor = torch.from_numpy(all_scores[0])
-                    else: 
-                        bboxes_tensor: torch.tensor = torch.stack(all_bboxes)
-                        scores_tensor: torch.tensor = torch.stack(all_scores)
-                    
-                    if len(all_scores) > 1:
-                        scores: torch.tensor = self.__mean_nonzero(tensor=scores_tensor) # scores is only one element why? 
-                    else:
-                        scores: torch.tensor = scores_tensor
-                    labels: torch.tensor = torch.tensor([3, 1, 2], device=labels_reference.device)[labels_reference]
-                    if len(all_bboxes) > 1:
-                        bboxes: torch.tensor = self.__mean_nonzero(tensor=bboxes_tensor)
-                    else:
-                        bboxes: torch.tensor = bboxes_tensor
-                    detection_sequence.frames.append(FrameDetection(frame=sample_id,
+                results = self.model(batched_pts=points, mode='test')
+                labels_reference: torch.tensor = torch.from_numpy(results[0]['labels'])
+                num_obj: int = results[0]['lidar_bboxes'].shape[0]
+                # Points can contain no  objects
+                if num_obj == 0:
+                    continue
+                all_bboxes, all_scores = self.__sample(point=points, num_obj=num_obj)
+                if len(all_bboxes) <= 1 and len(all_scores) <= 1:
+                    bboxes_tensor: torch.tensor = torch.from_numpy(all_bboxes[0])
+                    scores_tensor: torch.tensor = torch.from_numpy(all_scores[0])
+                else:
+                    bboxes_tensor: torch.tensor = torch.stack(all_bboxes)
+                    scores_tensor: torch.tensor = torch.stack(all_scores)
+                if len(all_scores) > 1:
+                    scores: torch.tensor = self.__mean_nonzero(tensor=scores_tensor) 
+                else:
+                    scores: torch.tensor = scores_tensor
+                labels: torch.tensor = torch.tensor([3, 1, 2], device=labels_reference.device)[labels_reference]
+                if len(all_bboxes) > 1:
+                    bboxes: torch.tensor = self.__mean_nonzero(tensor=bboxes_tensor)
+                else:
+                    bboxes: torch.tensor = bboxes_tensor
+                detection_sequence.frames.append(FrameDetection(frame=samples[0],
                                                                 highest_score_index=scores.argmax(),
                                                                 dets=[
                                                                     Detection(
                                                                         score=score,
                                                                         label=label,
-                                                                        box=box) for score, box, label in zip(scores, bboxes, labels)
+                                                                        box=box)
+                                                                    for score, box, label in zip(scores.squeeze(0), bboxes.squeeze(0), labels)
                                                                 ],
-                                                            targets=target))
+                                                                targets=targets))
             return detection_sequence
-            
+
     def __sample(self, point, num_obj):
         all_bboxes: list = []
         all_scores: list = []
@@ -108,11 +106,10 @@ class Pointpillars(Detector):
             elif num_obj_actual_score > num_obj:
                 scores_tensor_infered.resize_(num_obj)
 
-            all_bboxes.append(bboxes_tensor_infered)
-            all_scores.append(scores_tensor_infered)
+            all_bboxes.append(torch.from_numpy(bboxes_tensor_infered))
+            all_scores.append(torch.from_numpy(scores_tensor_infered))
         return all_bboxes, all_scores
         
-    
     def __init_model(self, checkpoint_file):
         if self.device == 'gpu' and torch.cuda.is_available():
             model = PointPillars(nclasses=len(self.classes)).cuda()
@@ -142,6 +139,6 @@ def custom_collate(batch):
     filtered_samples = []
     for item in batch:
         filtered_data.append(item["points"])
-        filtered_targets.append(item["target"])
+        filtered_targets.append(item["target"][0])
         filtered_samples.append(item["sample_id"])
     return filtered_data, filtered_targets, filtered_samples

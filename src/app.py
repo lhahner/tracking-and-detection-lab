@@ -53,9 +53,9 @@ if __name__ == "__main__":
                                  detection_path=settings.paths.detection_path,
                                  model_path=settings.paths.model_root)
         inference_engine.evaluate_detection(detections=detections,
-                                            classes=CLASSES) 
+                                            classes=CLASSES)
         # Object Tracking
-        if settings.runtime.tracker != ""
+        if settings.runtime.tracker != "":
             inference_engine.update_tracker()
 
     elif settings.runtime.mode == "train":
