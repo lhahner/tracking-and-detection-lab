@@ -35,10 +35,8 @@ def boxes_overlap_bev(boxes_a, boxes_b):
     Returns:
         ans_overlap (torch.Tensor): Overlap result with shape (M, N).
     """
-    # WARNING AI Generated Code start
     if not _HAS_COMPILED_OPS:
         return boxes_overlap_bev_fallback(boxes_a, boxes_b)
-    # AI Generated Code end
 
     ans_overlap = boxes_a.new_zeros(
         torch.Size((boxes_a.shape[0], boxes_b.shape[0])))
@@ -57,10 +55,8 @@ def boxes_iou_bev(boxes_a, boxes_b):
     Returns:
         ans_iou (torch.Tensor): IoU result with shape (M, N).
     """
-    # WARNING AI Generated Code start
     if not _HAS_COMPILED_OPS:
         return boxes_iou_bev_fallback(boxes_a, boxes_b)
-    # AI Generated Code end
 
     ans_iou = boxes_a.new_zeros(
         torch.Size((boxes_a.shape[0], boxes_b.shape[0])))
@@ -90,14 +86,12 @@ def nms_cuda(boxes, scores, thresh, pre_maxsize=None, post_max_size=None):
     boxes = boxes[order].contiguous()
     scores = scores[order].contiguous()
     
-    # WARNING AI Generated Code Start 
     if _HAS_COMPILED_OPS:
         keep = torch.zeros(boxes.size(0), dtype=torch.long)
         num_out = nms_gpu(boxes, keep, thresh, boxes.device.index)
         keep = keep[:num_out].to(order.device)
     else:
         keep = rotated_nms(boxes, scores, thresh).to(order.device)
-    # WARNING AI Generate Code End
 
     keep = order[keep].contiguous()
     if post_max_size is not None:
@@ -131,4 +125,3 @@ def nms_normal_gpu(boxes, scores, thresh):
         keep = nms_normal_fallback(boxes, scores, thresh).to(order.device)
 
     return order[keep].contiguous()
-# AI Generated Code End 

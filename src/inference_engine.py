@@ -27,6 +27,7 @@ from detector.detr.detr_huggingface import DetrHuggingFaceDetector
 from detector.maskfrcnn.maskfrcnn_detectron2 import MaskFasterRCNNDetectron2Detector
 from detector.frcnn.frcnn_detectron2 import FasterRCNNDetectron2Detector
 from detector.pointnet.pointnet_trainer import PointnetTrainer
+from detector.pointpillars.pointpillars import Pointpillars
 
 # Datasets
 from datasets.kitti3D import Kitti3D, CLASSES
@@ -86,6 +87,11 @@ class InferenceEngine:
             )
         if detector_name == "pointrcnn":
             detector = PointRCNNmmDetections3D(dataset=self.dataset,
+                                               config_file=self.settings.paths.config_file,
+                                               classes=self.settings.benchmark.class_filter,
+                                               settings=self.settings)
+        if detector_name == "pointpillars":
+            detector = Pointpillars(dataset=self.dataset,
                                                config_file=self.settings.paths.config_file,
                                                classes=self.settings.benchmark.class_filter,
                                                settings=self.settings)

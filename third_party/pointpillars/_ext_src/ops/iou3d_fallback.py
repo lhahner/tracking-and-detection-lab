@@ -22,6 +22,16 @@ def _boxes_as_rotated_rects(boxes):
 
 
 def boxes_overlap_bev(boxes_a, boxes_b):
+    """
+    Compute box overlap of bew projection by using the rotated
+    rectangleIntersection from OpenCV2.
+
+    Args:
+        boxes_a: [x_1, x_2, y_2, angle]
+        boxes_b: [x_1, x_2, y_2, angle]
+    Returns:
+        tensor with overlaps
+    """
     rects_a = _boxes_as_rotated_rects(boxes_a)
     rects_b = _boxes_as_rotated_rects(boxes_b)
     overlaps = np.zeros((len(rects_a), len(rects_b)), dtype=np.float32)
@@ -40,19 +50,18 @@ def boxes_overlap_bev(boxes_a, boxes_b):
         device=boxes_a.device,
     )
 
-
 def boxes_iou_bev(boxes_a, boxes_b):
     overlaps = boxes_overlap_bev(boxes_a, boxes_b)
     areas_a = (
         (boxes_a[:, 2] - boxes_a[:, 0])
-        * (boxes_a[:, 3] - boxes_a[:, 1])
+        * (boxes_a[:, 3] - boxes_a[:, 1]) # Potential Index Overflow
     )
     areas_b = (
         (boxes_b[:, 2] - boxes_b[:, 0])
-        * (boxes_b[:, 3] - boxes_b[:, 1])
+        * (boxes_b[:, 3] - boxes_b[:, 1]) # Potential Index Overflow
     )
     return overlaps / (
-        areas_a[:, None] + areas_b[None, :] - overlaps + 1e-8
+        areas_a[:, None] + areas_b[None, :] - overlaps + 1e-8 # Potenial division by 0
     )
 
 
@@ -87,9 +96,7 @@ def nms_normal(boxes, scores, threshold):
     scores_array = scores.detach().cpu().float().numpy().tolist()
     if not xywh_boxes:
         return torch.empty(0, dtype=torch.long)
-    # AI Generated Code Start
     min_score = min(scores_array)
-    # End
     score_threshold = min_score - max(abs(min_score) * 1e-6, 1e-6)
     indices = cv2.dnn.NMSBoxes(
         xywh_boxes,
@@ -97,9 +104,7 @@ def nms_normal(boxes, scores, threshold):
         score_threshold,
         float(threshold),
     )
-    # AI Generated Code Start
     return torch.as_tensor(
         np.asarray(indices).reshape(-1),
         dtype=torch.long,
     )
-    # End

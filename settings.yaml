@@ -23,11 +23,11 @@ visualizer:
 
 runtime:
   mode: "inference"
-  display: true
-  dataset: "KITTI-17"                      
-  detector: "detr"                  
-  tracker: "deepsort"
-  datatype: "jpg"
+  display: false 
+  dataset: "KITTI3D"                      
+  detector: "pointpillars"                  
+  tracker: ""
+  datatype: "bin"
   benchmark: true
   
 tracker:

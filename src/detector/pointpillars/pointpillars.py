@@ -72,8 +72,6 @@ class Pointpillars(Detector):
                                                                 ],
                                                             targets=target))
             return detection_sequence
-
-                
             
     def __sample(self, point, num_obj):
         all_bboxes: list = []

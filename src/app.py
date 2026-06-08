@@ -55,7 +55,8 @@ if __name__ == "__main__":
         inference_engine.evaluate_detection(detections=detections,
                                             classes=CLASSES) 
         # Object Tracking
-        inference_engine.update_tracker()
+        if settings.runtime.tracker != ""
+            inference_engine.update_tracker()
 
     elif settings.runtime.mode == "train":
         train_dataset = Kitti3D(
