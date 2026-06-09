@@ -26,11 +26,9 @@ class MeanAveragePrecision3D(Metric):
             If ``predictions`` or ``ground_truth`` is not of shape (N, 9)
         ValueError:
             If ``predictions`` or ``ground_truth`` is not empty
-        
 
     Example::
-
-        Basic example on how to use this metric internally         
+        Basic example on how to use this metric internally
 
         >>> predictions = torch.randn(3, 9)
         >>> ground_truth = torch.randn(2, 9)
@@ -41,7 +39,6 @@ class MeanAveragePrecision3D(Metric):
         >>>         ground_truths=ground_truths,
         >>>         classes=classes)
         >>> metric.compute()
-
     """
     def __init__(self, box_mode="camera", iou_threshold=0.5, **kwargs):
         super().__init__(**kwargs)
@@ -73,6 +70,7 @@ class MeanAveragePrecision3D(Metric):
                                                                                  self.ground_truths,
                                                                                  class_.item())
             if class_predictions.numel() == 0 or class_ground_truths.numel() == 0:
+                class_wise_average_precision.append(torch.tensor(0.0).cpu())
                 continue
             # Coordinate convertion need since pytorch3d iou computation needs corner boxes
             prediction_corner_boxes = self.coordinate_converter.boxes_3d_to_corners(

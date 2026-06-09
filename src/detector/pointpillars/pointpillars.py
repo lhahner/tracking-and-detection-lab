@@ -10,7 +10,7 @@ from definitions import ROOT_DIR
 CHECKPOINT_FILE = f"{ROOT_DIR}/third_party/pointpillars/_ext_src/pretrained/epoch_160.pth"
 
 
-class Pointpillars(Detector): 
+class Pointpillars(Detector):
     def __init__(self,
                  dataset,
                  config_file,
@@ -31,7 +31,7 @@ class Pointpillars(Detector):
         self.model = self.__init_model(self.checkpoint_file)
 
     def detect(self):
-        test_dataloader: torch.utils.dataloader = DataLoader(dataset=self.dataset, 
+        test_dataloader: torch.utils.dataloader = DataLoader(dataset=self.dataset,
                                                              batch_size=self.batch_size,
                                                              collate_fn=custom_collate)
         detection_sequence: DetectionSequence = DetectionSequence()
@@ -63,46 +63,6 @@ class Pointpillars(Detector):
                         targets=targets[batch_idx]))
             return detection_sequence
 
-    def __sample(self, point, num_obj):
-        all_bboxes: list = []
-        all_scores: list = []
-
-        for i in range(0, int(self.num_inference_samples)):
-            filtered_points = self.__filter_points_for_inference(point)
-            results = self.model(batched_pts=filtered_points, mode='test')
-            scores_tensor_infered: torch.tensor = results[0]['scores']
-            bboxes_tensor_infered: torch.tensor = results[0]['lidar_bboxes']
-
-            num_obj_actual_bbox: int = bboxes_tensor_infered.shape[0]
-            num_obj_actual_score: int = scores_tensor_infered.shape[0]
-
-            if num_obj_actual_bbox != num_obj_actual_score:
-                raise ValueError("Number of identified objects do not align wiht scores")
-
-            if num_obj_actual_bbox < num_obj:
-                shape_diff: int = num_obj - num_obj_actual_bbox
-                bboxes_tensor_infered: torch.tensor = Functional.pad(
-                                                        input=bboxes_tensor_infered,
-                                                        pad=(0, 0, shape_diff, 0),
-                                                        mode='constant',
-                                                        value=0)
-            elif num_obj_actual_bbox > num_obj:
-                bboxes_tensor_infered.resize_(num_obj, 7)
-
-            if num_obj_actual_score < num_obj:
-                shape_diff: int = num_obj - num_obj_actual_score
-                scores_tensor_infered: torch.tensor = Functional.pad(
-                                                        input=scores_tensor_infered,
-                                                        pad=(0, shape_diff),
-                                                        mode='constant',
-                                                        value=0)
-            elif num_obj_actual_score > num_obj:
-                scores_tensor_infered.resize_(num_obj)
-
-            all_bboxes.append(torch.from_numpy(bboxes_tensor_infered))
-            all_scores.append(torch.from_numpy(scores_tensor_infered))
-        return all_bboxes, all_scores
-        
     def __filter_points_for_inference(self, points):
         filtered_points = []
         for pts in points:
@@ -125,11 +85,6 @@ class Pointpillars(Detector):
             torch.load(self.checkpoint_file, map_location=torch.device('cpu')))
             return model
 
-    def __mean_nonzero(self, tensor: torch.tensor) -> torch.tensor:
-        if tensor.numel() <= 0:
-            raise ValueError("Tensor to compute only includes zeros.")
-        mask: torch.tensor = tensor != 0
-        return tensor.sum(dim=0, keepdim=True) / mask.sum(dim=0, keepdim=True).clamp(min=1)
 
 @staticmethod
 def custom_collate(batch):
