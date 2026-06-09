@@ -4,10 +4,13 @@ from pathlib import Path
 import glob
 import matplotlib
 import importlib.util
+import torch
 import numpy as np
 from skimage import io
 
 from util.coordinate_converter import CoordinateConverter
+from util.kitti_calib import extend_to_4x4
+from third_party.pointpillars._ext_src.utils.process import bbox_camera2lidar
 from util.evaluation import Evaluation
 from util.visualizer import Visualizer
 
@@ -42,11 +45,13 @@ class InferenceEngine:
         )
         self.dataset = None 
     
-    def load(self):
+    def load(self, split, max_samples):
         dataset_name = self.settings.runtime.dataset.lower()
         if dataset_name == "kitti3d":
             self.dataset = Kitti3D(
-                    data_root=self.settings.paths.dataset_path) 
+                    data_root=self.settings.paths.dataset_path,
+                    split=split,
+                    max_samples=max_samples)
         return self.dataset
 
     def predict(self, detector_name, dataset_path, detection_path, model_path):
@@ -88,14 +93,14 @@ class InferenceEngine:
                                                config_file=self.settings.paths.config_file,
                                                classes=self.settings.benchmark.class_filter,
                                                settings=self.settings)
-        return detector.detect()
-    
+        return detector.detect() 
+
     def evaluate_detection(self, detections, classes):
         """
         Run evaluation for detections.
 
         Args:
-            detections: A tensor of detections 
+            detections: A tensor of detections
 
         Returns:
             List of mAP evaluations
@@ -103,15 +108,27 @@ class InferenceEngine:
         results = []
         class_tensor = convert_classes_to_tensor(classes)
         for detection_frame in detections.frames:
+            ground_truth_camera = self.dataset.convert_ground_truth(detection_frame.targets)
+            calib, _ = self.dataset._load_calib(detection_frame.frame)
+            detection_tensor = convert_to_tensor(detection_frame.dets)
+
+            gt_lidar_boxes = bbox_camera2lidar(
+                ground_truth_camera[:, :7].detach().cpu().numpy(),
+                extend_to_4x4(calib["Tr_velo_to_cam"]),
+                extend_to_4x4(calib["R0_rect"]),
+            )
+            gt_lidar = ground_truth_camera.clone()
+            gt_lidar[:, :7] = torch.from_numpy(gt_lidar_boxes).to(ground_truth_camera.dtype)
+            mAP = Evaluation().compute_mAP_3D(
+                           predicted_detections=detection_tensor,
+                           ground_truth=gt_lidar,
+                           classes=class_tensor,
+                           box_mode="lidar",
+                           )
             results.append(
                 {
                     "frame": detection_frame.frame,
-                    "mAP":
-                       Evaluation().compute_mAP_3D(
-                           predicted_detections=convert_to_tensor(detection_frame.dets),
-                           ground_truth=self.dataset.convert_ground_truth(detection_frame.targets),
-                           classes=class_tensor,
-                           )
+                    "mAP": mAP
                 }
             )
         return results

@@ -16,7 +16,7 @@ paths:
 
 benchmark:
         iou_threshold: 0.5
-        class_filter: [0, 1, 2] 
+        class_filter: [1, 2, 3] 
 
 visualizer:
         colour: "Red"

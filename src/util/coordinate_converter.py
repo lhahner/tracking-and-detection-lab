@@ -1,14 +1,13 @@
-import numpy as np
-import torch
-
 """
-TO BE REVIEWED
 Direct mmdetection3d references used:
 
   - LiDAR corners: mmdetection3d/mmdet3d/structures/bbox_3d/lidar_box3d.py:41
   - Camera/LiDAR conversion semantics: mmdetection3d/mmdet3d/structures/bbox_3d/box_3d_mode.py:127
   - Transform application and limit_period: mmdetection3d/mmdet3d/structures/bbox_3d/box_3d_mode.py:220
 """
+import numpy as np
+import torch
+
 
 class CoordinateConverter:
     def convert2DDetectionToBox(self, seq_dets, frame):
@@ -56,7 +55,7 @@ class CoordinateConverter:
         if box_mode == "camera":
             return self.__camera_boxes_to_corners(boxes_3d)
         if box_mode == "lidar":
-            return self.__lidar_boxes_to_corners(boxes_3d)  # patched typo fix
+            return self.__lidar_boxes_to_corners(boxes_3d)
         raise ValueError(f"Unsupported box_mode {box_mode}")
 
     def __rotation_3d_in_axis(self,
@@ -129,8 +128,8 @@ class CoordinateConverter:
         Returns:
             Tensor: A tensor with 8 corners of each box in shape (N, 8, 3).
         """
-        if self.boxes_3d.numel() == 0:
-            return torch.empty([0, 8, 3], device=self.tensor.device)
+        if boxes_3d.numel() == 0:
+            return torch.empty([0, 8, 3], device=boxes_3d.device)
 
         dims = boxes_3d[:, 3:6]
         corners_norm = torch.from_numpy(
@@ -142,11 +141,11 @@ class CoordinateConverter:
         corners_norm = corners_norm - dims.new_tensor([0.5, 1, 0.5])
         corners = dims.view([-1, 1, 3]) * corners_norm.reshape([1, 8, 3])
 
-        corners = self.__rotation_3d_in_axis(corners, self.tensor[:, 6], axis=1)
-        corners += self.tensor[:, :3].view(-1, 1, 3)
+        corners = self.__rotation_3d_in_axis(corners, boxes_3d[:, 6], axis=1)
+        corners += boxes_3d[:, :3].view(-1, 1, 3)
         return corners
 
-    def __lidar_boxes_to_corners(self, boxes_3d):  # patched
+    def __lidar_boxes_to_corners(self, boxes_3d):
         """
         MODIFIED from MMDETECTION3D https://mmdetection3d.readthedocs.io/en/latest/
         Source reference: mmdetection3d/mmdet3d/structures/bbox_3d/lidar_box3d.py
@@ -167,7 +166,7 @@ class CoordinateConverter:
         corners += boxes_3d[:, :3].view(-1, 1, 3)
         return corners
 
-    def __camera_to_lidar_boxes(self, boxes_3d, rt_mat):  # patched
+    def __camera_to_lidar_boxes(self, boxes_3d, rt_mat):
         """
         MODIFIED from MMDETECTION3D https://mmdetection3d.readthedocs.io/en/latest/
         Source reference: mmdetection3d/mmdet3d/structures/bbox_3d/box_3d_mode.py
@@ -192,7 +191,7 @@ class CoordinateConverter:
         remains = boxes_3d[..., 7:]
         return torch.cat([xyz[..., :3], xyz_size, yaw, remains], dim=-1)
 
-    def __lidar_to_camera_boxes(self, boxes_3d, rt_mat):  # patched
+    def __lidar_to_camera_boxes(self, boxes_3d, rt_mat):
         """
         MODIFIED from MMDETECTION3D https://mmdetection3d.readthedocs.io/en/latest/
         Source reference: mmdetection3d/mmdet3d/structures/bbox_3d/box_3d_mode.py
@@ -217,72 +216,9 @@ class CoordinateConverter:
         remains = boxes_3d[..., 7:]
         return torch.cat([xyz[..., :3], xyz_size, yaw, remains], dim=-1)
 
-    def __limit_period(self, val, period=np.pi, offset=0.5):  # patched
+    def __limit_period(self, val, period=np.pi, offset=0.5):
         """
         MODIFIED from MMDETECTION3D https://mmdetection3d.readthedocs.io/en/latest/
         Source reference: mmdetection3d/mmdet3d/structures/bbox_3d/box_3d_mode.py
         """
         return val - torch.floor(val / period + offset) * period
-
-
-    def boxes_3d_to_corners(self, boxes_3d):
-        """
-        DEPRECATED
-        """
-        if boxes_3d.ndim != 2 or boxes_3d.shape[1] != 7:
-            raise ValueError(f"Expected boxes_3d shape [N, 7], got {tuple(boxes_3d.shape)}")
-
-        device = boxes_3d.device
-        dtype = boxes_3d.dtype
-
-        centers = boxes_3d[:, 0:3]
-        dims = boxes_3d[:, 3:6]
-        yaws = boxes_3d[:, 6]
-
-        dx = dims[:, 0]
-        dy = dims[:, 1]
-        dz = dims[:, 2]
-
-        x_corners = torch.stack(
-            [
-                -dx / 2, dx / 2, dx / 2, -dx / 2,
-                -dx / 2, dx / 2, dx / 2, -dx / 2,
-            ],
-            dim=1,
-        )
-        y_corners = torch.stack(
-            [
-                -dy / 2, -dy / 2, dy / 2, dy / 2,
-                -dy / 2, -dy / 2, dy / 2, dy / 2,
-            ],
-            dim=1,
-        )
-        z_corners = torch.stack(
-            [
-                -dz / 2, -dz / 2, -dz / 2, -dz / 2,
-                dz / 2, dz / 2, dz / 2, dz / 2,
-            ],
-            dim=1,
-        )
-
-        local_corners = torch.stack(
-            [x_corners, y_corners, z_corners],
-            dim=-1,
-        )
-        cos_yaw = torch.cos(yaws)
-        sin_yaw = torch.sin(yaws)
-
-        rotation_matrices = torch.zeros((boxes_3d.shape[0], 3, 3), device=device, dtype=dtype)
-
-        rotation_matrices[:, 0, 0] = cos_yaw
-        rotation_matrices[:, 0, 2] = sin_yaw
-        rotation_matrices[:, 1, 1] = 1.0
-        rotation_matrices[:, 2, 0] = -sin_yaw
-        rotation_matrices[:, 2, 2] = cos_yaw
-
-        rotated_corners = torch.bmm(
-            local_corners,
-            rotation_matrices.transpose(1, 2),
-        )
-        corners = rotated_corners + centers[:, None, :]
-        return corners

@@ -7,7 +7,7 @@ class TestPointpillarsEvaluationPipeline(unittest.TestCase):
         return SimpleNamespace(
             paths=SimpleNamespace(
                 detection_path="output/",
-                dataset_path="tests/data/kitti3d_dummy/",
+                dataset_path="/media/lennart/LaCie/gau/advanced-research-training-applied-system-development/datasets/kitti_3D_object_detection",
                 config_file="",
             ),
             runtime=SimpleNamespace(
@@ -15,9 +15,9 @@ class TestPointpillarsEvaluationPipeline(unittest.TestCase):
                 dataset="kitti3d",
                 display=False,
             ),
-            benchmark=SimpleNamespace(iou_threshold=0.4, class_filter=[0, 1, 2]),
+            benchmark=SimpleNamespace(iou_threshold=0.4, class_filter=[1, 2, 3]),
             tracker=SimpleNamespace(max_age=3, min_hits=2, iou_threshold=0.2),
-            dataset=SimpleNamespace(classes=["Car", "Pedestrian"]),
+            dataset=SimpleNamespace(classes=["Pedestrian", "Cyclist", "Car"]),
         )
 
     def test_predict_and_evaluate_from_inference_engine(self):
@@ -26,7 +26,7 @@ class TestPointpillarsEvaluationPipeline(unittest.TestCase):
         detection_path = "output/"
         model_path = "/home/lennart/Dokumente/gau/master-thesis/tracking-and-detection-lab/third_party/pointpillars/_ext_src/pretrained/epoch_160.pth"
         inference_engine = InferenceEngine(settings=self.build_settings())
-        inference_engine.load()
+        inference_engine.load(split="val", max_samples=10)
         predictions = inference_engine.predict(
                 detector_name=detector_name,
                 dataset_path=dataset_path,
@@ -36,6 +36,6 @@ class TestPointpillarsEvaluationPipeline(unittest.TestCase):
 
         self.assertTrue(len(predictions.frames) >= 1)
         results = inference_engine.evaluate_detection(detections=predictions,
-                                                      classes=[0, 1, 2])
+                                                      classes=[1, 2, 3])
         breakpoint()
         self.assertTrue(len(results) >= 1)

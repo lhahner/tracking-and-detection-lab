@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 import unittest
 from types import SimpleNamespace
@@ -34,8 +35,14 @@ class TestInferenceEngine(unittest.TestCase):
     ):
         inference_engine = InferenceEngine(settings=self.build_settings())
         inference_engine.dataset = MagicMock()
-        ground_truth_tensor = torch.tensor([[1, 2, 3, 4, 5, 6, 7, 1, 1]])
+        ground_truth_tensor = torch.tensor([[1, 2, 3, 4, 5, 6, 7, 1, 1]], dtype=torch.float32)
         inference_engine.dataset.convert_ground_truth.return_value = ground_truth_tensor
+        inference_engine.dataset._load_calib.return_value = ({
+            "Tr_velo_to_cam": np.array([[1.0, 0.0, 0.0, 0.0],
+                                          [0.0, 1.0, 0.0, 0.0],
+                                          [0.0, 0.0, 1.0, 0.0]], dtype=np.float32),
+            "R0_rect": np.eye(3, dtype=np.float32),
+        }, "/tmp/calib.txt")
 
         mock_metric = mock_evaluation.return_value
         mock_metric.compute_mAP_3D.return_value = torch.tensor(0.75)
@@ -76,6 +83,10 @@ class TestInferenceEngine(unittest.TestCase):
         self.assertEqual(results[0]["frame"], 0)
         self.assertTrue(torch.equal(results[0]["mAP"], torch.tensor(0.75)))
         inference_engine.dataset.convert_ground_truth.assert_called_once_with([target])
+        inference_engine.dataset._load_calib.assert_called_once_with(0)
         mock_metric.compute_mAP_3D.assert_called_once()
+        called_kwargs = mock_metric.compute_mAP_3D.call_args.kwargs
+        self.assertTrue(torch.equal(called_kwargs["predicted_detections"], torch.tensor([[1, 2, 3, 4, 5, 6, 7, 0.9, 1]])))
+        self.assertEqual(called_kwargs["box_mode"], "lidar")
 
     

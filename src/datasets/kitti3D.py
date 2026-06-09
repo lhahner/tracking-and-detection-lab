@@ -45,6 +45,7 @@ class Kitti3D(Dataset):
         include_background=False,
         background_iou_threshold=0.1,
         transform=None,
+        max_samples=None
     ):
         if split not in ["training", "testing", "val"]:
             raise ValueError("Split name has to be training or testing")
@@ -57,16 +58,21 @@ class Kitti3D(Dataset):
         self.include_background = include_background
         self.background_iou_threshold = background_iou_threshold
         self.transform = transform
+        self.max_samples = max_samples
 
-        if split in ["training", "testing"]:
-            self.dir_calib = os.path.join(data_root, self.split, "calib")
+        data_split_dir = "training" if split == "val" else split
+
+        if split in ["training", "testing", "val"]:
+            self.dir_calib = os.path.join(data_root, data_split_dir, "calib")
             self.dir_label = os.path.join(data_root, "training", "label_2")
-            self.dir_velodyne = os.path.join(data_root, self.split, "velodyne")
-            self.dir_image = os.path.join(data_root, self.split, "image_2")
+            self.dir_velodyne = os.path.join(data_root, data_split_dir, "velodyne")
+            self.dir_image = os.path.join(data_root, data_split_dir, "image_2")
 
         self.split_file = os.path.join(data_root, "ImageSets", f"{split}.txt")
         with open(self.split_file, "r", encoding="utf-8") as f:
             self.sample_ids = [line.strip() for line in f if line.strip()]
+        if self.max_samples is not None:
+            self.sample_ids = self.sample_ids[: self.max_samples]
 
         if self.mode not in {"frame", "object"}:
             raise ValueError(f"""
@@ -316,9 +322,9 @@ class Kitti3D(Dataset):
                 ground_truth_dict["location"][0],
                 ground_truth_dict["location"][1],
                 ground_truth_dict["location"][2],
+                ground_truth_dict["dimensions"][2],
                 ground_truth_dict["dimensions"][0],
                 ground_truth_dict["dimensions"][1],
-                ground_truth_dict["dimensions"][2],
                 ground_truth_dict["rotation_y"],
                 0,
                 list(CLASSES.values())[list(CLASSES.keys()).index(ground_truth_dict["type"])]

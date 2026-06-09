@@ -2,6 +2,7 @@ import torch
 import numpy as np
 from detector.detector import Detector
 from third_party.pointpillars._ext_src.model.pointpillars import PointPillars
+from third_party.pointpillars._ext_src.dataset import point_range_filter
 from torch.utils.data import DataLoader
 from entities.detection import DetectionSequence, FrameDetection, Detection
 from definitions import ROOT_DIR
@@ -16,7 +17,7 @@ class Pointpillars(Detector):
                  classes,
                  settings,
                  batch_size=16,
-                 num_inference_samples=5,
+                 num_inference_samples=1,
                  checkpoint_file=CHECKPOINT_FILE,
                  device='cpu'):
         self.dataset = dataset
@@ -37,38 +38,29 @@ class Pointpillars(Detector):
         self.model.eval()
         with torch.no_grad():
             for points, targets, samples in test_dataloader:
-                results = self.model(batched_pts=points, mode='test')
-                labels_reference: torch.tensor = torch.from_numpy(results[0]['labels'])
-                num_obj: int = results[0]['lidar_bboxes'].shape[0]
-                # Points can contain no  objects
-                if num_obj == 0:
-                    continue
-                all_bboxes, all_scores = self.__sample(point=points, num_obj=num_obj)
-                if len(all_bboxes) <= 1 and len(all_scores) <= 1:
-                    bboxes_tensor: torch.tensor = torch.from_numpy(all_bboxes[0])
-                    scores_tensor: torch.tensor = torch.from_numpy(all_scores[0])
-                else:
-                    bboxes_tensor: torch.tensor = torch.stack(all_bboxes)
-                    scores_tensor: torch.tensor = torch.stack(all_scores)
-                if len(all_scores) > 1:
-                    scores: torch.tensor = self.__mean_nonzero(tensor=scores_tensor) 
-                else:
-                    scores: torch.tensor = scores_tensor
-                labels: torch.tensor = torch.tensor([3, 1, 2], device=labels_reference.device)[labels_reference]
-                if len(all_bboxes) > 1:
-                    bboxes: torch.tensor = self.__mean_nonzero(tensor=bboxes_tensor)
-                else:
-                    bboxes: torch.tensor = bboxes_tensor
-                detection_sequence.frames.append(FrameDetection(frame=samples[0],
-                                                                highest_score_index=scores.argmax(),
-                                                                dets=[
-                                                                    Detection(
-                                                                        score=score,
-                                                                        label=label,
-                                                                        box=box)
-                                                                    for score, box, label in zip(scores.squeeze(0), bboxes.squeeze(0), labels)
-                                                                ],
-                                                                targets=targets))
+                filtered_points = self.__filter_points_for_inference(points)
+                results = self.model(batched_pts=filtered_points, mode='test')
+                for batch_idx, result in enumerate(results):
+                    labels_reference: torch.tensor = torch.from_numpy(result['labels'])
+                    num_obj: int = result['lidar_bboxes'].shape[0]
+                    if num_obj == 0:
+                        continue
+
+                    scores: torch.tensor = torch.from_numpy(result['scores'])
+                    bboxes: torch.tensor = torch.from_numpy(result['lidar_bboxes'])
+                    labels: torch.tensor = torch.tensor([1, 2, 3], device=labels_reference.device)[labels_reference]
+
+                    detection_sequence.frames.append(FrameDetection(
+                        frame=samples[batch_idx],
+                        highest_score_index=scores.argmax(),
+                        dets=[
+                            Detection(
+                                score=score,
+                                label=label,
+                                box=box)
+                            for score, box, label in zip(scores, bboxes, labels)
+                        ],
+                        targets=targets[batch_idx]))
             return detection_sequence
 
     def __sample(self, point, num_obj):
@@ -76,7 +68,8 @@ class Pointpillars(Detector):
         all_scores: list = []
 
         for i in range(0, int(self.num_inference_samples)):
-            results = self.model(batched_pts=point, mode='test')
+            filtered_points = self.__filter_points_for_inference(point)
+            results = self.model(batched_pts=filtered_points, mode='test')
             scores_tensor_infered: torch.tensor = results[0]['scores']
             bboxes_tensor_infered: torch.tensor = results[0]['lidar_bboxes']
 
@@ -110,6 +103,17 @@ class Pointpillars(Detector):
             all_scores.append(torch.from_numpy(scores_tensor_infered))
         return all_bboxes, all_scores
         
+    def __filter_points_for_inference(self, points):
+        filtered_points = []
+        for pts in points:
+            data_dict = {"pts": pts}
+            filtered = point_range_filter(
+                data_dict,
+                point_range=[0, -39.68, -3, 69.12, 39.68, 1],
+            )
+            filtered_points.append(filtered["pts"])
+        return filtered_points
+
     def __init_model(self, checkpoint_file):
         if self.device == 'gpu' and torch.cuda.is_available():
             model = PointPillars(nclasses=len(self.classes)).cuda()
@@ -139,6 +143,6 @@ def custom_collate(batch):
     filtered_samples = []
     for item in batch:
         filtered_data.append(item["points"])
-        filtered_targets.append(item["target"][0])
+        filtered_targets.append(item["target"])
         filtered_samples.append(item["sample_id"])
     return filtered_data, filtered_targets, filtered_samples
