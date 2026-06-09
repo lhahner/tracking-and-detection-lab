@@ -7,7 +7,7 @@ class TestPointpillarsEvaluationPipeline(unittest.TestCase):
         return SimpleNamespace(
             paths=SimpleNamespace(
                 detection_path="output/",
-                dataset_path="/media/lennart/LaCie/gau/advanced-research-training-applied-system-development/datasets/kitti_3D_object_detection",
+                dataset_path="tests/data/kitti3d_dummy",
                 config_file="",
             ),
             runtime=SimpleNamespace(
@@ -22,7 +22,7 @@ class TestPointpillarsEvaluationPipeline(unittest.TestCase):
 
     def test_predict_and_evaluate_from_inference_engine(self):
         detector_name = "pointpillars"
-        dataset_path = "testst/data/kitti3d_dummy/"
+        dataset_path = "tests/data/kitti3d_dummy/"
         detection_path = "output/"
         model_path = "/home/lennart/Dokumente/gau/master-thesis/tracking-and-detection-lab/third_party/pointpillars/_ext_src/pretrained/epoch_160.pth"
         inference_engine = InferenceEngine(settings=self.build_settings())
@@ -37,5 +37,4 @@ class TestPointpillarsEvaluationPipeline(unittest.TestCase):
         self.assertTrue(len(predictions.frames) >= 1)
         results = inference_engine.evaluate_detection(detections=predictions,
                                                       classes=[1, 2, 3])
-        breakpoint()
         self.assertTrue(len(results) >= 1)
