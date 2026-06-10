@@ -26,13 +26,20 @@ def frame_collate_fn(batch):
     return {
         "image": [item["image"] for item in batch],
         "image_path": [item["image_path"] for item in batch],
+        "images": [item.get("images") for item in batch],
         "points": [item["points"] for item in batch],
         "points_path": [item["points_path"] for item in batch],
+        "sweep_paths": [item.get("sweep_paths") for item in batch],
         "calib": [item["calib"] for item in batch],
         "calib_path": [item["calib_path"] for item in batch],
         "target": [item["target"] for item in batch],
         "target_path": [item["target_path"] for item in batch],
         "sample_id": [item["sample_id"] for item in batch],
+        "scene_id": [item.get("scene_id") for item in batch],
+        "frame_index": [item.get("frame_index") for item in batch],
+        "timestamp": [item.get("timestamp") for item in batch],
+        "is_first_frame": [item.get("is_first_frame") for item in batch],
+        "is_last_frame": [item.get("is_last_frame") for item in batch],
     }
 
 

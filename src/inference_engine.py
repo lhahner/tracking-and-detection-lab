@@ -30,6 +30,7 @@ from detector.pointnet.pointnet_trainer import PointnetTrainer
 
 # Datasets
 from datasets.kitti3D import Kitti3D, CLASSES
+from datasets.nuScenes import NuScenesDataset
 
 class InferenceEngine:
     def __init__(self, settings):
@@ -53,6 +54,14 @@ class InferenceEngine:
         if dataset_name == "kitti3d":
             self.dataset = Kitti3D(
                     data_root=self.settings.paths.dataset_path) 
+        elif dataset_name in {"nuscenes", "nuscenes-mini"}:
+            version = "v1.0-mini" if dataset_name == "nuscenes-mini" else "v1.0-trainval"
+            split = "mini_val" if dataset_name == "nuscenes-mini" else "val"
+            self.dataset = NuScenesDataset(
+                data_root=self.settings.paths.dataset_path,
+                version=version,
+                split=split,
+            )
         return self.dataset
 
     def predict(self, detector_name, dataset_path, detection_path, model_path):
