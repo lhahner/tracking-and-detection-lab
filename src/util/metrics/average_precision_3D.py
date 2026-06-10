@@ -1,7 +1,5 @@
-from torchmetrics import Metric, Precision, Recall
+from torchmetrics import Metric
 import torch
-from pytorch3d.ops import box3d_overlap
-from util.coordinate_converter import CoordinateConverter
 
 
 class AveragePrecision3D(Metric):
