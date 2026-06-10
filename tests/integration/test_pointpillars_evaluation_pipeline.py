@@ -21,7 +21,7 @@ class TestPointpillarsEvaluationPipeline(unittest.TestCase):
             dataset=SimpleNamespace(classes=["Pedestrian", "Cyclist", "Car"]),
         )
 
-    def test_predict_and_evaluate_from_inference_engine(self):
+    def test_predict_and_evaluate_from_inference_engine_with_kitti3D(self):
         detector_name = "pointpillars"
         dataset_path = "tests/data/kitti3d_dummy/"
         detection_path = "output/"
@@ -39,3 +39,4 @@ class TestPointpillarsEvaluationPipeline(unittest.TestCase):
         results = inference_engine.evaluate_detection(detections=predictions,
                                                       classes=[1, 2, 3])
         self.assertTrue(len(results) >= 1)
+

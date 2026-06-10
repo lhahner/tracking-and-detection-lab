@@ -80,16 +80,16 @@ class NuScenesDataset(Dataset):
 
     def __init__(
         self,
-        data_root: str | Path,
-        version: str = "v1.0-mini",
-        split: str = "mini_train",
-        max_sweeps: int = 1,
-        include_time_lag: bool = False,
-        load_images: bool = True,
-        camera_channel: str = "CAM_FRONT",
-        class_names: Iterable[str] | None = None,
+        data_root,
+        version="v1.0-mini",
+        split="mini_train",
+        max_sweeps=1,
+        include_time_lag=False,
+        load_images=True,
+        camera_channel="CAM_FRONT",
+        class_names=None,
         transform=None,
-        verbose: bool = False,
+        verbose=False,
     ):
         """Load nuScenes metadata and build a scene-preserving sample index.
 
