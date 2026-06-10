@@ -45,7 +45,8 @@ class Kitti3D(Dataset):
         include_background=False,
         background_iou_threshold=0.1,
         transform=None,
-        max_samples=None
+        max_samples=None,
+        labels=[1, 2, 3]
     ):
         if split not in ["training", "testing", "val"]:
             raise ValueError("Split name has to be training or testing")
@@ -59,6 +60,7 @@ class Kitti3D(Dataset):
         self.background_iou_threshold = background_iou_threshold
         self.transform = transform
         self.max_samples = max_samples
+        self.labels = labels
 
         data_split_dir = "training" if split == "val" else split
 
@@ -333,3 +335,25 @@ class Kitti3D(Dataset):
         if len(tmp_list) == 0:
             return torch.empty((0, 9))
         return torch.stack(tmp_list)
+
+    def custom_collate(self, batch):
+        """
+        Custom collate function for the provided dataloader.
+    
+        Params:
+            :param batch: The given batch coming from dataloader
+
+        Returns:
+            The filtered points, targets and sample_id to be
+            used. Where points include the point data, target
+            includes the target data and sample_id includes the
+            filename of the given sample.
+        """
+        filtered_data = []
+        filtered_targets = []
+        filtered_samples = []
+        for item in batch:
+            filtered_data.append(item["points"])
+            filtered_targets.append(item["target"])
+            filtered_samples.append(item["sample_id"])
+        return filtered_data, filtered_targets, filtered_samples

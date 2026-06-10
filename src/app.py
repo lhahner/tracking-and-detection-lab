@@ -46,7 +46,7 @@ if __name__ == "__main__":
     settings = SettingsLoader.load("settings.yaml")
     if settings.runtime.mode == "inference":
         inference_engine = InferenceEngine(settings)
-        dataset = inference_engine.load(split="test")
+        dataset = inference_engine.load(split="val")
         # Object Detection
         detections = inference_engine.predict(detector_name=settings.runtime.detector,
                                  dataset_path=settings.paths.dataset_path,

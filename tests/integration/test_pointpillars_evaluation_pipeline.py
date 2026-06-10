@@ -1,6 +1,7 @@
 import unittest
 from inference_engine import InferenceEngine
 from types import SimpleNamespace
+from definitions import ROOT_DIR
 
 class TestPointpillarsEvaluationPipeline(unittest.TestCase):
     def build_settings(self):
@@ -24,7 +25,7 @@ class TestPointpillarsEvaluationPipeline(unittest.TestCase):
         detector_name = "pointpillars"
         dataset_path = "tests/data/kitti3d_dummy/"
         detection_path = "output/"
-        model_path = "/home/lennart/Dokumente/gau/master-thesis/tracking-and-detection-lab/third_party/pointpillars/_ext_src/pretrained/epoch_160.pth"
+        model_path = "{ROOT_DIR}/third_party/pointpillars/_ext_src/pretrained/epoch_160.pth"
         inference_engine = InferenceEngine(settings=self.build_settings())
         inference_engine.load(split="val", max_samples=10)
         predictions = inference_engine.predict(
