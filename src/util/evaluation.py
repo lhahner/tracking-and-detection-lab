@@ -301,7 +301,8 @@ class Evaluation:
     def compute_mAP_3D(self,
                        predicted_detections: torch.tensor,
                        ground_truth: torch.tensor,
-                       classes):
+                       classes,
+                       box_mode="camera"):
         """
         Frame-wise standalone mAP interaction.
         """
@@ -309,7 +310,7 @@ class Evaluation:
             return torch.tensor([0])
         from util.metrics.mean_average_precision_3D import MeanAveragePrecision3D
 
-        metric = MeanAveragePrecision3D()
+        metric = MeanAveragePrecision3D(box_mode=box_mode, iou_threshold=self.iou_threshold)
         metric.update(
                 preds=predicted_detections,
                 target=ground_truth,

@@ -64,8 +64,9 @@ class PointRCNNmmDetections3D(Detector):
         Returns:
             List of formatted detectiosn that are not empty and and object.
         """
-        test_dataloader: torch.utils.dataloader = DataLoader(dataset=self.dataset, batch_size=self.batch_size,
-                                                             collate_fn=custom_collate)
+        test_dataloader: torch.utils.dataloader = DataLoader(dataset=self.dataset, 
+                                                             batch_size=self.batch_size,
+                                                             collate_fn=self.dataset.custom_collate)
         detection_sequence: DetectionSequence = DetectionSequence()
         for points, targets, samples in test_dataloader:
             for point, target, sample_id in zip(points, targets, samples):
@@ -157,20 +158,3 @@ class PointRCNNmmDetections3D(Detector):
             raise ValueError("Tensor to compute only includes zeros.")
         mask: torch.tensor = tensor != 0
         return tensor.sum(dim=0, keepdim=True) / mask.sum(dim=0, keepdim=True).clamp(min=1)
-
-
-@staticmethod
-def custom_collate(batch):
-    """
-    Custom collate function for the provided dataloader
-    Parameters:
-        :param batch:
-    """
-    filtered_data = []
-    filtered_targets = []
-    filtered_samples = []
-    for item in batch:
-        filtered_data.append(item["points"])
-        filtered_targets.append(item["target"])
-        filtered_samples.append(item["sample_id"])
-    return filtered_data, filtered_targets, filtered_samples

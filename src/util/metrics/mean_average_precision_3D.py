@@ -26,11 +26,9 @@ class MeanAveragePrecision3D(Metric):
             If ``predictions`` or ``ground_truth`` is not of shape (N, 9)
         ValueError:
             If ``predictions`` or ``ground_truth`` is not empty
-        
 
     Example::
-
-        Basic example on how to use this metric internally         
+        Basic example on how to use this metric internally
 
         >>> predictions = torch.randn(3, 9)
         >>> ground_truth = torch.randn(2, 9)
@@ -41,15 +39,15 @@ class MeanAveragePrecision3D(Metric):
         >>>         ground_truths=ground_truths,
         >>>         classes=classes)
         >>> metric.compute()
-
     """
-    def __init__(self, **kwargs):
+    def __init__(self, box_mode="camera", iou_threshold=0.5, **kwargs):
         super().__init__(**kwargs)
         self.add_state("predictions", default=torch.tensor(0), dist_reduce_fx="cat")
         self.add_state("ground_truths", default=torch.tensor(0), dist_reduce_fx="cat")
         self.add_state("classes", default=torch.tensor(0), dist_reduce_fx="cat")
-        self.iou_threshold = 0.5
+        self.iou_threshold = iou_threshold
         self.coordinate_converter = CoordinateConverter()
+        self.box_mode = box_mode
 
     def update(self, preds: torch.tensor, target: torch.tensor, classes: torch.tensor) -> None:
         self.predictions = preds
@@ -76,9 +74,11 @@ class MeanAveragePrecision3D(Metric):
                 continue
             # Coordinate convertion need since pytorch3d iou computation needs corner boxes
             prediction_corner_boxes = self.coordinate_converter.boxes_3d_to_corners(
-                    class_predictions[:, :7])
+                    class_predictions[:, :7],
+                    self.box_mode)
             ground_truth_cornder_boxes = self.coordinate_converter.boxes_3d_to_corners(
-                    class_ground_truths[:, :7])
+                    class_ground_truths[:, :7],
+                    self.box_mode)
 
             _, iou_3d_class = box3d_overlap(prediction_corner_boxes, ground_truth_cornder_boxes)
             # Considering that we only consider the preds with the gt that has has the highest IoU
@@ -104,6 +104,8 @@ class MeanAveragePrecision3D(Metric):
             recall = cumulative_tp / len(class_ground_truths)  # total number of ground_truth_classes
             # Compute AP, initally the integration of the trade-off curve between recall and precision
             class_wise_average_precision.append(self.__compute_average_precision(precision, recall))
+        if len(class_wise_average_precision) == 0:
+            return torch.tensor(0.0)
         return torch.stack(class_wise_average_precision).cpu().mean()
 
     def __collect_class_values(self, predictions, ground_truths, req_class):

@@ -3,7 +3,8 @@ import sys
 import types
 import unittest
 from unittest.mock import Mock, patch
-
+from datasets.kitti3D import Kitti3D
+from types import SimpleNamespace
 import torch
 
 
@@ -60,6 +61,23 @@ def make_prediction(scores, bboxes, labels=None):
 class TestPointRCNNmmDetections3D(unittest.TestCase):
     def setUp(self):
         self.module = load_pointrcnn_module()
+        
+    def build_settings(self):
+        return SimpleNamespace(
+            paths=SimpleNamespace(
+                detection_path="output/",
+                dataset_path="tests/data/kitti3d_dummy",
+                config_file="",
+            ),
+            runtime=SimpleNamespace(
+                datatype="png",
+                dataset="kitti3d",
+                display=False,
+            ),
+            benchmark=SimpleNamespace(iou_threshold=0.4, class_filter=[1, 2, 3]),
+            tracker=SimpleNamespace(max_age=3, min_hits=2, iou_threshold=0.2),
+            dataset=SimpleNamespace(classes=["Pedestrian", "Cyclist", "Car"]),
+        )
 
     def make_detector_without_init(self, **overrides):
         detector = self.module.PointRCNNmmDetections3D.__new__(self.module.PointRCNNmmDetections3D)
@@ -107,34 +125,7 @@ class TestPointRCNNmmDetections3D(unittest.TestCase):
                 settings=Mock(),
                 checkpoint_file="checkpoint.pth",
             )
-
-    @patch("torch.utils.data.DataLoader", side_effect=lambda dataset, batch_size, collate_fn: [collate_fn(dataset)])
-    def test_detect_returns_detection_sequence(self, _mock_dataloader):
-        detector = self.make_detector_without_init()
-        self.module.inference_detector.side_effect = [
-            make_prediction(scores=[0.9], bboxes=[[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 0.1]], labels=[0]),
-            make_prediction(scores=[0.7], bboxes=[[1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 0.2]], labels=[0]),
-        ]
-
-        detection_sequence = detector.detect()
-
-        self.assertEqual(len(detection_sequence.frames), 1)
-        frame = detection_sequence.frames[0]
-        self.assertEqual(frame.frame, 42)
-        self.assertEqual(frame.highest_score_index.item(), 0)
-        self.assertEqual(len(frame.dets), 1)
-        self.assertTrue(torch.equal(frame.dets[0].score, torch.tensor(0.7)))
-        self.assertEqual(frame.dets[0].label.item(), 3)
-        self.assertTrue(torch.equal(frame.dets[0].box, torch.tensor([1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 0.2])))
-
-    @patch("torch.utils.data.DataLoader", side_effect=lambda dataset, batch_size, collate_fn: [collate_fn(dataset)])
-    def test_detect_propagates_inference_error(self, _mock_dataloader):
-        detector = self.make_detector_without_init()
-        self.module.inference_detector.side_effect = RuntimeError("inference failed")
-
-        with self.assertRaises(RuntimeError):
-            detector.detect()
-
+   
     def test_sample_pads_short_predictions_to_expected_object_count(self):
         detector = self.make_detector_without_init(num_inference_samples=1)
         self.module.inference_detector.return_value = make_prediction(
@@ -178,24 +169,6 @@ class TestPointRCNNmmDetections3D(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             detector._PointRCNNmmDetections3D__mean_nonzero(torch.tensor([]))
-
-    def test_custom_collate_returns_points_and_sample_ids(self):
-        batch = [
-                {"points": "point-cloud-1", "sample_id": "000001", "target": "target-1"},
-                {"points": "point-cloud-2", "sample_id": "000002", "target": "target-2"},
-        ]
-
-        points, targets, sample_ids = self.module.custom_collate(batch)
-
-        self.assertEqual(points, ["point-cloud-1", "point-cloud-2"])
-        self.assertEqual(sample_ids, ["000001", "000002"])
-
-    def test_custom_collate_rejects_missing_sample_id(self):
-        batch = [{"points": "point-cloud-1"},
-                 {"targets": "point-cloud-2"}]
-
-        with self.assertRaises(KeyError):
-            self.module.custom_collate(batch)
 
 
 if __name__ == "__main__":

@@ -2,11 +2,13 @@ from dataclasses import dataclass, field
 import torch
 import torch.nn.functional as F
 
+
 @dataclass(frozen=True)
 class Detection:
     score: float
     label: int
     box: torch.tensor
+
 
 @dataclass(frozen=True)
 class FrameDetection:
@@ -15,21 +17,23 @@ class FrameDetection:
     dets: list[Detection]
     targets: list = field(default_factory=list)
 
+
 @dataclass(frozen=True)
 class DetectionSequence:
-    frames: list[FrameDetection] = field(default_factory=list) # makes frames optional
+    frames: list[FrameDetection] = field(default_factory=list)  # makes frames optional
+
 
 def convert_to_tensor(detections):
     tmp_list_to_be_stacked = []
     if len(detections) == 0:
         return torch.empty((0, 9))
-
-    for detection in detections: 
+    for detection in detections:
         tmp_tensor = F.pad(detection.box, (0, 2))
         tmp_tensor[-2] = detection.score
         tmp_tensor[-1] = detection.label
         tmp_list_to_be_stacked.append(tmp_tensor)
     return torch.stack(tmp_list_to_be_stacked)
+
 
 def convert_classes_to_tensor(classes):
     if isinstance(classes, dict):

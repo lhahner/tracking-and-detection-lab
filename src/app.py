@@ -46,16 +46,17 @@ if __name__ == "__main__":
     settings = SettingsLoader.load("settings.yaml")
     if settings.runtime.mode == "inference":
         inference_engine = InferenceEngine(settings)
-        dataset = inference_engine.load()
+        dataset = inference_engine.load(split="val")
         # Object Detection
         detections = inference_engine.predict(detector_name=settings.runtime.detector,
                                  dataset_path=settings.paths.dataset_path,
                                  detection_path=settings.paths.detection_path,
                                  model_path=settings.paths.model_root)
         inference_engine.evaluate_detection(detections=detections,
-                                            classes=CLASSES) 
+                                            classes=CLASSES)
         # Object Tracking
-        inference_engine.update_tracker()
+        if settings.runtime.tracker != "":
+            inference_engine.update_tracker()
 
     elif settings.runtime.mode == "train":
         train_dataset = Kitti3D(
