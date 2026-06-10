@@ -32,7 +32,6 @@ class TetsPointPillars(unittest.TestCase):
                                     settings=self.build_settings()
                                     )
         filtered_points = pointpillars._Pointpillars__filter_points_for_inference(points)
-        breakpoint()
         self.assertTrue(points[0].shape[0] > len(filtered_points[0]))
 
 
