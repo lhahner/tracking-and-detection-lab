@@ -100,6 +100,13 @@ class InferenceEngine:
                                                config_file=self.settings.paths.config_file,
                                                classes=self.settings.benchmark.class_filter,
                                                settings=self.settings)
+        if detector_name == "detr3d_mmdetection3d":
+            from detector.detr3d.detr3d_mmdetection3d import DETR3DMMDetections3D
+            detector = DETR3DMMDetections3D(dataset=self.dataset,
+                                      config_file=self.settings.paths.config_file,
+                                      classes=self.settings.benchmark.class_filter,
+                                      settings=self.settings,
+                                      checkpoint_file=model_path)
         return detector.detect() 
 
     def evaluate_detection(self, detections, classes):
@@ -115,18 +122,22 @@ class InferenceEngine:
         results = []
         class_tensor = convert_classes_to_tensor(classes)
         for detection_frame in detections.frames:
-            ground_truth_camera = self.dataset.convert_ground_truth(detection_frame.targets)
-            calib, _ = self.dataset._load_calib(detection_frame.frame)
+            ground_truth = self.dataset.convert_ground_truth(detection_frame.targets)
             detection_tensor = convert_to_tensor(detection_frame.dets)
 
-            gt_lidar_boxes = bbox_camera2lidar(
-                ground_truth_camera[:, :7].detach().cpu().numpy(),
-                extend_to_4x4(calib["Tr_velo_to_cam"]),
-                extend_to_4x4(calib["R0_rect"]),
-            )
-            gt_lidar = ground_truth_camera.clone()
-            gt_lidar[:, :7] = torch.from_numpy(gt_lidar_boxes).to(ground_truth_camera.dtype)
-            mAP = Evaluation().compute_mAP_3D(
+            if hasattr(self.dataset, "_load_calib"):
+                calib, _ = self.dataset._load_calib(detection_frame.frame)
+                gt_lidar_boxes = bbox_camera2lidar(
+                    ground_truth[:, :7].detach().cpu().numpy(),
+                    extend_to_4x4(calib["Tr_velo_to_cam"]),
+                    extend_to_4x4(calib["R0_rect"]),
+                )
+                gt_lidar = ground_truth.clone()
+                gt_lidar[:, :7] = torch.from_numpy(gt_lidar_boxes).to(ground_truth.dtype)
+            else:
+                gt_lidar = ground_truth
+
+            mAP = Evaluation(iou_threshold=self.settings.benchmark.iou_threshold).compute_mAP_3D(
                            predicted_detections=detection_tensor,
                            ground_truth=gt_lidar,
                            classes=class_tensor,
