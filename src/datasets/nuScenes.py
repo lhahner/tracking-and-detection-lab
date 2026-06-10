@@ -528,6 +528,17 @@ class NuScenesDataset(Dataset):
         transformed = homogeneous @ transform.T
         return transformed[:, :3].astype(np.float32)
 
+    def custom_collate(self, batch):
+        """Return points, targets, and sample IDs for detector wrappers."""
+        filtered_data = []
+        filtered_targets = []
+        filtered_samples = []
+        for item in batch:
+            filtered_data.append(item["points"])
+            filtered_targets.append(item["target"])
+            filtered_samples.append(item["sample_id"])
+        return filtered_data, filtered_targets, filtered_samples
+
     def _resolve_data_path(self, filename: str) -> Path:
         """Resolve devkit-relative filenames against the dataset root."""
         path = Path(filename)
