@@ -57,15 +57,14 @@ class Pointpillars(Detector):
                 filtered_points = self.__filter_points_for_inference(points)
                 results = self.model(batched_pts=filtered_points, mode='test')
                 for batch_idx, result in enumerate(results):
-                    labels_reference: torch.tensor = torch.from_numpy(result['labels'])
-                    num_obj: int = result['lidar_bboxes'].shape[0]
-                    if num_obj == 0:
+                    if len(result) == 0:
                         detection_sequence.frames.append(FrameDetection(
                             frame=samples[batch_idx],
                             highest_score_index=None,
                             dets=[],
                             targets=targets[batch_idx]))
                         continue
+                    labels_reference: torch.tensor = torch.from_numpy(result['labels'])
 
                     scores: torch.tensor = torch.from_numpy(result['scores'])
                     bboxes: torch.tensor = torch.from_numpy(result['lidar_bboxes'])
