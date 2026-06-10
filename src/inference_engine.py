@@ -26,6 +26,7 @@ from detector.detr.detr_huggingface import DetrHuggingFaceDetector
 from detector.pointpillars.pointpillars import Pointpillars
 
 # Datasets
+from datasets.nuScenes import NuScenesDataset
 from datasets.kitti3D import Kitti3D
 
 class InferenceEngine:
@@ -48,10 +49,16 @@ class InferenceEngine:
     def load(self, split, max_samples):
         dataset_name = self.settings.runtime.dataset.lower()
         if dataset_name == "kitti3d":
-            self.dataset = Kitti3D(
-                    data_root=self.settings.paths.dataset_path,
-                    split=split,
-                    max_samples=max_samples)
+            self.dataset = Kitti3D(data_root=self.settings.paths.dataset_path,
+                                   split=split,
+                                   max_samples=max_samples)
+        elif dataset_name in {"nuscenes", "nuscenes-mini"}:
+            version = "v1.0-mini" if dataset_name == "nuscenes-mini" else "v1.0-trainval"
+            split = "mini_val" if dataset_name == "nuscenes-mini" else "val"
+            self.dataset = NuScenesDataset(data_root=self.settings.paths.dataset_path,
+                                           version=version,
+                                           split=split
+                                           )       
         return self.dataset
 
     def predict(self, detector_name, dataset_path, detection_path, model_path):
