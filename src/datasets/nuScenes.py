@@ -545,7 +545,17 @@ class NuScenesDataset(Dataset):
         if path.is_absolute():
             return path
         return self.data_root / path
+    
+    def __build_label_map(self, classes):
+        if classes is None:
+            return NUSCENES_LABELS
+        if isinstance(classes, dict):
+            ordered = [class_id for name, class_id in classes.items() if name != "Background"]
+            return torch.tensor(ordered, dtype=torch.int64)
+        return torch.as_tensor(classes, dtype=torch.int64)
 
+    def __labels_as_tensor(self):
+        return torch.tensor([value for value in DETECTION_CLASSES.values()])
 
 # Keep the shorter spelling available for configuration and imports.
 NuScenes = NuScenesDataset
