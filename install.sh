@@ -4,10 +4,10 @@ set -eo pipefail
 
 ENV_NAME="${ENV_NAME:-track-lab}"
 PYTHON_VERSION="${PYTHON_VERSION:-3.10.20}"
-PYTORCH_VERSION="${PYTORCH_VERSION:-2.5.1}"
-TORCHVISION_VERSION="${TORCHVISION_VERSION:-0.20.1}"
-TORCHAUDIO_VERSION="${TORCHAUDIO_VERSION:-2.5.1}"
-CUDA_FLAVOR="${CUDA_FLAVOR:-cpu}"
+PYTORCH_VERSION="${PYTORCH_VERSION:-2.1.0}"
+TORCHVISION_VERSION="${TORCHVISION_VERSION:-0.16.0}"
+TORCHAUDIO_VERSION="${TORCHAUDIO_VERSION:-2.1.0}"
+CUDA_FLAVOR="${CUDA_FLAVOR:-cu118}"
 INSTALL_DETECTRON2="${INSTALL_DETECTRON2:-1}"
 INSTALL_MMDET3D="${INSTALL_MMDET3D:-0}"
 MMDET3D_REPO_URL="${MMDET3D_REPO_URL:-https://github.com/lhahner/mmdetection3d-cpu-only.git}"
@@ -20,15 +20,15 @@ Usage:
 Options:
   --env NAME              Conda environment name. Default: track-lab
   --python VERSION        Python version. Default: 3.10
-  --cuda FLAVOR           One of: cpu, cu121, cu124. Default: cpu
+  --cuda FLAVOR           One of: cpu, cu118, cu121, cu124. Default: cu118
   --without-detectron2    Skip detectron2 installation
   --with-mmdet3d          Install MMDetection3D and its OpenMMLab dependencies
   --help                  Show this help
 
 Examples:
   bash install.sh
-  bash install.sh --cuda cu121
-  bash install.sh --env track-lab-gpu --cuda cu124
+  bash install.sh --cuda cu118
+  bash install.sh --env track-lab-gpu --cuda cu121
   bash install.sh --with-mmdet3d
 EOF
 }
@@ -88,11 +88,11 @@ if ! command -v conda >/dev/null 2>&1; then
 fi
 
 case "${CUDA_FLAVOR}" in
-  cpu|cu121|cu124)
+  cpu|cu118|cu121|cu124)
     PYTORCH_INDEX_URL="https://download.pytorch.org/whl/${CUDA_FLAVOR}"
     ;;
   *)
-    echo "Unsupported CUDA flavor: ${CUDA_FLAVOR}. Use one of: cpu, cu121, cu124." >&2
+    echo "Unsupported CUDA flavor: ${CUDA_FLAVOR}. Use one of: cpu, cu118, cu121, cu124." >&2
     exit 1
     ;;
 esac
@@ -129,8 +129,12 @@ python -m pip install "setuptools>=65.5,<81"
 echo "Installing helper build/runtime packages"
 python -m pip install ninja "opencv-python==4.10.0.84"
 
-echo "Installing PyTorch ${PYTORCH_VERSION} and torchvision ${TORCHVISION_VERSION} from ${PYTORCH_INDEX_URL}"
-conda install "pytorch" "torchvision" -c pytorch
+echo "Installing PyTorch ${PYTORCH_VERSION}, torchvision ${TORCHVISION_VERSION}, and torchaudio ${TORCHAUDIO_VERSION} from ${PYTORCH_INDEX_URL}"
+PYTORCH_LOCAL_SUFFIX="+${CUDA_FLAVOR}"
+python -m pip install --index-url "${PYTORCH_INDEX_URL}" \
+  "torch==${PYTORCH_VERSION}${PYTORCH_LOCAL_SUFFIX}" \
+  "torchvision==${TORCHVISION_VERSION}${PYTORCH_LOCAL_SUFFIX}" \
+  "torchaudio==${TORCHAUDIO_VERSION}${PYTORCH_LOCAL_SUFFIX}"
 conda install -c conda-forge fvcore iopath -y
 
 echo "Installing NumPy < 2 for motmetrics compatibility"
@@ -181,8 +185,12 @@ fi
 echo "Installing PyTorch3D for MMDetection3D"
 if [[ "$(uname -s)" == "Darwin" ]]; then
    echo "Skipping pytorch3d for MMDetection3D"
+elif [[ "${PYTHON_MAJOR_MINOR}" == "3.10" && "${PYTORCH_VERSION}" == "2.1.0" && "${CUDA_FLAVOR}" == "cu118" ]]; then
+   python -m pip install --no-index --no-cache-dir pytorch3d==0.7.5 \
+     -f https://dl.fbaipublicfiles.com/pytorch3d/packaging/wheels/py310_cu118_pyt210/download.html
 else
-   conda install -c pytorch3d -c conda-forge pytorch3d -y
+   echo "No pinned PyTorch3D wheel configured for Python ${PYTHON_MAJOR_MINOR}, torch ${PYTORCH_VERSION}, ${CUDA_FLAVOR}."
+   echo "Install a matching PyTorch3D build manually before running 3D mAP evaluation."
 fi
 
 if [[ "${INSTALL_MMDET3D}" == "1" ]]; then

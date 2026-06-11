@@ -6,7 +6,7 @@ filterpy
 scikit-image
 lap
 motmetrics
-transformers
+transformers==4.46.3
 timm
 matplotlib
 Pillow

@@ -14,6 +14,8 @@ from util.kitti_boxes import (
 )
 from util.kitti_calib import parse_kitti_calibration
 from util.logging_config import LoggingConfig
+from util.kitti_calib import extend_to_4x4
+from third_party.pointpillars._ext_src.utils.process import bbox_camera2lidar
 
 CLASSES = {
     "Background": 0,
@@ -315,7 +317,7 @@ class Kitti3D(Dataset):
                 )
         return objects, path
 
-    def convert_ground_truth(self, ground_truth_dicts):
+    def convert_ground_truth(self, ground_truth_dicts, frame):
         tmp_list = []
         for ground_truth_dict in ground_truth_dicts:
             if ground_truth_dict["type"] not in CLASSES:
@@ -329,12 +331,22 @@ class Kitti3D(Dataset):
                 ground_truth_dict["dimensions"][1],
                 ground_truth_dict["rotation_y"],
                 0,
-                list(CLASSES.values())[list(CLASSES.keys()).index(ground_truth_dict["type"])]
+                list(CLASSES.values())[
+                    list(CLASSES.keys()).index(
+                        ground_truth_dict["type"])]
             ])
             tmp_list.append(gt_tensor)
         if len(tmp_list) == 0:
             return torch.empty((0, 9))
-        return torch.stack(tmp_list)
+        ground_truth = torch.stack(tmp_list)
+        calib, _ = self._load_calib(frame)
+        gt_lidar_boxes = bbox_camera2lidar(
+            ground_truth[:, :7].detach().cpu().numpy(),
+            extend_to_4x4(calib["Tr_velo_to_cam"]),
+            extend_to_4x4(calib["R0_rect"]),
+        )
+        ground_truth[:, :7] = torch.from_numpy(gt_lidar_boxes)
+        return ground_truth
 
     def custom_collate(self, batch):
         """
