@@ -86,10 +86,7 @@ class MeanAveragePrecision3D(Metric):
             if box3d_overlap is not None:
                 _, iou_3d_class = box3d_overlap(prediction_corner_boxes, ground_truth_cornder_boxes)
             else:
-                iou_3d_class = self.__axis_aligned_iou_3d(
-                    class_predictions[:, :7],
-                    class_ground_truths[:, :7],
-                )
+               raise EnvironmentError("pytroch3d is needed here") 
             # Considering that we only consider the preds with the gt that has has the highest IoU
             best_iou, best_gt_idx = torch.max(iou_3d_class, dim=1)
             tp_tensor = torch.zeros(best_gt_idx.shape[0])
@@ -144,33 +141,6 @@ class MeanAveragePrecision3D(Metric):
         score_order = torch.argsort(class_predictions_tensor[:, 7], descending=True)
         sorted_class_predictions = class_predictions_tensor[score_order]
         return sorted_class_predictions, torch.stack(class_ground_truths)
-
-    def __axis_aligned_iou_3d(self, prediction_boxes, ground_truth_boxes):
-        """Fallback 3D IoU for environments without a working PyTorch3D build.
-
-        The fallback ignores yaw and treats boxes as axis-aligned. It is intended
-        for lightweight tests and simple smoke checks; production evaluation
-        should use PyTorch3D when available.
-        """
-        pred_centers = prediction_boxes[:, :3]
-        pred_dims = prediction_boxes[:, 3:6].abs()
-        gt_centers = ground_truth_boxes[:, :3]
-        gt_dims = ground_truth_boxes[:, 3:6].abs()
-
-        pred_min = pred_centers[:, None, :] - pred_dims[:, None, :] / 2
-        pred_max = pred_centers[:, None, :] + pred_dims[:, None, :] / 2
-        gt_min = gt_centers[None, :, :] - gt_dims[None, :, :] / 2
-        gt_max = gt_centers[None, :, :] + gt_dims[None, :, :] / 2
-
-        intersection_min = torch.maximum(pred_min, gt_min)
-        intersection_max = torch.minimum(pred_max, gt_max)
-        intersection_dims = torch.clamp(intersection_max - intersection_min, min=0)
-        intersection_volume = intersection_dims.prod(dim=-1)
-
-        pred_volume = pred_dims.prod(dim=-1)[:, None]
-        gt_volume = gt_dims.prod(dim=-1)[None, :]
-        union_volume = pred_volume + gt_volume - intersection_volume
-        return intersection_volume / torch.clamp(union_volume, min=1e-8)
 
     def __compute_average_precision(self, precision, recall: torch.Tensor):
         metric = AveragePrecision3D()
