@@ -1,6 +1,9 @@
 from torchmetrics import Metric, Precision, Recall
 import torch
-from pytorch3d.ops import box3d_overlap
+try:
+    from pytorch3d.ops import box3d_overlap
+except (ImportError, OSError):
+    box3d_overlap = None
 from util.coordinate_converter import CoordinateConverter
 from util.metrics.average_precision_3D import AveragePrecision3D
 
@@ -80,7 +83,10 @@ class MeanAveragePrecision3D(Metric):
                     class_ground_truths[:, :7],
                     self.box_mode)
 
-            _, iou_3d_class = box3d_overlap(prediction_corner_boxes, ground_truth_cornder_boxes)
+            if box3d_overlap is not None:
+                _, iou_3d_class = box3d_overlap(prediction_corner_boxes, ground_truth_cornder_boxes)
+            else:
+               raise EnvironmentError("pytroch3d is needed here") 
             # Considering that we only consider the preds with the gt that has has the highest IoU
             best_iou, best_gt_idx = torch.max(iou_3d_class, dim=1)
             tp_tensor = torch.zeros(best_gt_idx.shape[0])

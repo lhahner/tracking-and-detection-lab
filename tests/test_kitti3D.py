@@ -2,7 +2,7 @@ import os
 import sys
 import unittest
 import torch
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, Mock
 
 TESTS_DIR = os.path.dirname(__file__)
 PROJECT_ROOT = os.path.dirname(TESTS_DIR)
@@ -131,7 +131,7 @@ class Kitti3DTest(unittest.TestCase):
                     },
                 ]
         kitti3d = Kitti3D(data_root="tests/data/kitti3d_dummy")
-        res = kitti3d.convert_ground_truth(ground_truth_dicts=ground_truth_dicts)
+        res = kitti3d.convert_ground_truth(ground_truth_dicts=ground_truth_dicts, frame="000000")
         self.assertTrue(isinstance(res, torch.Tensor))
 
 if __name__ == "__main__":
