@@ -60,6 +60,7 @@ class TestPointPillarsMMDetection3DNuScenesPipeline(unittest.TestCase):
 
         inference_engine = InferenceEngine(settings=settings)
         dataset = inference_engine.load(split="mini_val", max_samples=1)
+        dataset.sample_records = dataset.sample_records[3:4]
         self.assertEqual(len(dataset), 1)
 
         predictions = inference_engine.predict(
