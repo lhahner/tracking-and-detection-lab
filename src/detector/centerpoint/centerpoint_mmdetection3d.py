@@ -105,7 +105,7 @@ class CenterPointMMDetections3D(Detector):
         if bboxes.ndim != 2 or bboxes.shape[1] < 7:
             raise ValueError(f"Expected MMDetection3D boxes with shape [N, >=7], got {tuple(bboxes.shape)}")
         bboxes = bboxes[:, :7].clone()
-        bboxes[:, 2] += bboxes[:, 5] / 2
+        bboxes[:, 2] += bboxes[:, 5] / 2 
         labels_reference = instance_data.labels_3d.detach().cpu().long()
         if bboxes.shape[0] == 0:
             return [], None

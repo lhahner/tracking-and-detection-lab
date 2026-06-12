@@ -59,7 +59,7 @@ def test_convert_ground_truth_uses_internal_box_layout():
         }
     ]
 
-    converted = dataset.convert_ground_truth(targets, frame="000001")
+    converted = dataset.convert_ground_truth(targets, frame="000000")
 
     assert converted.shape == (1, 9)
     assert converted.dtype == torch.float32

@@ -88,11 +88,11 @@ if ! command -v conda >/dev/null 2>&1; then
 fi
 
 case "${CUDA_FLAVOR}" in
-  cpu|cu118|cu121|cu124)
+  cpu|cu118|cu121)
     PYTORCH_INDEX_URL="https://download.pytorch.org/whl/${CUDA_FLAVOR}"
     ;;
   *)
-    echo "Unsupported CUDA flavor: ${CUDA_FLAVOR}. Use one of: cpu, cu118, cu121, cu124." >&2
+    echo "Unsupported CUDA flavor: ${CUDA_FLAVOR}. Use one of: cpu, cu118, cu121." >&2
     exit 1
     ;;
 esac
