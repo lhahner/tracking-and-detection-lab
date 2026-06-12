@@ -68,7 +68,11 @@ class DummyNuScenesDataset(torch.utils.data.Dataset):
 class TestPointPillarsMMDetections3D(unittest.TestCase):
     def setUp(self):
         self.apis_module = types.ModuleType("mmdet3d.apis")
-        self.apis_module.init_model = Mock(name="init_model", return_value="model")
+        self.model = types.SimpleNamespace(dataset_meta={"classes": (
+            "car", "truck", "construction_vehicle", "bus", "trailer",
+            "barrier", "motorcycle", "bicycle", "pedestrian", "traffic_cone",
+        )})
+        self.apis_module.init_model = Mock(name="init_model", return_value=self.model)
         self.apis_module.inference_detector = Mock(name="inference_detector")
         fake_modules = {
             "mmdet3d": types.ModuleType("mmdet3d"),
@@ -100,7 +104,7 @@ class TestPointPillarsMMDetections3D(unittest.TestCase):
         self.assertIs(detector.dataset, dataset)
         self.assertEqual(detector.config_file, "config.py")
         self.assertEqual(detector.checkpoint_file, "checkpoint.pth")
-        self.assertEqual(detector.model, "model")
+        self.assertEqual(detector.model, self.model)
         self.assertEqual(detector.classes, NUSCENES_CLASSES)
         self.assertEqual(detector.batch_size, 2)
         self.assertEqual(detector.num_inference_samples, 3)
@@ -117,8 +121,8 @@ class TestPointPillarsMMDetections3D(unittest.TestCase):
         )
         self.apis_module.inference_detector.return_value = make_prediction(
             scores=[0.91],
-            bboxes=[[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 0.5]],
-            labels=[3],  # zero-based nuScenes model class index -> project class id 4/car
+            bboxes=[[1.0, 2.0, 0.0, 4.0, 5.0, 6.0, 0.5]],
+            labels=[0],  # zero-based MMDet3D model class index -> project class id 4/car
         )
 
         detections = detector.detect()
@@ -127,8 +131,8 @@ class TestPointPillarsMMDetections3D(unittest.TestCase):
         frame = detections.frames[0]
         self.assertEqual(frame.frame, "sample-token-1")
         self.assertEqual(len(frame.dets), 1)
-        self.assertTrue(torch.equal(frame.dets[0].label, torch.tensor(4)))
-        self.assertTrue(torch.isclose(frame.dets[0].score, torch.tensor(0.91)))
+        self.assertEqual(frame.dets[0].label, 4)
+        self.assertAlmostEqual(frame.dets[0].score, 0.91, places=6)
         torch.testing.assert_close(frame.dets[0].box, torch.tensor([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 0.5]))
 
     def test_detect_adds_empty_frame_for_no_predictions(self):
@@ -162,8 +166,8 @@ class TestPointPillarsMMDetections3D(unittest.TestCase):
         )
         self.apis_module.inference_detector.return_value = make_prediction(
             scores=[0.91],
-            bboxes=[[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 0.5]],
-            labels=[3],
+            bboxes=[[1.0, 2.0, 0.0, 4.0, 5.0, 6.0, 0.5]],
+            labels=[0],
         )
 
         detections = detector.detect()

@@ -1,74 +1,86 @@
+import importlib.util
 import unittest
+from pathlib import Path
 from types import SimpleNamespace
 
-import numpy as np
-import torch
-
-from entities.detection import Detection, DetectionSequence, FrameDetection
-from inference_engine import InferenceEngine
-
-
-class DummyNuScenesDataset:
-    def __init__(self):
-        self.targets = [
-            {
-                "type": "car",
-                "label": 4,
-                "box": np.asarray([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 0.5], dtype=np.float32),
-            }
-        ]
-
-    def convert_ground_truth(self, ground_truth_dicts):
-        rows = []
-        for target in ground_truth_dicts:
-            rows.append(torch.tensor([*target["box"], 0.0, target["label"]], dtype=torch.float32))
-        return torch.stack(rows) if rows else torch.empty((0, 9), dtype=torch.float32)
+from definitions import ROOT_DIR
 
 
 class TestPointPillarsMMDetection3DNuScenesPipeline(unittest.TestCase):
-    def build_settings(self):
-        return SimpleNamespace(
+    def test_predict_and_evaluate_from_inference_engine_with_nuscenes_mini(self):
+        if importlib.util.find_spec("mmdet3d") is None:
+            raise unittest.SkipTest("MMDetection3D is not installed")
+        if importlib.util.find_spec("nuscenes") is None:
+            raise unittest.SkipTest("nuScenes devkit is not installed")
+
+        from inference_engine import InferenceEngine
+
+        root_dir = Path(ROOT_DIR)
+        checkpoint_file = root_dir / "src/detector/pointpillars/model/hv_pointpillars_fpn_sbn-all_4x8_2x_nus-3d_20210826_104936-fca299c1.pth"
+        config_file = root_dir / "src/detector/pointpillars/model/pointpillars_hv_fpn_sbn-all_8xb4-2x_nus-3d.py"
+        dataset_path = root_dir / "tests/data/nuScenes_dummy"
+        if not checkpoint_file.exists():
+            raise unittest.SkipTest(f"PointPillars checkpoint is missing: {checkpoint_file}")
+        if not config_file.exists():
+            raise unittest.SkipTest(f"PointPillars config is missing: {config_file}")
+        if not dataset_path.exists():
+            raise unittest.SkipTest(f"nuScenes dummy dataset is missing: {dataset_path}")
+
+        settings = SimpleNamespace(
             paths=SimpleNamespace(
-                detection_path="output/",
-                dataset_path="tests/data/nuscenes_dummy",
-                config_file="",
+                detection_path=str(root_dir / "output"),
+                dataset_path=str(dataset_path),
+                config_file=str(config_file),
             ),
             runtime=SimpleNamespace(
-                datatype="png",
+                datatype="bin",
                 dataset="nuscenes-mini",
                 display=False,
             ),
-            benchmark=SimpleNamespace(iou_threshold=0.4, class_filter=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]),
+            benchmark=SimpleNamespace(
+                iou_threshold=0.4,
+                class_filter=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+            ),
             tracker=SimpleNamespace(max_age=3, min_hits=2, iou_threshold=0.2),
-            dataset=SimpleNamespace(classes=["barrier", "bicycle", "bus", "car", "construction_vehicle", "motorcycle", "pedestrian", "traffic_cone", "trailer", "truck"]),
+            dataset=SimpleNamespace(
+                classes=[
+                    "barrier",
+                    "bicycle",
+                    "bus",
+                    "car",
+                    "construction_vehicle",
+                    "motorcycle",
+                    "pedestrian",
+                    "traffic_cone",
+                    "trailer",
+                    "truck",
+                ]
+            ),
         )
 
-    def test_evaluate_detection_accepts_lidar_native_nuscenes_boxes(self):
-        engine = InferenceEngine(settings=self.build_settings())
-        dataset = DummyNuScenesDataset()
-        engine.dataset = dataset
-        detections = DetectionSequence(
-            frames=[
-                FrameDetection(
-                    frame="sample-token-1",
-                    highest_score_index=torch.tensor(0),
-                    dets=[
-                        Detection(
-                            score=torch.tensor(0.95),
-                            label=torch.tensor(4),
-                            box=torch.tensor([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 0.5]),
-                        )
-                    ],
-                    targets=dataset.targets,
-                )
-            ]
+        inference_engine = InferenceEngine(settings=settings)
+        dataset = inference_engine.load(split="mini_val", max_samples=1)
+        self.assertEqual(len(dataset), 1)
+
+        predictions = inference_engine.predict(
+            detector_name="pointpillars_mmdetection3d",
+            dataset_path=str(dataset_path),
+            detection_path=str(Path(settings.paths.detection_path)),
+            model_path=str(checkpoint_file),
         )
+        self.assertEqual(len(predictions.frames), 1)
+        self.assertEqual(predictions.frames[0].frame, dataset.sample_records[0]["sample_token"])
+        self.assertIsInstance(predictions.frames[0].dets, list)
 
-        results = engine.evaluate_detection(detections=detections, classes=[4])
-
+        results = inference_engine.evaluate_detection(
+            detections=predictions,
+            classes=settings.benchmark.class_filter,
+        )
         self.assertEqual(len(results), 1)
-        self.assertEqual(results[0]["frame"], "sample-token-1")
-        self.assertTrue(torch.isclose(results[0]["mAP"], torch.tensor(1.0)))
+        self.assertEqual(results[0]["frame"], predictions.frames[0].frame)
+        self.assertIn("mAP", results[0])
+        self.assertGreater(float(results[0]["mAP"]), 0.0)
+        self.assertLessEqual(float(results[0]["mAP"]), 1.0)
 
 
 if __name__ == "__main__":

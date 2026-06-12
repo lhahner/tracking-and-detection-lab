@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
@@ -51,13 +52,13 @@ class PointPillarsMMDetections3D(Detector):
         self.batch_size = batch_size
         self.settings = settings
         self.device = device or ("cuda:0" if torch.cuda.is_available() else "cpu")
-        self.label_map = self.__build_label_map(classes)
         self.init_model, self.inference_detector = self.__load_mmdetection3d_apis()
         self.model = self.init_model(
             self.config_file,
             self.checkpoint_file if self.checkpoint_file else None,
             device=self.device,
         )
+        self.label_map = self.__build_label_map(classes)
 
     def detect(self):
         """Run MMDetection3D inference and return project detection objects."""
@@ -99,25 +100,45 @@ class PointPillarsMMDetections3D(Detector):
         return init_model, inference_detector
 
     def __predict_instances(self, point):
-        result = self.inference_detector(self.model, point)
+        result = self.inference_detector(self.model, self.__prepare_point_input(point))
         while isinstance(result, (list, tuple)) and len(result) > 0:
             result = result[0]
         if hasattr(result, "pred_instances_3d"):
             return result.pred_instances_3d
         raise ValueError("MMDetection3D inference result does not contain pred_instances_3d")
 
+    def __prepare_point_input(self, point):
+        if isinstance(point, torch.Tensor):
+            point = point.detach().cpu().numpy()
+        elif not isinstance(point, np.ndarray):
+            point = np.asarray(point)
+        point = point.astype(np.float32, copy=False)
+        if point.ndim != 2:
+            raise ValueError(f"Expected point cloud with shape [N, C], got {point.shape}")
+        if point.shape[1] == 4:
+            time_lag = np.zeros((point.shape[0], 1), dtype=point.dtype)
+            return np.concatenate([point, time_lag], axis=1)
+        if point.shape[1] < 4:
+            raise ValueError(f"Expected at least four point features [x, y, z, intensity], got {point.shape[1]}")
+        return point
+
     def __convert_instances(self, instance_data):
         scores = instance_data.scores_3d.detach().cpu().float()
-        bboxes = instance_data.bboxes_3d.tensor.detach().cpu().float()
+        bboxes_3d = instance_data.bboxes_3d
+        bbox_tensor = bboxes_3d.tensor if hasattr(bboxes_3d, "tensor") else bboxes_3d
+        bboxes = bbox_tensor.detach().cpu().float()
         labels_reference = instance_data.labels_3d.detach().cpu().long()
-
-        if bboxes.shape[0] == 0:
+        if bboxes.numel() == 0:
             return [], None
+        if bboxes.ndim != 2 or bboxes.shape[1] < 7:
+            raise ValueError(f"Expected MMDetection3D boxes with shape [N, >=7], got {tuple(bboxes.shape)}")
+        bboxes = bboxes[:, :7].clone()
+        bboxes[:, 2] += bboxes[:, 5] / 2
 
         labels = self.__map_labels(labels_reference)
-        highest_score_index = scores.argmax()
+        highest_score_index = int(scores.argmax().item())
         detections = [
-            Detection(score=score, label=label, box=box)
+            Detection(score=float(score.item()), label=int(label.item()), box=box)
             for score, box, label in zip(scores, bboxes, labels)
         ]
         return detections, highest_score_index
@@ -125,15 +146,26 @@ class PointPillarsMMDetections3D(Detector):
     def __build_label_map(self, classes):
         if classes is None:
             return NUSCENES_LABELS
-        if isinstance(classes, dict):
-            ordered = [class_id for name, class_id in classes.items() if name != "Background"]
-            return torch.tensor(ordered, dtype=torch.int64)
-        return torch.as_tensor(classes, dtype=torch.int64)
+        if not isinstance(classes, dict):
+            return torch.as_tensor(classes, dtype=torch.int64)
+
+        model_classes = None
+        if hasattr(self.model, "dataset_meta"):
+            model_classes = self.model.dataset_meta.get("classes")
+        if model_classes is None and hasattr(self.model, "cfg"):
+            model_classes = self.model.cfg.get("class_names", None)
+        if model_classes is None:
+            raise ValueError("Unable to determine MMDetection3D PointPillars class order")
+
+        try:
+            return torch.tensor([classes[name] for name in model_classes], dtype=torch.int64)
+        except KeyError as exc:
+            raise ValueError(f"MMDetection3D class {exc.args[0]!r} is not present in the project label map") from exc
 
     def __map_labels(self, labels_reference):
         if self.label_map.numel() == 0:
             return labels_reference
-        valid = labels_reference < self.label_map.numel()
+        valid = (labels_reference >= 0) & (labels_reference < self.label_map.numel())
         if not torch.all(valid):
             raise ValueError(
                 "MMDetection3D PointPillars returned a class index outside "
