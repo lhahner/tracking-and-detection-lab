@@ -38,7 +38,7 @@ CLASSES = {
 class TestPointRCNNMMDetection3DInference(unittest.TestCase):
     def load_mmdet3d_path_from_settings(self):
         settings_loader = SettingsLoader()
-        return settings_loader.load("settings.yaml").paths.mmdetection3d_path
+        return settings_loader.load("settings.yaml")
 
     def test_non_gpu_test(self):
         if not torch.cuda.is_available():
@@ -51,12 +51,14 @@ class TestPointRCNNMMDetection3DInference(unittest.TestCase):
         if torch.cuda.is_available():
             from detector.pointrcnn.pointrcnn_mmdetection3d import PointRCNNmmDetections3D
 
-            kitti3d: Kitti3D = Kitti3D(KITTI3D_DUMMY_PATH, logger=logger)
+            kitti3d: Kitti3D = Kitti3D(KITTI3D_DUMMY_PATH)
             pointrcnn: PointRCNNmmDetections3D = PointRCNNmmDetections3D(
                 dataset=kitti3d,
-                config_file=f"{SRC_ROOT}/detector/pointrcnn/model/point-rcnn_8xb2_kitti-3d-3class_legacyckpt.py",
-                classes=CLASSES)
-            out: list = pointrcnn.detect(serialize=False)
+                config_file=Path(SRC_ROOT) / "detector/pointrcnn/model/point-rcnn_8xb2_kitti-3d-3class_legacyckpt.py",
+                classes=CLASSES,
+                batch_size=1,
+                settings=self.load_mmdet3d_path_from_settings())
+            out: list = pointrcnn.detect()
             self.assertTrue(len(out) > 0)
         else:
             self.skipTest("Test requires GPU")  # Smoke Test
