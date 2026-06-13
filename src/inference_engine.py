@@ -1,4 +1,3 @@
-
 import os
 from pathlib import Path
 import glob
@@ -29,23 +28,24 @@ from detector.pointpillars.pointpillars import Pointpillars
 from datasets.nuScenes import NuScenesDataset
 from datasets.kitti3D import Kitti3D
 
+
 class InferenceEngine:
     def __init__(self, settings):
         self.settings = settings
         self.visualizer = Visualizer(
             self.settings.runtime.datatype
-        )  
+        )
         self.evaluation_runner = Evaluation(
             iou_threshold=settings.benchmark.iou_threshold
-        )  
+        )
         self.detection_path = os.path.join(settings.paths.detection_path, "det.txt")
         self.tracker = Sort(
-            max_age=self.settings.tracker.max_age, 
+            max_age=self.settings.tracker.max_age,
             min_hits=self.settings.tracker.min_hits,
             iou_threshold=self.settings.tracker.iou_threshold,
         )
-        self.dataset = None 
-    
+        self.dataset = None
+
     def load(self, split, max_samples):
         dataset_name = self.settings.runtime.dataset.lower()
         if dataset_name == "kitti3d":
@@ -58,7 +58,9 @@ class InferenceEngine:
             self.dataset = NuScenesDataset(data_root=self.settings.paths.dataset_path,
                                            version=version,
                                            split=split
-                                           )       
+                                           )
+            if max_samples is not None:
+                self.dataset.sample_records = self.dataset.sample_records[:max_samples]
         return self.dataset
 
     def predict(self, detector_name, dataset_path, detection_path, model_path):
@@ -91,6 +93,7 @@ class InferenceEngine:
                 input_path=dataset_path, output_path=detection_path, threshold=0.9
             )
         if detector_name == "pointrcnn":
+            from detector.pointrcnn.pointrcnn_mmdetection3d import PointRCNNmmDetections3D
             detector = PointRCNNmmDetections3D(dataset=self.dataset,
                                                config_file=self.settings.paths.config_file,
                                                classes=self.settings.benchmark.class_filter,
@@ -107,7 +110,14 @@ class InferenceEngine:
                                                   classes=self.settings.benchmark.class_filter,
                                                   settings=self.settings,
                                                   checkpoint_file=model_path)
-        return detector.detect() 
+        if detector_name == "centerpoint_mmdetection3d":
+            from detector.centerpoint.centerpoint_mmdetection3d import CenterPointMMDetections3D
+            detector = CenterPointMMDetections3D(dataset=self.dataset,
+                                                 config_file=self.settings.paths.config_file,
+                                                 classes=self.dataset.classes,
+                                                 settings=self.settings,
+                                                 checkpoint_file=model_path)
+        return detector.detect()
 
     def evaluate_detection(self, detections, classes):
         """
@@ -122,24 +132,11 @@ class InferenceEngine:
         results = []
         class_tensor = convert_classes_to_tensor(classes)
         for detection_frame in detections.frames:
-            ground_truth = self.dataset.convert_ground_truth(detection_frame.targets)
+            ground_truth = self.dataset.convert_ground_truth(detection_frame.targets, detection_frame.frame)
             detection_tensor = convert_to_tensor(detection_frame.dets)
-
-            if hasattr(self.dataset, "_load_calib"):
-                calib, _ = self.dataset._load_calib(detection_frame.frame)
-                gt_lidar_boxes = bbox_camera2lidar(
-                    ground_truth[:, :7].detach().cpu().numpy(),
-                    extend_to_4x4(calib["Tr_velo_to_cam"]),
-                    extend_to_4x4(calib["R0_rect"]),
-                )
-                gt_lidar = ground_truth.clone()
-                gt_lidar[:, :7] = torch.from_numpy(gt_lidar_boxes).to(ground_truth.dtype)
-            else:
-                gt_lidar = ground_truth
-
             mAP = Evaluation(iou_threshold=self.settings.benchmark.iou_threshold).compute_mAP_3D(
                            predicted_detections=detection_tensor,
-                           ground_truth=gt_lidar,
+                           ground_truth=ground_truth,
                            classes=class_tensor,
                            box_mode="lidar",
                            )

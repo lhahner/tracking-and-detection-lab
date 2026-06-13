@@ -125,6 +125,7 @@ class NuScenesDataset(Dataset):
         selected_classes = (
             DETECTION_CLASSES.keys() if class_names is None else class_names
         )
+        self.classes = DETECTION_CLASSES
         self.class_names = set(selected_classes)
         self.class_names.discard("Background")
         self.transform = transform
@@ -427,10 +428,7 @@ class NuScenesDataset(Dataset):
             )
         return targets
 
-    def convert_ground_truth(
-        self, ground_truth_dicts: Iterable[dict[str, Any]]
-    ) -> torch.Tensor:
-        """Convert annotations to the project's ``box, score, label`` tensor."""
+    def convert_ground_truth(self, ground_truth_dicts, frame):
         rows = []
         for target in ground_truth_dicts:
             box = target.get("box")
@@ -545,6 +543,9 @@ class NuScenesDataset(Dataset):
         if path.is_absolute():
             return path
         return self.data_root / path
+
+    def __labels_as_tensor(self):
+        return torch.tensor([value for value in DETECTION_CLASSES.values()])
 
 
 # Keep the shorter spelling available for configuration and imports.
