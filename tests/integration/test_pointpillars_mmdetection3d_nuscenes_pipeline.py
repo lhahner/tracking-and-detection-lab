@@ -1,5 +1,6 @@
 import importlib.util
 import unittest
+import torch
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -8,6 +9,8 @@ from definitions import ROOT_DIR
 
 class TestPointPillarsMMDetection3DNuScenesPipeline(unittest.TestCase):
     def test_predict_and_evaluate_from_inference_engine_with_nuscenes_mini(self):
+        if not torch.cuda.is_available():
+            unittest.SkipTest("CUDA GPU required for this test")
         if importlib.util.find_spec("mmdet3d") is None:
             raise unittest.SkipTest("MMDetection3D is not installed")
         if importlib.util.find_spec("nuscenes") is None:
@@ -17,12 +20,9 @@ class TestPointPillarsMMDetection3DNuScenesPipeline(unittest.TestCase):
 
         root_dir = Path(ROOT_DIR)
         checkpoint_file = root_dir / "src/detector/pointpillars/model/hv_pointpillars_fpn_sbn-all_4x8_2x_nus-3d_20210826_104936-fca299c1.pth"
-        config_file = root_dir / "src/detector/pointpillars/model/pointpillars_hv_fpn_sbn-all_8xb4-2x_nus-3d.py"
         dataset_path = root_dir / "tests/data/nuScenes_dummy"
         if not checkpoint_file.exists():
             raise unittest.SkipTest(f"PointPillars checkpoint is missing: {checkpoint_file}")
-        if not config_file.exists():
-            raise unittest.SkipTest(f"PointPillars config is missing: {config_file}")
         if not dataset_path.exists():
             raise unittest.SkipTest(f"nuScenes dummy dataset is missing: {dataset_path}")
 
@@ -30,7 +30,6 @@ class TestPointPillarsMMDetection3DNuScenesPipeline(unittest.TestCase):
             paths=SimpleNamespace(
                 detection_path=str(root_dir / "output"),
                 dataset_path=str(dataset_path),
-                config_file=str(config_file),
             ),
             runtime=SimpleNamespace(
                 datatype="bin",
