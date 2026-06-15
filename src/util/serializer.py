@@ -3,11 +3,11 @@ Basic serialization used to serialize object detection results to drive,
 counter part of deserializer.py
 """
 import numpy as np
-import dataclasses, json, torch, functools
-import datetime
+import dataclasses, json, torch, functools, csv, io
 from entities.detection import Detection, FrameDetection, DetectionSequence
 from util.file_handler import write_output
 from pathlib import Path
+from datasets.nuScenes import DETECTION_CLASSES_BY_INDEX
 
 class Serializer:
     def __init__(self, settings=None, data_format="json", file_name=None):
@@ -53,12 +53,71 @@ class Serializer:
             return json_str
         if self.data_format == "kitti" and isinstance(data, DetectionSequence):
             self.format_kitti3d_detections(data)
+        if self.data_format == "nuscenes" and isinstance(data, DetectionSequence):
+            return self.format_nuScenes_detections(data)
         if self.data_format == "sort" and isinstance(data, DetectionSequence):
             pass
 
     def format_sort_detections(self, detection_sequence) -> str:
         """TOOD"""
         raise NotImplementedError()
+    
+    def format_nuScenes_detections(self, detection_sequence) -> str:
+        output_buffer = io.StringIO()
+        fieldnames = [
+            "sample_token",
+            "detection_name",
+            "detection_score",
+            "x",
+            "y",
+            "z",
+            "length",
+            "width",
+            "height",
+            "yaw",
+            "velocity_x",
+            "velocity_y",
+            "attribute_name",
+        ]
+        writer = csv.DictWriter(output_buffer, fieldnames=fieldnames)
+        writer.writeheader()
+
+        for frame in detection_sequence.frames:
+            sample_token = str(frame.frame)
+            for det in frame.dets:
+                if det.box.shape[0] < 7:
+                    raise IndexError(
+                        "nuScenes detections require boxes with at least 7 values: "
+                        "[x, y, z, length, width, height, yaw]"
+                    )
+                label = det.label.item() if hasattr(det.label, "item") else det.label
+                detection_name = DETECTION_CLASSES_BY_INDEX[int(label)]
+                score = det.score.item() if hasattr(det.score, "item") else det.score
+                box = det.box.detach().cpu() if hasattr(det.box, "detach") else det.box
+                writer.writerow(
+                    {
+                        "sample_token": sample_token,
+                        "detection_name": detection_name,
+                        "detection_score": self.__round_value(score),
+                        "x": self.__round_value(box[0]),
+                        "y": self.__round_value(box[1]),
+                        "z": self.__round_value(box[2]),
+                        "length": self.__round_value(box[3]),
+                        "width": self.__round_value(box[4]),
+                        "height": self.__round_value(box[5]),
+                        "yaw": self.__round_value(box[6]),
+                        "velocity_x": 0.0,
+                        "velocity_y": 0.0,
+                        "attribute_name": "",
+                    }
+                )
+
+        csv_string = output_buffer.getvalue()
+        base = Path(self.detection_path)
+        base.mkdir(exist_ok=True)
+        csv_path = base / (self.file_name + ".csv")
+        csv_path.write_text(csv_string, encoding="utf-8")
+        return csv_string
 
     def format_kitti3d_detections(self, detection_sequence) -> str:
         """

@@ -103,6 +103,25 @@ class TestSerializer(unittest.TestCase):
         with self.assertRaises(IndexError):
             serializer.format_kitti3d_detections(detection_sequence)
 
+    def test_format_nuscenes_detections_returns_expected_csv(self):
+        serializer = Serializer(self.settings, data_format="nuscenes", file_name="detections")
+        detection = Detection(
+            score=torch.tensor(0.91),
+            label=4,
+            box=torch.tensor([1.234, 2.345, 3.456, 4.567, 1.891, 1.678, 0.123]),
+        )
+        detection_sequence = DetectionSequence(
+            frames=[FrameDetection(frame="sample-token-123", highest_score_index=0, dets=[detection])]
+        )
+
+        result = serializer.format_nuScenes_detections(detection_sequence)
+
+        self.assertEqual(
+            result,
+            "sample_token,detection_name,detection_score,x,y,z,length,width,height,yaw,velocity_x,velocity_y,attribute_name\r\n"
+            "sample-token-123,car,0.91,1.23,2.35,3.46,4.57,1.89,1.68,0.12,0.0,0.0,\r\n",
+        )
+
     def test_build_kitti_gt_string_formats_values(self):
         serializer = Serializer(settings=self.settings)
 

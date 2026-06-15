@@ -38,6 +38,19 @@ DETECTION_CLASSES = {
     "truck": 10,
 }
 
+DETECTION_CLASSES_BY_INDEX = {
+        0: "Background",
+        1: "barrier",
+        2: "bicycle",
+        3: "bus",
+        4: "car",
+        5: "construction_vehicle",
+        6: "motorcycle",
+        7: "pedestrian",
+        8: "traffic_cone",
+        9: "trailer",
+        10: "truck",
+}
 TRACKING_CLASSES = {
     "bicycle",
     "bus",
