@@ -100,9 +100,16 @@ class InferenceEngine:
                                                settings=self.settings)
         if detector_name == "pointpillars":
             detector = Pointpillars(dataset=self.dataset,
-                                    config_file=self.settings.paths.config_file,
-                                    classes=self.settings.benchmark.class_filter,
-                                    settings=self.settings)
+                                               config_file=self.settings.paths.config_file,
+                                               classes=self.settings.benchmark.class_filter,
+                                               settings=self.settings)
+        if detector_name == "pointpillars_mmdetection3d":
+            from detector.pointpillars.pointpillars_mmdetection3d import PointPillarsMMDetections3D
+            detector = PointPillarsMMDetections3D(dataset=self.dataset,
+                                                  config_file=self.settings.paths.config_file,
+                                                  classes=self.settings.benchmark.class_filter,
+                                                  settings=self.settings,
+                                                  checkpoint_file=model_path)
         if detector_name == "centerpoint_mmdetection3d":
             from detector.centerpoint.centerpoint_mmdetection3d import CenterPointMMDetections3D
             detector = CenterPointMMDetections3D(dataset=self.dataset,

@@ -13,16 +13,23 @@ from definitions import ROOT_DIR
 from util.logging_config import LoggingConfig
 
 PROJECT_DIR = Path(__file__).resolve().parent
-DEFAULT_CONFIG_FILE = Path(ROOT_DIR) / "mmdetection3d/configs/centerpoint/centerpoint_voxel01_second_secfpn_head-circlenms_8xb4-cyclic-20e_nus-3d.py"
-DEFAULT_CHECKPOINT_FILE = PROJECT_DIR / "model" / "centerpoint_01voxel_second_secfpn_circlenms_4x8_cyclic_20e_nus_20220810_030004-9061688e.pth"
-
+DEFAULT_CONFIG_FILE = (
+    Path(ROOT_DIR)
+    / "mmdetection3d"
+    / "configs"
+    / "centerpoint"
+    / "centerpoint_voxel01_second_secfpn_head-circlenms_8xb4-cyclic-20e_nus-3d.py"
+)
+DEFAULT_CHECKPOINT_FILE = (
+        PROJECT_DIR
+        / "model"
+        / "centerpoint_01voxel_second_secfpn_circlenms_4x8_cyclic_20e_nus_20220810_030004-9061688e.pth"
+)
 logging_config = LoggingConfig()
 logger = logging_config.get_logger(__name__)
 
 
 class CenterPointMMDetections3D(Detector):
-    """MMDetection3D CenterPoint wrapper for project 3D detection pipelines."""
-
     def __init__(self,
                  dataset,
                  classes,
@@ -121,5 +128,6 @@ class CenterPointMMDetections3D(Detector):
             return labels_reference
         valid = (labels_reference >= 0) & (labels_reference < self.class_map.numel())
         if not torch.all(valid):
-            raise ValueError("MMDetection3D CenterPoint returned a class index outside the configured label map")
+            raise ValueError("MMDetection3D CenterPoint returned a class index outside"
+                             "the configured label map")
         return self.class_map[labels_reference]
