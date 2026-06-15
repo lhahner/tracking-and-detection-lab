@@ -400,7 +400,7 @@ def write_results_json(results_payload: dict[str, Any], output_json: Path) -> No
 
 def load_nuscenes(version: str, dataroot: Path) -> Any:
     try:
-        from nuscenes import NuScenes
+        from nuscenes.nuscenes import NuScenes
     except ImportError as exc:
         raise ImportError(
             "nuScenes conversion requires nuscenes-devkit to be installed."

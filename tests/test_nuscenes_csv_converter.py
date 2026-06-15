@@ -136,3 +136,22 @@ def test_convert_csv_to_results_seeds_empty_eval_samples(tmp_path, monkeypatch):
     assert set(results_payload["results"].keys()) == {"sample-1", "sample-2"}
     assert len(results_payload["results"]["sample-1"]) == 1
     assert results_payload["results"]["sample-2"] == []
+
+
+def test_load_nuscenes_imports_from_nuscenes_submodule(monkeypatch, tmp_path):
+    calls = []
+
+    class FakeNuScenesClass:
+        def __init__(self, version, dataroot, verbose):
+            calls.append((version, dataroot, verbose))
+
+    top_level_module = types.ModuleType("nuscenes")
+    submodule = types.ModuleType("nuscenes.nuscenes")
+    submodule.NuScenes = FakeNuScenesClass
+    monkeypatch.setitem(sys.modules, "nuscenes", top_level_module)
+    monkeypatch.setitem(sys.modules, "nuscenes.nuscenes", submodule)
+
+    result = module.load_nuscenes("v1.0-mini", tmp_path)
+
+    assert isinstance(result, FakeNuScenesClass)
+    assert calls == [("v1.0-mini", str(tmp_path), True)]

@@ -68,7 +68,7 @@ class Pointpillars(Detector):
 
                     scores: torch.tensor = torch.from_numpy(result['scores'])
                     bboxes: torch.tensor = torch.from_numpy(result['lidar_bboxes'])
-                    labels: torch.tensor = torch.tensor(self.dataset.labels, 
+                    labels: torch.tensor = torch.tensor(self.dataset.labels,
                                                         device=labels_reference.device)[labels_reference]
 
                     detection_sequence.frames.append(FrameDetection(
