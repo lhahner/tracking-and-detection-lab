@@ -22,7 +22,7 @@ import numpy as np
 import torch
 from PIL import Image
 from torch.utils.data import Dataset
-
+from nuscenes.nuscenes import NuScenes
 
 DETECTION_CLASSES = {
     "Background": 0,
@@ -559,7 +559,6 @@ class NuScenesDataset(Dataset):
 
     def __labels_as_tensor(self):
         return torch.tensor([value for value in DETECTION_CLASSES.values()])
-
-
+    
 # Keep the shorter spelling available for configuration and imports.
 NuScenes = NuScenesDataset

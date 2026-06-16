@@ -11,6 +11,7 @@ from util.logging_config import LoggingConfig
 from util.coordinate_converter import CoordinateConverter
 from util.file_handler import write_output
 from definitions import ROOT_DIR
+from nuscenes.nuscenes import NuScenes
 
 logging_config = LoggingConfig()
 logger = logging_config.get_logger(__name__)
@@ -353,28 +354,26 @@ class Evaluation:
         detection_sequence: DetectionSequence,
         output_file_path,
         serializer=None,
+        data_root=None,
+        version="",
         serialize_predictions=False,
         box_mode="lidar",
     ):
         """Write a minimal per-prediction IoU analysis CSV for nuScenes-on-KITTI runs."""
-        if serialize_predictions and serializer is not None:
-            serializer.format_nuScenes_detections(detection_sequence)
-
         iou_results = self.compute_IoU_3D(detection_sequence, box_mode=box_mode)
-        fieldnames = ["sample_id", "IoU", "predicted_class", "ground_truth_class"]
+        fieldnames = ["sample_id","file_name","IoU","predicted_class","ground_truth_class"]
         rows = []
 
         for frame_detection, frame_iou in zip(detection_sequence.frames, iou_results):
             iou_matrix = frame_iou["iou_matrix"]
-            breakpoint()
             gt_labels = frame_detection.targets
-
             for prediction_index, det in enumerate(frame_detection.dets):
                 predicted_class = det.label
                 if iou_matrix.numel() == 0 or iou_matrix.shape[1] == 0:
                     rows.append(
                         {
                             "sample_id": str(frame_detection.frame),
+                            "file_name": "",
                             "IoU": 0.0,
                             "predicted_class": predicted_class,
                             "ground_truth_class": "",
@@ -387,12 +386,14 @@ class Evaluation:
                 rows.append(
                     {
                         "sample_id": str(frame_detection.frame),
+                        "file_name": str(self.__get_file_name_by_token_id(token_id=str(frame_detection.frame),
+                                                                   version=version,
+                                                                   data_root=data_root)),
                         "IoU": round(float(best_iou.item()), 6),
-                        "predicted_class": predicted_class,
-                        "ground_truth_class": gt_labels[best_gt_idx_value] if best_gt_idx_value < len(gt_labels) else "",
+                        "predicted_class": predicted_class.item(),
+                        "ground_truth_class": gt_labels[best_gt_idx_value]['label'] if best_gt_idx_value < len(gt_labels) else "",
                     }
                 )
-
         output_path = Path(output_file_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
         with output_path.open("w", encoding="utf-8", newline="") as csv_file:
@@ -449,3 +450,16 @@ class Evaluation:
                 target=ground_truth,
                 classes=classes)
         return metric.compute()
+
+    def __get_file_name_by_token_id(self,
+                                    token_id, 
+                                    data_root, 
+                                    version="v1.0-trainval", 
+                                    verbose=True):
+        nusc = NuScenes(version=version,
+                        dataroot=data_root,
+                        verbose=verbose)
+        sample = nusc.get("sample", token_id)
+        lidar_token = sample["data"]["LIDAR_TOP"]
+        lidar_sd = nusc.get("sample_data", lidar_token)
+        return lidar_sd["filename"]

@@ -46,12 +46,12 @@ class TestPointpillarsEvaluationPipeline(unittest.TestCase):
         settings = SimpleNamespace(
             paths=SimpleNamespace(
                 detection_path="output/",
-                dataset_path="tests/data/kitti3d_dummy",
+                dataset_path="/home/lennart-hahner/.openclaw/workspace/tracking-and-detection-lab/tests/data/nuScenes_dummy/",
                 config_file="",
             ),
             runtime=SimpleNamespace(
                 datatype="png",
-                dataset="kitti3d",
+                dataset="nuscenes-mini",
                 display=False,
             ),
             benchmark=SimpleNamespace(iou_threshold=0.4, class_filter=[1, 2, 3]),
@@ -59,16 +59,18 @@ class TestPointpillarsEvaluationPipeline(unittest.TestCase):
             dataset=SimpleNamespace(classes=["Pedestrian", "Cyclist", "Car"]),
         )
         inference_engine = InferenceEngine(settings=settings)
-        inference_engine.load()
+        inference_engine.load(split="val", max_samples=None)
         predictions = inference_engine.predict(
                 detector_name="pointpillars",
-                dataset_path="",
-                detection_path="",
-                mode_path="pretrained/epoch_160.pth"
+                dataset_path="/home/lennart-hahner/.openclaw/workspace/tracking-and-detection-lab/tests/data/nuScenes_dummy/",
+                detection_path=f"{ROOT_DIR}/src/detector/pointpillars/",
+                model_path="pretrained/epoch_160.pth"
         )
         Evaluation().export_nuscenes_kitti3d_iou_analysis(
                 detection_sequence=predictions,
-                output_file_path=f"{ROOT_DIR}/src/detector/pointpillars/pretrained/"
+                output_file_path=f"{ROOT_DIR}/output.csv",
+                data_root="/home/lennart-hahner/.openclaw/workspace/tracking-and-detection-lab/tests/data/nuScenes_dummy/",
+                version="v1.0-mini"
                 )
         
 
