@@ -363,6 +363,7 @@ def convert_csv_to_results(
     expected_sample_tokens: list[str] | None = None,
 ) -> dict[str, Any]:
     transform_resolver = NuScenesTransformResolver(nusc)
+    expected_token_set = set(expected_sample_tokens or [])
     results: dict[str, list[dict[str, Any]]] = build_seeded_results(expected_sample_tokens or [])
     with csv_path.open("r", encoding="utf-8", newline="") as csv_file:
         reader = csv.DictReader(csv_file)
@@ -382,6 +383,12 @@ def convert_csv_to_results(
             )
 
         for row_index, row in enumerate(reader, start=2):
+            sample_token = parse_string(row, "sample_token")
+            if expected_token_set and sample_token not in expected_token_set:
+                raise ValueError(
+                    f"Row {row_index} references sample_token '{sample_token}' that is not part "
+                    "of the expected evaluation sample set. Check --eval-set or --sample-list."
+                )
             sample_token, detection = convert_row_to_nuscenes_detection(
                 row,
                 row_index,

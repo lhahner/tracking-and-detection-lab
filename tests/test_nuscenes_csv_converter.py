@@ -5,6 +5,7 @@ import types
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 
 SCRIPT_PATH = Path(__file__).resolve().parents[1] / "scripts" / "evaluate_nuscenes_from_csv.py"
@@ -155,3 +156,20 @@ def test_load_nuscenes_imports_from_nuscenes_submodule(monkeypatch, tmp_path):
 
     assert isinstance(result, FakeNuScenesClass)
     assert calls == [("v1.0-mini", str(tmp_path), True)]
+
+
+def test_convert_csv_to_results_rejects_sample_tokens_outside_expected_set(tmp_path):
+    csv_path = tmp_path / "predictions.csv"
+    csv_path.write_text(
+        "sample_token,detection_name,detection_score,x,y,z,length,width,height,yaw\n"
+        "sample-3,car,0.91,1.0,0.0,0.5,4.0,1.8,1.6,0.0\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="not part of the expected evaluation sample set"):
+        module.convert_csv_to_results(
+            csv_path,
+            module.DEFAULT_META,
+            FakeNuScenes(),
+            expected_sample_tokens=["sample-1", "sample-2"],
+        )

@@ -1,7 +1,9 @@
 import unittest
+from detector import detector
 from inference_engine import InferenceEngine
 from types import SimpleNamespace
 from definitions import ROOT_DIR
+from util.evaluation import Evaluation
 
 class TestPointpillarsEvaluationPipeline(unittest.TestCase):
     def build_settings(self):
@@ -39,4 +41,36 @@ class TestPointpillarsEvaluationPipeline(unittest.TestCase):
         results = inference_engine.evaluate_detection(detections=predictions,
                                                       classes=[1, 2, 3])
         self.assertTrue(len(results) >= 1)
+
+    def test_predict_and_evaluate_from_inference_engine_with_nuScenes(self):
+        settings = SimpleNamespace(
+            paths=SimpleNamespace(
+                detection_path="output/",
+                dataset_path="tests/data/kitti3d_dummy",
+                config_file="",
+            ),
+            runtime=SimpleNamespace(
+                datatype="png",
+                dataset="kitti3d",
+                display=False,
+            ),
+            benchmark=SimpleNamespace(iou_threshold=0.4, class_filter=[1, 2, 3]),
+            tracker=SimpleNamespace(max_age=3, min_hits=2, iou_threshold=0.2),
+            dataset=SimpleNamespace(classes=["Pedestrian", "Cyclist", "Car"]),
+        )
+        inference_engine = InferenceEngine(settings=settings)
+        inference_engine.load()
+        predictions = inference_engine.predict(
+                detector_name="pointpillars",
+                dataset_path="",
+                detection_path="",
+                mode_path="pretrained/epoch_160.pth"
+        )
+        Evaluation().export_nuscenes_kitti3d_iou_analysis(
+                detection_sequence=predictions,
+                output_file_path=f"{ROOT_DIR}/src/detector/pointpillars/pretrained/"
+                )
+        
+
+
 
