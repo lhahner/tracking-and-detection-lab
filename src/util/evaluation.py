@@ -361,7 +361,7 @@ class Evaluation:
     ):
         """Write a minimal per-prediction IoU analysis CSV for nuScenes-on-KITTI runs."""
         iou_results = self.compute_IoU_3D(detection_sequence, box_mode=box_mode)
-        fieldnames = ["sample_id","file_name","IoU","predicted_class","ground_truth_class"]
+        fieldnames = ["sample_id", "file_name", "IoU", "predicted_class", "ground_truth_class"]
         rows = []
 
         for frame_detection, frame_iou in zip(detection_sequence.frames, iou_results):
@@ -387,10 +387,10 @@ class Evaluation:
                     {
                         "sample_id": str(frame_detection.frame),
                         "file_name": str(self.__get_file_name_by_token_id(token_id=str(frame_detection.frame),
-                                                                   version=version,
-                                                                   data_root=data_root)),
+                                                                          version=version,
+                                                                          data_root=data_root)),
                         "IoU": round(float(best_iou.item()), 6),
-                        "predicted_class": predicted_class.item(),
+                        "predicted_class": predicted_class.item() if torch.is_tensor(predicted_class) else predicted_class,
                         "ground_truth_class": gt_labels[best_gt_idx_value]['label'] if best_gt_idx_value < len(gt_labels) else "",
                     }
                 )

@@ -68,33 +68,36 @@ class TestEvaluationIoUAndAnalysis:
         assert len(results) == 1
         assert results[0]["sample_id"] == "sample-1"
         torch.testing.assert_close(results[0]["iou_matrix"], expected_iou)
-
-    def test_export_nuscenes_kitti3d_iou_analysis_writes_expected_csv(self, tmp_path):
+    
+    @patch.object(Evaluation, "_Evaluation__get_file_name_by_token_id", return_value="file.txt")
+    def test_export_nuscenes_kitti3d_iou_analysis_writes_expected_csv(self,
+                                                                      mock_get_file_name_by_token_id,
+                                                                      tmp_path):
         detection_sequence = self.build_detection_sequence()
         evaluation = Evaluation()
         serializer = Mock()
         expected_iou = torch.tensor([[0.8, 0.1], [0.05, 0.2]], dtype=torch.float32)
-        output_path = tmp_path / "analysis.csv"
+        output_path = Path(tmp_path) / "analysis.csv"
 
         with self.install_fake_pytorch3d(expected_iou), patch(
             "util.coordinate_converter.CoordinateConverter.boxes_3d_to_corners",
             side_effect=lambda boxes, mode: boxes.unsqueeze(1).repeat(1, 8, 1),
         ):
             rows = evaluation.export_nuscenes_kitti3d_iou_analysis(
-                detection_sequence,
-                output_path,
+                detection_sequence=detection_sequence,
+                output_file_path=output_path,
                 serializer=serializer,
                 serialize_predictions=True,
+                data_root="/home/lennart-hahner/.openclaw/workspace/tracking-and-detection-lab/tests/data/nuScenes_dummy/",
+                version="v1.0-mini"
             )
-
-        serializer.format_nuScenes_detections.assert_called_once_with(detection_sequence)
         assert len(rows) == 2
         assert rows[0]["sample_id"] == "sample-1"
         assert rows[0]["IoU"] == 0.8
-        assert rows[0]["ground_truth_class"] == "Cyclist"
-        assert rows[0]["predicted_class"] == "car"
-        assert rows[1]["ground_truth_class"] == "Car"
-        assert rows[1]["predicted_class"] == "pedestrian"
+        assert rows[0]["ground_truth_class"] == 2
+        assert rows[0]["predicted_class"] == 4
+        assert rows[1]["ground_truth_class"] == 3
+        assert rows[1]["predicted_class"] == 7
 
         with output_path.open("r", encoding="utf-8", newline="") as csv_file:
             reader = csv.DictReader(csv_file, delimiter=";")
@@ -102,6 +105,6 @@ class TestEvaluationIoUAndAnalysis:
 
         assert written_rows[0]["sample_id"] == "sample-1"
         assert written_rows[0]["IoU"] == "0.8"
-        assert written_rows[0]["ground_truth_class"] == "Cyclist"
-        assert written_rows[0]["predicted_class"] == "car"
-        assert written_rows[1]["ground_truth_class"] == "Car"
+        assert written_rows[0]["ground_truth_class"] == "2"
+        assert written_rows[0]["predicted_class"] == "4"
+        assert written_rows[1]["ground_truth_class"] == "3"
