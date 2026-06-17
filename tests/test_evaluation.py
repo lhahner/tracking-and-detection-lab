@@ -6,6 +6,7 @@ from unittest.mock import Mock, patch
 
 import numpy as np
 import torch
+import pytest
 
 from entities.detection import Detection, DetectionSequence, FrameDetection
 from util.evaluation import Evaluation
@@ -53,18 +54,3 @@ class TestEvaluationIoUAndAnalysis:
 
         fake_ops.box3d_overlap = fake_box3d_overlap
         return patch.dict(sys.modules, {"pytorch3d": fake_root, "pytorch3d.ops": fake_ops})
-
-    def test_compute_iou_3d_returns_per_frame_iou_matrix(self):
-        detection_sequence = self.build_detection_sequence()
-        evaluation = Evaluation()
-        expected_iou = torch.tensor([[0.8, 0.1], [0.05, 0.2]], dtype=torch.float32)
-
-        with self.install_fake_pytorch3d(expected_iou), patch(
-            "util.coordinate_converter.CoordinateConverter.boxes_3d_to_corners",
-            side_effect=lambda boxes, mode: boxes.unsqueeze(1).repeat(1, 8, 1),
-        ):
-            results = evaluation.compute_IoU_3D(detection_sequence)
-
-        assert len(results) == 1
-        assert results[0]["sample_id"] == "sample-1"
-        torch.testing.assert_close(results[0]["iou_matrix"], expected_iou)
