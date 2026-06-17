@@ -30,7 +30,10 @@ class Evaluation:
         self.iou_threshold = iou_threshold
         self.metrics_handler = mm.metrics.create()
 
-    def read_mot_file(self, file_path, filter_ground_truth_by_confidence=False, allowed_class_ids=None):
+    def read_mot_file(self,
+                      file_path,
+                      filter_ground_truth_by_confidence=False,
+                      allowed_class_ids=None):
         """Read a MOT-format file and group detections by frame.
 
         Args:
@@ -59,7 +62,8 @@ class Evaluation:
             frame_number = int(mot_row[0])
             object_id = int(mot_row[1])
             bounding_box_xywh = [mot_row[2], mot_row[3], mot_row[4], mot_row[5]]
-            detections_per_frame.setdefault(frame_number, []).append((object_id, bounding_box_xywh))
+            detections_per_frame.setdefault(frame_number, []).append((
+                object_id, bounding_box_xywh))
         return detections_per_frame
 
     def should_filter_ground_truth_to_pedestrians(self, sequence_name):
@@ -258,6 +262,19 @@ class Evaluation:
 
         return benchmark_file_path
 
+    def compute_IoU_3D(self, predicted_detections: list, ground_truth: list):
+        """
+        Standalone wrapper for PyTorch3D IoU computation. PyTorch3D Requires Linux.
+        """
+        try:
+            from pytorch3d.ops import box3d_overlap
+            if predicted_detections.numel() == 0 or ground_truth.numel() == 0:
+                raise ValueError("Prediction or Ground truth empty can compute IoU.")
+
+            return box3d_overlap(predicted_detections, ground_truth)
+        except ImportError as e:
+            logger.error("PyTorch3D not installed, either install or try to bypass", e)
+
     def compute_precision_and_recall(self,
                                      predicted_detection_classes: torch.tensor,
                                      ground_truth: torch.tensor,
@@ -284,7 +301,7 @@ class Evaluation:
         """
         from util.metrics.average_precision_3D import AveragePrecision3D
         metric = AveragePrecision3D()
-        metric.update(recall=recall, 
+        metric.update(recall=recall,
                       precision=precision)
         return metric.compute()
 
