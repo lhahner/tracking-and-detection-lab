@@ -119,7 +119,10 @@ class InferenceEngine:
                                                  checkpoint_file=model_path)
         return detector.detect()
 
-    def evaluate_detection(self, detections, classes):
+    def evaluate_detection(self,
+                           detections,
+                           classes,
+                           box_mode="lidar"):
         """
         Run evaluation for detections.
 
@@ -138,7 +141,7 @@ class InferenceEngine:
                            predicted_detections=detection_tensor,
                            ground_truth=ground_truth,
                            classes=class_tensor,
-                           box_mode="lidar",
+                           box_mode=box_mode,
                            )
             results.append(
                 {

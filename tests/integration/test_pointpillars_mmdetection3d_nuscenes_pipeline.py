@@ -30,6 +30,7 @@ class TestPointPillarsMMDetection3DNuScenesPipeline(unittest.TestCase):
             paths=SimpleNamespace(
                 detection_path=str(root_dir / "output"),
                 dataset_path=str(dataset_path),
+                config_file=root_dir / "mmdetection3d/configs/pointpillars/pointpillars_hv_fpn_sbn-all_8xb4-2x_nus-3d.py"
             ),
             runtime=SimpleNamespace(
                 datatype="bin",
@@ -59,7 +60,6 @@ class TestPointPillarsMMDetection3DNuScenesPipeline(unittest.TestCase):
 
         inference_engine = InferenceEngine(settings=settings)
         dataset = inference_engine.load(split="mini_val", max_samples=1)
-        dataset.sample_records = dataset.sample_records[3:4]
         self.assertEqual(len(dataset), 1)
 
         predictions = inference_engine.predict(

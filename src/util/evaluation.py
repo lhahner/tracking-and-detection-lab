@@ -11,7 +11,6 @@ from util.logging_config import LoggingConfig
 from util.coordinate_converter import CoordinateConverter
 from util.file_handler import write_output
 from definitions import ROOT_DIR
-from nuscenes.nuscenes import NuScenes
 
 logging_config = LoggingConfig()
 logger = logging_config.get_logger(__name__)
@@ -259,149 +258,6 @@ class Evaluation:
 
         return benchmark_file_path
 
-    def __targets_to_tensor(self, targets):
-        if isinstance(targets, torch.Tensor):
-            if targets.numel() == 0:
-                return torch.empty((0, 9), dtype=torch.float32)
-            if targets.ndim == 1:
-                return targets.reshape(1, -1).to(dtype=torch.float32)
-            return targets.to(dtype=torch.float32)
-
-        if targets is None or len(targets) == 0:
-            return torch.empty((0, 9), dtype=torch.float32)
-
-        rows = []
-        for target in targets:
-            if isinstance(target, torch.Tensor):
-                row = target.to(dtype=torch.float32)
-                if row.ndim == 1:
-                    rows.append(row)
-                elif row.ndim == 2:
-                    rows.extend(individual_row.to(dtype=torch.float32) for individual_row in row)
-                continue
-
-            if not isinstance(target, dict):
-                continue
-            box = target.get("box")
-            label = target.get("label")
-            if box is None or label is None:
-                continue
-            rows.append(
-                torch.tensor(
-                    [*np.asarray(box, dtype=np.float32), 0.0, float(label)],
-                    dtype=torch.float32,
-                )
-            )
-
-        if not rows:
-            return torch.empty((0, 9), dtype=torch.float32)
-        return torch.stack(rows)
-
-    def compute_IoU_3D(self, detection_sequence: DetectionSequence, box_mode="lidar"):
-        """Compute per-frame 3D IoU matrices for a detection sequence."""
-        try:
-            from pytorch3d.ops import box3d_overlap
-        except ImportError as exc:
-            raise ImportError("PyTorch3D is required for 3D IoU computation.") from exc
-
-        coordinate_converter = CoordinateConverter()
-        iou_per_frame = []
-        for frame_detection in detection_sequence.frames:
-            prediction_rows = []
-            for det in frame_detection.dets:
-                prediction_rows.append(
-                    torch.tensor(
-                        [*det.box.detach().cpu().tolist(), float(det.score), float(det.label)],
-                        dtype=torch.float32,
-                    )
-                )
-            predicted_detections = (
-                torch.stack(prediction_rows)
-                if prediction_rows
-                else torch.empty((0, 9), dtype=torch.float32)
-            )
-            ground_truth = self.__targets_to_tensor(frame_detection.targets)
-
-            if predicted_detections.numel() == 0 or ground_truth.numel() == 0:
-                iou_matrix = torch.empty(
-                    (predicted_detections.shape[0], ground_truth.shape[0]),
-                    dtype=torch.float32,
-                )
-            else:
-                prediction_corner_boxes = coordinate_converter.boxes_3d_to_corners(
-                    predicted_detections[:, :7],
-                    box_mode,
-                )
-                ground_truth_corner_boxes = coordinate_converter.boxes_3d_to_corners(
-                    ground_truth[:, :7],
-                    box_mode,
-                )
-                _, iou_matrix = box3d_overlap(
-                    prediction_corner_boxes,
-                    ground_truth_corner_boxes,
-                )
-
-            iou_per_frame.append(
-                {
-                    "sample_id": frame_detection.frame,
-                    "iou_matrix": iou_matrix.cpu(),
-                }
-            )
-        return iou_per_frame
-
-    def export_nuscenes_kitti3d_iou_analysis(
-        self,
-        detection_sequence: DetectionSequence,
-        output_file_path,
-        serializer=None,
-        data_root=None,
-        version="",
-        serialize_predictions=False,
-        box_mode="lidar",
-    ):
-        """Write a minimal per-prediction IoU analysis CSV for nuScenes-on-KITTI runs."""
-        iou_results = self.compute_IoU_3D(detection_sequence, box_mode=box_mode)
-        fieldnames = ["sample_id", "file_name", "IoU", "predicted_class", "ground_truth_class"]
-        rows = []
-
-        for frame_detection, frame_iou in zip(detection_sequence.frames, iou_results):
-            iou_matrix = frame_iou["iou_matrix"]
-            gt_labels = frame_detection.targets
-            for prediction_index, det in enumerate(frame_detection.dets):
-                predicted_class = det.label
-                if iou_matrix.numel() == 0 or iou_matrix.shape[1] == 0:
-                    rows.append(
-                        {
-                            "sample_id": str(frame_detection.frame),
-                            "file_name": "",
-                            "IoU": 0.0,
-                            "predicted_class": predicted_class,
-                            "ground_truth_class": "",
-                        }
-                    )
-                    continue
-
-                best_iou, best_gt_idx = torch.max(iou_matrix[prediction_index], dim=0)
-                best_gt_idx_value = int(best_gt_idx.item())
-                rows.append(
-                    {
-                        "sample_id": str(frame_detection.frame),
-                        "file_name": str(self.__get_file_name_by_token_id(token_id=str(frame_detection.frame),
-                                                                          version=version,
-                                                                          data_root=data_root)),
-                        "IoU": round(float(best_iou.item()), 6),
-                        "predicted_class": predicted_class.item() if torch.is_tensor(predicted_class) else predicted_class,
-                        "ground_truth_class": gt_labels[best_gt_idx_value]['label'] if best_gt_idx_value < len(gt_labels) else "",
-                    }
-                )
-        output_path = Path(output_file_path)
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        with output_path.open("w", encoding="utf-8", newline="") as csv_file:
-            writer = csv.DictWriter(csv_file, fieldnames=fieldnames, delimiter=";")
-            writer.writeheader()
-            writer.writerows(rows)
-        return rows
-
     def compute_precision_and_recall(self,
                                      predicted_detection_classes: torch.tensor,
                                      ground_truth: torch.tensor,
@@ -450,16 +306,3 @@ class Evaluation:
                 target=ground_truth,
                 classes=classes)
         return metric.compute()
-
-    def __get_file_name_by_token_id(self,
-                                    token_id, 
-                                    data_root, 
-                                    version="v1.0-trainval", 
-                                    verbose=True):
-        nusc = NuScenes(version=version,
-                        dataroot=data_root,
-                        verbose=verbose)
-        sample = nusc.get("sample", token_id)
-        lidar_token = sample["data"]["LIDAR_TOP"]
-        lidar_sd = nusc.get("sample_data", lidar_token)
-        return lidar_sd["filename"]

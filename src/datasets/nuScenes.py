@@ -560,5 +560,18 @@ class NuScenesDataset(Dataset):
     def __labels_as_tensor(self):
         return torch.tensor([value for value in DETECTION_CLASSES.values()])
     
+    def __get_file_name_by_token_id(self,
+                                    token_id, 
+                                    data_root, 
+                                    version="v1.0-trainval", 
+                                    verbose=True):
+        nusc = NuScenes(version=version,
+                        dataroot=data_root,
+                        verbose=verbose)
+        sample = nusc.get("sample", token_id)
+        lidar_token = sample["data"]["LIDAR_TOP"]
+        lidar_sd = nusc.get("sample_data", lidar_token)
+        return lidar_sd["filename"]
+
 # Keep the shorter spelling available for configuration and imports.
 NuScenes = NuScenesDataset
