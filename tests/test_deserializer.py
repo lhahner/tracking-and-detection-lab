@@ -4,7 +4,7 @@ import unittest
 import torch
 
 from entities.detection import Detection
-from src.io.deserializer import Deserializer
+from data_io.deserializer import Deserializer
 
 
 class TestDeserializer(unittest.TestCase):

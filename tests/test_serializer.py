@@ -7,7 +7,7 @@ import os
 import torch
 import glob
 from entities.detection import Detection, FrameDetection, DetectionSequence
-from src.io.serializer import Serializer
+from data_io.serializer import Serializer
 
 
 @dataclass(frozen=True)
@@ -64,7 +64,7 @@ class TestSerializer(unittest.TestCase):
         with self.assertRaises(ValueError):
             serializer.serialize(object())
 
-    @patch("src.io.serializer.write_output")
+    @patch("data_io.serializer.write_output")
     def test_serialize_kitti_formats_detection_sequence(self, mock_write_output):
         serializer, detection_sequence = self.buildDetectionSequenceAndSerializer()
         serializer.serialize(detection_sequence)
@@ -79,7 +79,7 @@ class TestSerializer(unittest.TestCase):
         self.assertIsNone(serializer.serialize({"frame": 1}))
 
 
-    @patch("src.io.serializer.write_output")
+    @patch("data_io.serializer.write_output")
     def test_format_kitti3d_detections_writes_expected_line(self, mock_write_output):
         serializer, detection_sequence = self.buildDetectionSequenceAndSerializer()
         serializer.format_kitti3d_detections(detection_sequence)

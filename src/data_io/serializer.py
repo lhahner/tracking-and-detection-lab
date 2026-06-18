@@ -5,7 +5,7 @@ counter part of deserializer.py
 import numpy as np
 import dataclasses, json, torch, functools, csv, io
 from entities.detection import Detection, FrameDetection, DetectionSequence
-from src.io.file_handler import write_output
+from data_io.file_handler import write_output
 from pathlib import Path
 from datasets.nuScenes import DETECTION_CLASSES_BY_INDEX
 
