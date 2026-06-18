@@ -15,6 +15,7 @@ from config.logging_config import LoggingConfig
 PROJECT_DIR = Path(__file__).resolve().parent
 DEFAULT_CONFIG_FILE = (
     Path(ROOT_DIR)
+    / "third_party"
     / "mmdetection3d"
     / "configs"
     / "centerpoint"

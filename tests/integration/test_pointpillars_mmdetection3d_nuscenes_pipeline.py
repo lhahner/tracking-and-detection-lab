@@ -30,7 +30,7 @@ class TestPointPillarsMMDetection3DNuScenesPipeline(unittest.TestCase):
             paths=SimpleNamespace(
                 detection_path=str(root_dir / "output"),
                 dataset_path=str(dataset_path),
-                config_file=root_dir / "mmdetection3d/configs/pointpillars/pointpillars_hv_fpn_sbn-all_8xb4-2x_nus-3d.py"
+                config_file=root_dir / "third_party/mmdetection3d/configs/pointpillars/pointpillars_hv_fpn_sbn-all_8xb4-2x_nus-3d.py"
             ),
             runtime=SimpleNamespace(
                 datatype="bin",
@@ -104,7 +104,7 @@ class TestPointPillarsMMDetection3DNuScenesPipeline(unittest.TestCase):
             paths=SimpleNamespace(
                 detection_path=str(root_dir / "src/detector/pointpillars/detections/"),
                 dataset_path=str(dataset_path),
-                config_file=root_dir / "mmdetection3d/configs/pointpillars/pointpillars_hv_fpn_sbn-all_8xb4-2x_nus-3d.py"
+                config_file=root_dir / "third_party/mmdetection3d/configs/pointpillars/pointpillars_hv_fpn_sbn-all_8xb4-2x_nus-3d.py"
             ),
             runtime=SimpleNamespace(
                 datatype="bin",
