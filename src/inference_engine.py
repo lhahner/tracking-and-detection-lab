@@ -10,7 +10,7 @@ from skimage import io
 from geometry.coordinate_converter import CoordinateConverter
 from datasets.kitti_calib import extend_to_4x4
 from third_party.pointpillars._ext_src.utils.process import bbox_camera2lidar
-from evaluation.evaluation import Evaluation
+from evaluation import Evaluation
 from visualization.visualizer import Visualizer
 
 if importlib.util.find_spec("tkinter") is not None:

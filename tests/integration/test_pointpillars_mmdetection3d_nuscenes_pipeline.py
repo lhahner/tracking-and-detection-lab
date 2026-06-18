@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 from types import SimpleNamespace
 from definitions import ROOT_DIR
-from data_io.serializer import Serializer
+from data_io import Serializer
 
 class TestPointPillarsMMDetection3DNuScenesPipeline(unittest.TestCase):
     def test_predict_and_evaluate_from_inference_engine_with_nuscenes_mini(self):

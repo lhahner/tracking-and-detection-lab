@@ -5,7 +5,7 @@ try:
 except (ImportError, OSError):
     box3d_overlap = None
 from geometry.coordinate_converter import CoordinateConverter
-from evaluation.metrics.average_precision_3D import AveragePrecision3D
+from .average_precision_3D import AveragePrecision3D
 from config.logging_config import LoggingConfig
 
 logging_config = LoggingConfig()

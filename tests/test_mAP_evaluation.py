@@ -1,7 +1,6 @@
 import torch
 import unittest
-from evaluation.evaluation import Evaluation
-from evaluation.metrics.mean_average_precision_3D import MeanAveragePrecision3D
+from evaluation import Evaluation, MeanAveragePrecision3D
 
 
 class TestmAPEvaluation(unittest.TestCase):

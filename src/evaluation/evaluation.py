@@ -9,8 +9,9 @@ import torchmetrics
 import datetime
 from config.logging_config import LoggingConfig
 from geometry.coordinate_converter import CoordinateConverter
-from data_io.file_handler import write_output
+from data_io import write_output
 from definitions import ROOT_DIR
+from .metrics import MeanAveragePrecision3D
 
 logging_config = LoggingConfig()
 logger = logging_config.get_logger(__name__)
@@ -299,7 +300,7 @@ class Evaluation:
         """
         Standalone Average Precision interaction.
         """
-        from evaluation.metrics.average_precision_3D import AveragePrecision3D
+        from .metrics import AveragePrecision3D
         metric = AveragePrecision3D()
         metric.update(recall=recall,
                       precision=precision)
@@ -315,7 +316,6 @@ class Evaluation:
         """
         if predicted_detections.numel() == 0 or ground_truth.numel() == 0 or classes.numel() == 0:
             return torch.tensor([0])
-        from evaluation.metrics.mean_average_precision_3D import MeanAveragePrecision3D
 
         metric = MeanAveragePrecision3D(box_mode=box_mode, iou_threshold=self.iou_threshold)
         metric.update(

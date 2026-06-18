@@ -13,7 +13,7 @@ from entities.datatype import Datatype
 from geometry.coordinate_converter import CoordinateConverter
 from visualization.visualizer import Visualizer
 from config.settings_loader import SettingsLoader
-from evaluation.evaluation import Evaluation
+from evaluation import Evaluation
 
 import glob
 import time
