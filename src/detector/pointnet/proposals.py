@@ -6,7 +6,7 @@ import numpy as np
 import numpy as np
 import open3d as o3d
 
-from util.logging_config import LoggingConfig
+from config.logging_config import LoggingConfig
 
 def filter_points(points: np.ndarray, point_cloud_range: tuple[float, float, float, float, float, float]):
     """

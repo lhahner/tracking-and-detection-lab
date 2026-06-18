@@ -1,7 +1,7 @@
 _base_ = [
-    '../../../../mmdetection3d/configs/_base_/datasets/nus-3d.py',
-    '../../../../mmdetection3d/configs/_base_/models/centerpoint_voxel01_second_secfpn_nus.py',
-    '../../../../mmdetection3d/configs/_base_/schedules/cyclic-20e.py', '../../../../mmdetection3d/configs/_base_/default_runtime.py'
+    '../../../../third_party/mmdetection3d/configs/_base_/datasets/nus-3d.py',
+    '../../../../third_party/mmdetection3d/configs/_base_/models/centerpoint_voxel01_second_secfpn_nus.py',
+    '../../../../third_party/mmdetection3d/configs/_base_/schedules/cyclic-20e.py', '../../../../third_party/mmdetection3d/configs/_base_/default_runtime.py'
 ]
 
 # If point cloud range is changed, the models should also change their point

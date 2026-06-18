@@ -10,12 +10,13 @@ from torch.utils.data import DataLoader
 
 from detector.detector import Detector
 from entities.detection import Detection, DetectionSequence, FrameDetection
-from util.logging_config import LoggingConfig
+from config.logging_config import LoggingConfig
 from definitions import ROOT_DIR
 
 PROJECT_DIR = Path(__file__).resolve().parent
 DEFAULT_CONFIG_FILE = (
     Path(ROOT_DIR)
+    / "third_party"
     / "mmdetection3d"
     / "configs"
     / "pointpillars"

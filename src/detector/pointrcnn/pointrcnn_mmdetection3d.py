@@ -4,8 +4,8 @@ import numpy as np
 from detector.detector import Detector
 from torch.utils.data import DataLoader
 from entities.detection import Detection, DetectionSequence, FrameDetection
-from util.serializer import Serializer
-from util.settings_loader import SettingsLoader
+from data_io.serializer import Serializer
+from config.settings_loader import SettingsLoader
 import torch.nn.functional as Functional
 
 if torch.cuda.is_available():
@@ -13,7 +13,7 @@ if torch.cuda.is_available():
     from mmdet3d.structures.bbox_3d import Box3DMode
 else:
     raise EnvironmentError("This model needs a GPU to work")
-from util.logging_config import LoggingConfig
+from config.logging_config import LoggingConfig
 
 logging_config = LoggingConfig()
 logger = logging_config.get_logger(__name__)

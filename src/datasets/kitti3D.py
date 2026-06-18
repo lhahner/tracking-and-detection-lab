@@ -7,14 +7,14 @@ from PIL import Image
 from torch.utils.data import Dataset
 
 from detector.pointnet.proposals import generate_proposals
-from util.kitti_boxes import (
+from datasets.kitti_boxes import (
     extract_points_in_box,
     image_box_to_lidar_proposal,
     proposal_iou_bev,
 )
-from util.kitti_calib import parse_kitti_calibration
-from util.logging_config import LoggingConfig
-from util.kitti_calib import extend_to_4x4
+from datasets.kitti_calib import parse_kitti_calibration
+from config.logging_config import LoggingConfig
+from datasets.kitti_calib import extend_to_4x4
 from third_party.pointpillars._ext_src.utils.process import bbox_camera2lidar
 
 CLASSES = {

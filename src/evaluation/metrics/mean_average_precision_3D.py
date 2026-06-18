@@ -4,9 +4,9 @@ try:
     from pytorch3d.ops import box3d_overlap
 except (ImportError, OSError):
     box3d_overlap = None
-from util.coordinate_converter import CoordinateConverter
-from util.metrics.average_precision_3D import AveragePrecision3D
-from util.logging_config import LoggingConfig
+from geometry.coordinate_converter import CoordinateConverter
+from .average_precision_3D import AveragePrecision3D
+from config.logging_config import LoggingConfig
 
 logging_config = LoggingConfig()
 logger = logging_config.get_logger(__name__)

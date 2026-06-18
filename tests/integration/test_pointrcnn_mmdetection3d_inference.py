@@ -7,15 +7,15 @@ from pathlib import Path
 TESTS_DIR = os.path.dirname(__file__)
 PROJECT_ROOT = os.path.dirname(os.path.dirname(TESTS_DIR))
 SRC_ROOT = os.path.join(PROJECT_ROOT, "src")
-MMDET3D_SRC_ROOT = os.path.join(PROJECT_ROOT, "external", "mmdetection3d-cpu-only")
+MMDET3D_SRC_ROOT = os.path.join(PROJECT_ROOT, "third_party", "mmdetection3d")
 if SRC_ROOT not in sys.path:
     sys.path.insert(0, SRC_ROOT)
 if MMDET3D_SRC_ROOT not in sys.path:
     sys.path.insert(0, MMDET3D_SRC_ROOT)
 
 from datasets.kitti3D import Kitti3D
-from util.settings_loader import SettingsLoader
-from util.logging_config import LoggingConfig
+from config.settings_loader import SettingsLoader
+from config.logging_config import LoggingConfig
 
 KITTI3D_DUMMY_PATH = Path(os.path.join(TESTS_DIR, "..", "data", "kitti3d_dummy"))
 

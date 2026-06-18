@@ -70,3 +70,4 @@ docs/_build/
 /.pytest_cache/
 
 tests/data/dets/*
+src/detector/*/detections/*

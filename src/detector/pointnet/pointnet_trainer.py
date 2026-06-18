@@ -1,4 +1,3 @@
-from util.trainer import Trainer
 from datasets.dataloader import get_dataloader
 
 import argparse
@@ -13,9 +12,9 @@ from torch.utils.data import DataLoader
 from datasets.kitti3D import Kitti3D
 from detector.pointnet.infer import build_model
 
-from util.logging_config import LoggingConfig
+from config.logging_config import LoggingConfig
 
-class PointnetTrainer(Trainer):
+class PointnetTrainer:
     def __init__(self, train_dataset, val_dataset, output_checkpoint, epochs, batch_size, num_points, learning_rate,
                  use_intensity):
         self.train_dataset = train_dataset

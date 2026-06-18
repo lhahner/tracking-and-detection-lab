@@ -14,7 +14,7 @@ from detector.pointnet.postprocess import (
 )
 from detector.pointnet.preprocess import prepare_crop
 from detector.pointnet.proposals import generate_proposals
-from util.logging_config import LoggingConfig
+from config.logging_config import LoggingConfig
 
 logging_config = LoggingConfig()
 logger = logging_config.get_logger(__name__)

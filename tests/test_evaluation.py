@@ -9,7 +9,7 @@ import torch
 import pytest
 
 from entities.detection import Detection, DetectionSequence, FrameDetection
-from util.evaluation import Evaluation
+from evaluation import Evaluation
 
 
 class TestEvaluationIoUAndAnalysis:

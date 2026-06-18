@@ -11,7 +11,7 @@ SRC_ROOT = os.path.join(PROJECT_ROOT, "src")
 if SRC_ROOT not in sys.path:
     sys.path.insert(0, SRC_ROOT)
 
-from util.coordinate_converter import CoordinateConverter
+from geometry.coordinate_converter import CoordinateConverter
 
 
 class TestCoordinateConverter(unittest.TestCase):

@@ -25,7 +25,7 @@ def load_pointrcnn_module():
 
     bbox_module.Box3DMode = FakeBox3DMode
 
-    logging_module = types.ModuleType("util.logging_config")
+    logging_module = types.ModuleType("config.logging_config")
 
     class FakeLoggingConfig:
         def get_logger(self, name):
@@ -38,7 +38,7 @@ def load_pointrcnn_module():
         "mmdet3d.apis": apis_module,
         "mmdet3d.structures": types.ModuleType("mmdet3d.structures"),
         "mmdet3d.structures.bbox_3d": bbox_module,
-        "util.logging_config": logging_module,
+        "config.logging_config": logging_module,
     }
 
     module_name = "detector.pointrcnn.pointrcnn_mmdetection3d"

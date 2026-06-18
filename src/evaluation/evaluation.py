@@ -7,10 +7,11 @@ from entities.detection import DetectionSequence
 import motmetrics as mm
 import torchmetrics
 import datetime
-from util.logging_config import LoggingConfig
-from util.coordinate_converter import CoordinateConverter
-from util.file_handler import write_output
+from config.logging_config import LoggingConfig
+from geometry.coordinate_converter import CoordinateConverter
+from data_io.file_handler import write_output
 from definitions import ROOT_DIR
+from .metrics import MeanAveragePrecision3D
 
 logging_config = LoggingConfig()
 logger = logging_config.get_logger(__name__)
@@ -299,7 +300,7 @@ class Evaluation:
         """
         Standalone Average Precision interaction.
         """
-        from util.metrics.average_precision_3D import AveragePrecision3D
+        from .metrics import AveragePrecision3D
         metric = AveragePrecision3D()
         metric.update(recall=recall,
                       precision=precision)
@@ -315,7 +316,6 @@ class Evaluation:
         """
         if predicted_detections.numel() == 0 or ground_truth.numel() == 0 or classes.numel() == 0:
             return torch.tensor([0])
-        from util.metrics.mean_average_precision_3D import MeanAveragePrecision3D
 
         metric = MeanAveragePrecision3D(box_mode=box_mode, iou_threshold=self.iou_threshold)
         metric.update(

@@ -9,11 +9,11 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from skimage import io
 
-from util.datatype import Datatype
-from util.coordinate_converter import CoordinateConverter
-from util.visualizer import Visualizer
-from util.settings_loader import SettingsLoader
-from util.evaluation import Evaluation
+from entities.datatype import Datatype
+from geometry.coordinate_converter import CoordinateConverter
+from visualization.visualizer import Visualizer
+from config.settings_loader import SettingsLoader
+from evaluation import Evaluation
 
 import glob
 import time
@@ -36,7 +36,7 @@ from detector.pointnet.pointnet_trainer import PointnetTrainer
 
 from datasets.kitti3D import Kitti3D, CLASSES
 from inference_engine import InferenceEngine
-from util.logging_config import LoggingConfig
+from config.logging_config import LoggingConfig
 from entities.detection import convert_to_tensor
 
 if __name__ == "__main__":

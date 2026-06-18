@@ -1,8 +1,8 @@
 _base_ = [
-    '../../../../mmdetection3d/configs/_base_/datasets/kitti-3d-car.py',
-    '../../../../mmdetection3d/configs/_base_/models/point_rcnn.py',
-    '../../../../mmdetection3d/configs/_base_/default_runtime.py',
-    '../../../../mmdetection3d/configs/_base_/schedules/cyclic-40e.py'
+    '../../../../third_party/mmdetection3d/configs/_base_/datasets/kitti-3d-car.py',
+    '../../../../third_party/mmdetection3d/configs/_base_/models/point_rcnn.py',
+    '../../../../third_party/mmdetection3d/configs/_base_/default_runtime.py',
+    '../../../../third_party/mmdetection3d/configs/_base_/schedules/cyclic-40e.py'
 ]
 
 # dataset settings
