@@ -1,6 +1,6 @@
 [submodule "docs/thesis/deep-learning-based-detection-systems-for-multi-object-tracking-in-lidar-data"]
 	path = docs/thesis/deep-learning-based-detection-systems-for-multi-object-tracking-in-lidar-data
 	url = https://gitlab.gwdg.de/lennart.hahner/deep-learning-based-detection-systems-for-multi-object-tracking-in-lidar-data.git
-[submodule "mmdetection3d"]
+[submodule "third_party/mmdetection3d"]
 	path = third_party/mmdetection3d
 	url = https://github.com/open-mmlab/mmdetection3d.git
