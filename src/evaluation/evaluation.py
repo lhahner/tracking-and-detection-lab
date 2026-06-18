@@ -9,7 +9,7 @@ import torchmetrics
 import datetime
 from config.logging_config import LoggingConfig
 from geometry.coordinate_converter import CoordinateConverter
-from data_io import write_output
+from data_io.file_handler import write_output
 from definitions import ROOT_DIR
 from .metrics import MeanAveragePrecision3D
 
