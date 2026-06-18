@@ -117,6 +117,34 @@ class InferenceEngine:
                                                  classes=self.dataset.classes,
                                                  settings=self.settings,
                                                  checkpoint_file=model_path)
+        if detector_name == "regnet_mmdetection3d":
+            from detector.regnet.regnet_mmdetection3d import RegnetMMDetections3D
+            detector = RegnetMMDetections3D(dataset=self.dataset,
+                                                 config_file=self.settings.paths.config_file,
+                                                 classes=self.dataset.classes,
+                                                 settings=self.settings,
+                                                 checkpoint_file=model_path)
+        if detector_name == "ssn_mmdetection3d":
+            from detector.ssn.ssn_mmdetection3d import SSNMMDetections3D 
+            detector = SSNMMDetections3D(dataset=self.dataset,
+                                         config_file=self.settings.paths.config_file,
+                                         classes=self.dataset.classes,
+                                         settings=self.settings,
+                                         checkpoint_file=model_path)
+        if detector_name == "fcos3d_mmdetection3d":
+            from detector.fcos3d.fcos3d_mmdetection3d import FCOS3DMMDetections3D 
+            detector = FCOS3DMMDetections3D(dataset=self.dataset,
+                                            config_file=self.settings.paths.config_file,
+                                            classes=self.dataset.classes,
+                                            settings=self.settings,
+                                            checkpoint_file=model_path)
+        if detector_name == "pgd_mmdetection3d":
+            from detector.pgd.pgd_mmdetection3d import PGDMMDetections3D 
+            detector = PGDMMDetections3D(dataset=self.dataset,
+                                            config_file=self.settings.paths.config_file,
+                                            classes=self.dataset.classes,
+                                            settings=self.settings,
+                                            checkpoint_file=model_path)
         return detector.detect()
 
     def evaluate_detection(self,
