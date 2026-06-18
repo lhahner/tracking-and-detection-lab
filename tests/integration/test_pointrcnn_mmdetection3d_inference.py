@@ -14,8 +14,8 @@ if MMDET3D_SRC_ROOT not in sys.path:
     sys.path.insert(0, MMDET3D_SRC_ROOT)
 
 from datasets.kitti3D import Kitti3D
-from util.settings_loader import SettingsLoader
-from util.logging_config import LoggingConfig
+from config.settings_loader import SettingsLoader
+from config.logging_config import LoggingConfig
 
 KITTI3D_DUMMY_PATH = Path(os.path.join(TESTS_DIR, "..", "data", "kitti3d_dummy"))
 

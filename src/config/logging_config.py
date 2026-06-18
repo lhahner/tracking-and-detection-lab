@@ -6,7 +6,7 @@ import datetime
 
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
-from util.settings_loader import SettingsLoader
+from config.settings_loader import SettingsLoader
 
 
 class LoggingConfig:

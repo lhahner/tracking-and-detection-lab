@@ -7,11 +7,11 @@ import torch
 import numpy as np
 from skimage import io
 
-from util.coordinate_converter import CoordinateConverter
-from util.kitti_calib import extend_to_4x4
+from geometry.coordinate_converter import CoordinateConverter
+from datasets.kitti_calib import extend_to_4x4
 from third_party.pointpillars._ext_src.utils.process import bbox_camera2lidar
-from util.evaluation import Evaluation
-from util.visualizer import Visualizer
+from evaluation.evaluation import Evaluation
+from visualization.visualizer import Visualizer
 
 if importlib.util.find_spec("tkinter") is not None:
     matplotlib.use("Agg")

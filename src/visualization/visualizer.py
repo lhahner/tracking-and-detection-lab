@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from skimage import io
 import numpy as np
-from util.logging_config import LoggingConfig
+from config.logging_config import LoggingConfig
 
 
 class Visualizer:

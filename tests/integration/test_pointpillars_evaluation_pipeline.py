@@ -3,7 +3,7 @@ from detector import detector
 from inference_engine import InferenceEngine
 from types import SimpleNamespace
 from definitions import ROOT_DIR
-from util.evaluation import Evaluation
+from evaluation.evaluation import Evaluation
 import os
 
 class TestPointpillarsEvaluationPipeline(unittest.TestCase):

@@ -11,7 +11,7 @@ SRC_ROOT = os.path.join(PROJECT_ROOT, "src")
 if SRC_ROOT not in sys.path:
     sys.path.insert(0, SRC_ROOT)
 
-from util.visualizer import Visualizer
+from visualization.visualizer import Visualizer
 
 if "skimage" not in sys.modules:
     skimage_module = types.ModuleType("skimage")
@@ -20,10 +20,10 @@ if "skimage" not in sys.modules:
 
 
 class TestVisualizer(unittest.TestCase):
-    @patch("util.visualizer.plt.draw")
-    @patch("util.visualizer.plt.subplots")
-    @patch("util.visualizer.plt.ion")
-    @patch("util.visualizer.io.imread")
+    @patch("visualization.visualizer.plt.draw")
+    @patch("visualization.visualizer.plt.subplots")
+    @patch("visualization.visualizer.plt.ion")
+    @patch("visualization.visualizer.io.imread")
     def test_visualize_image_and_bev(self,
                                      mock_imread,
                                      mock_ion,
@@ -75,7 +75,7 @@ class TestVisualizer(unittest.TestCase):
         mock_fig.tight_layout.assert_called_once()
         mock_draw.assert_called_once()
 
-    @patch("util.visualizer.io.imread")
+    @patch("visualization.visualizer.io.imread")
     def test_visualize_tracking_frame_render_image(self,
                                                    mock_imread):
         visualizer = Visualizer("bin")
@@ -134,7 +134,7 @@ class TestVisualizer(unittest.TestCase):
         expected_heigth = (y_range[1] - y_range[0]) / resolution
         self.assertEquals(bev.shape, (expected_heigth, expected_width, 3))
 
-    @patch("util.visualizer.np.fromfile")
+    @patch("visualization.visualizer.np.fromfile")
     def test_lidar_bin_to_bev_synthetic_point_cloud_transformed(self,
                                                                 mock_fromfile):
         points = np.array([0.3, 0.5, 0.4, 0.7, 0.1, 0.1, 0.1, 0.1])
@@ -150,7 +150,7 @@ class TestVisualizer(unittest.TestCase):
         self.assertEquals(np.floor(max_intensity), 0)
         self.assertEquals(np.floor(max_density), 0)
 
-    @patch("util.visualizer.np.fromfile")
+    @patch("visualization.visualizer.np.fromfile")
     def test_lidar_bin_to_bev_negative_tests(self,
                                              mock_fromfile):
         points = np.array([0.3, 0.5, 0.4])

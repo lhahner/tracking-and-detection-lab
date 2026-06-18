@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from detector.pointnet.proposals import cluster_to_proposal
-from util.kitti_boxes import proposal_iou_bev
+from datasets.kitti_boxes import proposal_iou_bev
 
 
 def attach_predictions(proposals: list[dict], labels, scores, class_names: dict[int, str], score_threshold: float):

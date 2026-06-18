@@ -10,7 +10,7 @@ from pathlib import Path
 from detector.detector import Detector
 from entities.detection import Detection, DetectionSequence, FrameDetection
 from definitions import ROOT_DIR
-from util.logging_config import LoggingConfig
+from config.logging_config import LoggingConfig
 
 PROJECT_DIR = Path(__file__).resolve().parent
 DEFAULT_CONFIG_FILE = (

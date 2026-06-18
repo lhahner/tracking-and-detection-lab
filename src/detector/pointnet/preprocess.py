@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 import torch
 
-from util.logging_config import LoggingConfig
+from config.logging_config import LoggingConfig
 
 
 def sample_points(points: np.ndarray, num_points: int) -> np.ndarray:
