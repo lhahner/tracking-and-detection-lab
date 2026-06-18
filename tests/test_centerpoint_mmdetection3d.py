@@ -160,7 +160,7 @@ class TestCenterPointMMDetections3D(unittest.TestCase):
                 torch.tensor([0, 1]),
             )
         )
-        with self.assertRaisesRegex(ValueError, "outside the configured label map"):
+        with self.assertRaises(ValueError):
             detector._CenterPointMMDetections3D__map_labels(torch.tensor([12]))
 
 

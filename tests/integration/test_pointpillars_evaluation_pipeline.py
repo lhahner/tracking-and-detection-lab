@@ -1,7 +1,10 @@
 import unittest
+from detector import detector
 from inference_engine import InferenceEngine
 from types import SimpleNamespace
 from definitions import ROOT_DIR
+from util.evaluation import Evaluation
+import os
 
 class TestPointpillarsEvaluationPipeline(unittest.TestCase):
     def build_settings(self):
@@ -39,4 +42,3 @@ class TestPointpillarsEvaluationPipeline(unittest.TestCase):
         results = inference_engine.evaluate_detection(detections=predictions,
                                                       classes=[1, 2, 3])
         self.assertTrue(len(results) >= 1)
-

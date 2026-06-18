@@ -1,11 +1,16 @@
 from pathlib import Path
+import csv
 import numpy as np
 import torch
 from torch.autograd import grad
+from entities.detection import DetectionSequence
 import motmetrics as mm
 import torchmetrics
 import datetime
 from util.logging_config import LoggingConfig
+from util.coordinate_converter import CoordinateConverter
+from util.file_handler import write_output
+from definitions import ROOT_DIR
 
 logging_config = LoggingConfig()
 logger = logging_config.get_logger(__name__)
@@ -269,8 +274,6 @@ class Evaluation:
             return box3d_overlap(predicted_detections, ground_truth)
         except ImportError as e:
             logger.error("PyTorch3D not installed, either install or try to bypass", e)
-
-
 
     def compute_precision_and_recall(self,
                                      predicted_detection_classes: torch.tensor,
