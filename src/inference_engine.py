@@ -141,10 +141,10 @@ class InferenceEngine:
         if detector_name == "pgd_mmdetection3d":
             from detector.pgd.pgd_mmdetection3d import PGDMMDetections3D 
             detector = PGDMMDetections3D(dataset=self.dataset,
-                                            config_file=self.settings.paths.config_file,
-                                            classes=self.dataset.classes,
-                                            settings=self.settings,
-                                            checkpoint_file=model_path)
+                                         config_file=self.settings.paths.config_file,
+                                         classes=self.dataset.classes,
+                                         settings=self.settings,
+                                         checkpoint_file=model_path)
         return detector.detect()
 
     def evaluate_detection(self,
