@@ -1,162 +1,142 @@
-import torch
-import os
+from pathlib import Path
+
 import numpy as np
-from detector.detector import Detector
-from torch.utils.data import DataLoader
-from entities.detection import Detection, DetectionSequence, FrameDetection
-from data_io.serializer import Serializer
-from config.settings_loader import SettingsLoader
-from detector.detector_registry import MODELS
+import torch
 import torch.nn.functional as Functional
+from torch.utils.data import DataLoader
+
+from config.logging_config import LoggingConfig
+from definitions import ROOT_DIR
+from detector.detector import Detector
+from detector.detector_registry import MODELS
+from entities.detection import Detection, DetectionSequence, FrameDetection
 
 if torch.cuda.is_available():
     from mmdet3d.apis import init_model, inference_detector
-    from mmdet3d.structures.bbox_3d import Box3DMode
 else:
     raise EnvironmentError("This model needs a GPU to work")
-from config.logging_config import LoggingConfig
+
+PROJECT_DIR = Path(__file__).resolve().parent
+DEFAULT_CONFIG_FILE = (
+    Path(ROOT_DIR)
+    / "third_party"
+    / "mmdetection3d"
+    / "configs"
+    / "point_rcnn"
+    / "point-rcnn_8xb2_kitti-3d-3class.py"
+)
+DEFAULT_CHECKPOINT_FILE = (
+    PROJECT_DIR
+    / "model"
+    / "point_rcnn_2x8_kitti-3d-3classes_20211208_151344.pth"
+)
 
 logging_config = LoggingConfig()
 logger = logging_config.get_logger(__name__)
 
-PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
 
-
-@MODELS.register("pointrcnn", "pointrcnn_mmdetection3d")
+@MODELS.register("pointrcnn_mmdetection3d")
 class PointRCNNmmDetections3D(Detector):
-    """
-    PointRCNN implementation based on the pre-trained
-    model from mmdetection3d.
-
-    Attributes:
-        :param dataset:
-        :param config_file:
-        :param checkpoint_file:
-        :param classes:
-        :param batch_size:
-        :param num_inference_samples:
-    """
-    def __init__(self,
-                 dataset,
-                 config_file,
-                 classes,
-                 settings,
-                 checkpoint_file=f"{PROJECT_DIR}/model/point_rcnn_2x8_kitti-3d-3classes_20211208_151344.pth",
-                 batch_size=16, num_inference_samples=50.
-                 ):
+    def __init__(
+        self,
+        dataset,
+        classes,
+        settings,
+        config_file=DEFAULT_CONFIG_FILE,
+        checkpoint_file=DEFAULT_CHECKPOINT_FILE,
+        batch_size=16):
         self.dataset = dataset
         self.config_file = config_file
         self.checkpoint_file = checkpoint_file
-        self.model = init_model(self.config_file, self.checkpoint_file)
-        self.num_inference_samples = num_inference_samples
-        self.classes = classes
+        self.classes = classes 
         self.batch_size = batch_size
         self.settings = settings
-        self.serializer = Serializer(settings=self.settings)
+        self.model = init_model(
+                str(self.config_file), 
+                str(self.checkpoint_file)
+        )
+        self.class_map = self.__build_class_map(self.classes)
 
     def detect(self):
-        """
-        Run detection with model using output format for
-        further processing.
-
-        Parameters:
-            :param format_option:
-            :rtype: list(str)
-
-        Returns:
-            List of formatted detectiosn that are not empty and and object.
-        """
-        test_dataloader: torch.utils.dataloader = DataLoader(dataset=self.dataset, 
-                                                             batch_size=self.batch_size,
-                                                             collate_fn=self.dataset.custom_collate)
-        detection_sequence: DetectionSequence = DetectionSequence()
+        test_dataloader = DataLoader(
+            dataset=self.dataset,
+            batch_size=self.batch_size,
+            collate_fn=self.dataset.custom_collate,
+        )
+        detection_sequence = DetectionSequence()
         for points, targets, samples in test_dataloader:
             for point, target, sample_id in zip(points, targets, samples):
-                instance_data_reference = inference_detector(self.model, point)[0][0].pred_instances_3d
-                labels_reference: torch.tensor = instance_data_reference.labels_3d
-                num_obj: int = instance_data_reference.bboxes_3d.tensor.shape[0]
-                # Points can contain no  objects
-                if num_obj == 0:
-                    continue
-                all_bboxes, all_scores = self.__sample(point=point, num_obj=num_obj)
-
-                bboxes_tensor: torch.tensor = torch.stack(all_bboxes)
-                scores_tensor: torch.tensor = torch.stack(all_scores)
-
-                scores: torch.tensor = self.__mean_nonzero(tensor=scores_tensor).squeeze(0)
-                labels: torch.tensor = torch.tensor([3, 1, 2], device=labels_reference.device)[labels_reference]
-                bboxes: torch.tensor = Box3DMode.convert(
-                    self.__mean_nonzero(tensor=bboxes_tensor),
-                    Box3DMode.LIDAR,
-                    Box3DMode.CAM).squeeze(0)
-
+                instance_data = self.__predict_instances(point)
+                detections, highest_score_index = self.__convert_instances(instance_data)
                 detection_sequence.frames.append(FrameDetection(frame=sample_id,
-                                                                highest_score_index=scores.argmax(),
-                                                                dets=[
-                                                                    Detection(
-                                                                        score=score,
-                                                                        label=label,
-                                                                        box=box) for score, box, label in zip(scores, bboxes, labels)
-                                                                ],
-                                                            targets=target))
+                                                                highest_score_index=highest_score_index,
+                                                                dets=detections,
+                                                                targets=target,
+                                                                )
+                )
         return detection_sequence
 
-    def __sample(self, point, num_obj):
-        """samples from the model a dedicted number of times.
+    def __build_class_map(self, classes):
+        model_classes = None
+        if hasattr(self.model, "dataset_meta"):
+            model_classes = self.model.dataset_meta.get("classes")
+        if model_classes is None and hasattr(self.model, "cfg"):
+            model_classes = self.model.cfg.get("class_names", None)
+        if model_classes is None:
+            raise ValueError("Unable to determine MMDetection3D PointRCNN class order")
+        try:
+            return torch.tensor([classes[name] for name in model_classes], dtype=torch.long)
+        except KeyError as exc:
+            raise ValueError(
+                f"MMDetection3D class {exc.args[0]!r} is not present in the project label map"
+            ) from exc
 
-        :param point:
-            The points-set from the dataset.
-        :param num_obj:
-            The inital number of objects from the very first prediction.
-        """
-        all_bboxes: list = []
-        all_scores: list = []
+    def __predict_instances(self, point):
+        result = inference_detector(self.model, self.__prepare_point_input(point))
+        while isinstance(result, (list, tuple)) and len(result) > 0:
+            result = result[0]
+        if hasattr(result, "pred_instances_3d"):
+            return result.pred_instances_3d
+        raise ValueError("MMDetection3D inference result does not contain pred_instances_3d")
 
-        for i in range(0, int(self.num_inference_samples)):
-            instance_data = inference_detector(self.model, point)[0][0].pred_instances_3d
-            scores_tensor_infered: torch.tensor = instance_data.scores_3d
-            bboxes_tensor_infered: torch.tensor = instance_data.bboxes_3d.tensor
+    def __prepare_point_input(self, point):
+        if isinstance(point, torch.Tensor):
+            point = point.detach().cpu().numpy()
+        elif not isinstance(point, np.ndarray):
+            point = np.asarray(point)
+        point = point.astype(np.float32, copy=False)
+        if point.ndim != 2:
+            raise ValueError(f"Expected point cloud with shape [N, C], got {point.shape}")
+        if point.shape[1] < 4:
+            raise ValueError(
+                f"Expected at least four point features [x, y, z, intensity], got {point.shape[1]}"
+            )
+        return point
 
-            num_obj_actual_bbox: int = bboxes_tensor_infered.shape[0]
-            num_obj_actual_score: int = scores_tensor_infered.shape[0]
+    def __convert_instances(self, instance_data):
+        scores = instance_data.scores_3d.detach().cpu().float()
+        bboxes_3d = instance_data.bboxes_3d
+        bbox_tensor = bboxes_3d.tensor if hasattr(bboxes_3d, "tensor") else bboxes_3d
+        bboxes = bbox_tensor.detach().cpu().float()
+        labels_reference = instance_data.labels_3d.detach().cpu().long()
 
-            if num_obj_actual_bbox != num_obj_actual_score:
-                raise ValueError("Number of identified objects do not align wiht scores")
+        if bboxes.numel() == 0:
+            return [], None
+        if bboxes.ndim != 2 or bboxes.shape[1] < 7:
+            raise ValueError(f"Expected MMDetection3D boxes with shape [N, >=7], got {tuple(bboxes.shape)}")
 
-            if num_obj_actual_bbox < num_obj:
-                shape_diff: int = num_obj - num_obj_actual_bbox
-                bboxes_tensor_infered: torch.tensor = Functional.pad(
-                                                        input=bboxes_tensor_infered,
-                                                        pad=(0, 0, shape_diff, 0),
-                                                        mode='constant',
-                                                        value=0)
-            elif num_obj_actual_bbox > num_obj:
-                bboxes_tensor_infered.resize_(num_obj, 7)
+        bboxes = bboxes[:, :7].clone()
+        labels = self.__map_labels(labels_reference)
+        highest_score_index = int(scores.argmax().item())
+        return [
+            Detection(score=float(score.item()), label=int(label.item()), box=box)
+            for score, box, label in zip(scores, bboxes, labels)
+        ], highest_score_index
 
-            if num_obj_actual_score < num_obj:
-                shape_diff: int = num_obj - num_obj_actual_score
-                scores_tensor_infered: torch.tensor = Functional.pad(
-                                                        input=scores_tensor_infered,
-                                                        pad=(0, shape_diff),
-                                                        mode='constant',
-                                                        value=0)
-            elif num_obj_actual_score > num_obj:
-                scores_tensor_infered.resize_(num_obj)
-
-            all_bboxes.append(bboxes_tensor_infered)
-            all_scores.append(scores_tensor_infered)
-        return all_bboxes, all_scores
-
-    def __mean_nonzero(self, tensor: torch.tensor) -> torch.tensor:
-        """
-        Simple helper function to compute the mean of the given tensor.
-
-        Parameters
-            :param tensor:
-            :type tensor: torch.tensor
-            :rtype: torch.tensor
-        """
-        if tensor.numel() <= 0:
-            raise ValueError("Tensor to compute only includes zeros.")
-        mask: torch.tensor = tensor != 0
-        return tensor.sum(dim=0, keepdim=True) / mask.sum(dim=0, keepdim=True).clamp(min=1)
+    def __map_labels(self, labels_reference):
+        if self.class_map.numel() == 0:
+            return labels_reference
+        valid = (labels_reference >= 0) & (labels_reference < self.class_map.numel())
+        if not torch.all(valid):
+            raise ValueError("MMDetection3D PointRCNN returned a class index outside the configured label map")
+        return self.class_map[labels_reference]

@@ -45,12 +45,13 @@ class InferenceEngine:
         )
         self.dataset = None
 
-    def load(self, split, max_samples):
+    def load(self, split, max_samples, labels=None):
         dataset_name = self.settings.runtime.dataset.lower()
         if dataset_name == "kitti3d":
             self.dataset = Kitti3D(data_root=self.settings.paths.dataset_path,
                                    split=split,
-                                   max_samples=max_samples)
+                                   max_samples=max_samples,
+                                   labels=labels)
         elif dataset_name in {"nuscenes", "nuscenes-mini"}:
             version = "v1.0-mini" if dataset_name == "nuscenes-mini" else "v1.0-trainval"
             split = "mini_val" if dataset_name == "nuscenes-mini" else "val"
@@ -63,17 +64,12 @@ class InferenceEngine:
         return self.dataset
 
     def predict(self, detector_name, dataset_path, detection_path, model_path):
-        """Instantiate and run the configured detector implementation.
-
-        Args:
-            detector_name: Short name of the detector to execute.
-            dataset_path: Directory that contains the input frames.
-            detection_path: Directory where `det.txt` should be written.
-            model_path: Path to the detector model weights if required.
-        """
+        # TODO define a project wide source of class-definitions
         classes = getattr(self.dataset, "classes", None)
         if classes is None:
             classes = getattr(self.dataset, "labels", None)
+        if classes is None:
+            classes = getattr(self.settings.dataset, "classes", None)
         if classes is None:
             classes = getattr(self.settings.benchmark, "class_filter", None)
         detector = MODELS.create(detector_name,
