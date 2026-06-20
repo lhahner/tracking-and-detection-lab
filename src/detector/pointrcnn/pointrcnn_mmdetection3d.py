@@ -6,6 +6,7 @@ from torch.utils.data import DataLoader
 from entities.detection import Detection, DetectionSequence, FrameDetection
 from data_io.serializer import Serializer
 from config.settings_loader import SettingsLoader
+from detector.detector_registry import MODELS
 import torch.nn.functional as Functional
 
 if torch.cuda.is_available():
@@ -21,6 +22,7 @@ logger = logging_config.get_logger(__name__)
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
+@MODELS.register("pointrcnn", "pointrcnn_mmdetection3d")
 class PointRCNNmmDetections3D(Detector):
     """
     PointRCNN implementation based on the pre-trained

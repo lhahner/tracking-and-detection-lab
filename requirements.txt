@@ -25,3 +25,4 @@ opencv_python
 PyYAML
 setuptools
 tensorboard
+nuscenes-devkit

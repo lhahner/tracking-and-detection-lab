@@ -9,6 +9,7 @@ except (ImportError, ModuleNotFoundError) as exc:
 from torch.utils.data import DataLoader
 
 from detector.detector import Detector
+from detector.detector_registry import MODELS
 from entities.detection import Detection, DetectionSequence, FrameDetection
 from config.logging_config import LoggingConfig
 from definitions import ROOT_DIR
@@ -31,6 +32,7 @@ logging_config = LoggingConfig()
 logger = logging_config.get_logger(__name__)
 
 
+@MODELS.register("regnet_mmdetection3d")
 class RegnetMMDetections3D(Detector):
     def __init__(self,
                  dataset,

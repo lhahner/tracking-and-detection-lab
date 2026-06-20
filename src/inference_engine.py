@@ -21,8 +21,7 @@ from tracker.SORT.sort import Sort
 from entities.detection import convert_to_tensor, convert_classes_to_tensor
 
 # Detection systems
-from detector.detr.detr_huggingface import DetrHuggingFaceDetector
-from detector.pointpillars.pointpillars import Pointpillars
+from detector.detector_registry import MODELS
 
 # Datasets
 from datasets.nuScenes import NuScenesDataset
@@ -72,79 +71,17 @@ class InferenceEngine:
             detection_path: Directory where `det.txt` should be written.
             model_path: Path to the detector model weights if required.
         """
-        detector = None
-        if detector_name == "frcnn":
-            detector = FasterRCNNDetector(
-                input_path=dataset_path, output_path=detection_path, threshold=0.9
-            )
-        if detector_name == "detr":
-            detector = DetrHuggingFaceDetector(
-                input_path=dataset_path,
-                output_path=detection_path,
-            )
-        if detector_name == "yolo":
-            detector = YoloDetector(
-                input_path=dataset_path,
-                output_path=detection_path,
-                model_path=model_path,
-            )
-        if detector_name == "detectron2":
-            detector = MaskFasterRCNNDetector(
-                input_path=dataset_path, output_path=detection_path, threshold=0.9
-            )
-        if detector_name == "pointrcnn":
-            from detector.pointrcnn.pointrcnn_mmdetection3d import PointRCNNmmDetections3D
-            detector = PointRCNNmmDetections3D(dataset=self.dataset,
-                                               config_file=self.settings.paths.config_file,
-                                               classes=self.settings.benchmark.class_filter,
-                                               settings=self.settings)
-        if detector_name == "pointpillars":
-            detector = Pointpillars(dataset=self.dataset,
-                                               config_file=self.settings.paths.config_file,
-                                               classes=self.settings.benchmark.class_filter,
-                                               settings=self.settings)
-        if detector_name == "pointpillars_mmdetection3d":
-            from detector.pointpillars.pointpillars_mmdetection3d import PointPillarsMMDetections3D
-            detector = PointPillarsMMDetections3D(dataset=self.dataset,
-                                                  config_file=self.settings.paths.config_file,
-                                                  classes=self.dataset.classes,
-                                                  settings=self.settings,
-                                                  checkpoint_file=model_path)
-        if detector_name == "centerpoint_mmdetection3d":
-            from detector.centerpoint.centerpoint_mmdetection3d import CenterPointMMDetections3D
-            detector = CenterPointMMDetections3D(dataset=self.dataset,
-                                                 config_file=self.settings.paths.config_file,
-                                                 classes=self.dataset.classes,
-                                                 settings=self.settings,
-                                                 checkpoint_file=model_path)
-        if detector_name == "regnet_mmdetection3d":
-            from detector.regnet.regnet_mmdetection3d import RegnetMMDetections3D
-            detector = RegnetMMDetections3D(dataset=self.dataset,
-                                                 config_file=self.settings.paths.config_file,
-                                                 classes=self.dataset.classes,
-                                                 settings=self.settings,
-                                                 checkpoint_file=model_path)
-        if detector_name == "ssn_mmdetection3d":
-            from detector.ssn.ssn_mmdetection3d import SSNMMDetections3D 
-            detector = SSNMMDetections3D(dataset=self.dataset,
-                                         config_file=self.settings.paths.config_file,
-                                         classes=self.dataset.classes,
-                                         settings=self.settings,
-                                         checkpoint_file=model_path)
-        if detector_name == "fcos3d_mmdetection3d":
-            from detector.fcos3d.fcos3d_mmdetection3d import FCOS3DMMDetections3D 
-            detector = FCOS3DMMDetections3D(dataset=self.dataset,
-                                            config_file=self.settings.paths.config_file,
-                                            classes=self.dataset.classes,
-                                            settings=self.settings,
-                                            checkpoint_file=model_path)
-        if detector_name == "pgd_mmdetection3d":
-            from detector.pgd.pgd_mmdetection3d import PGDMMDetections3D 
-            detector = PGDMMDetections3D(dataset=self.dataset,
-                                         config_file=self.settings.paths.config_file,
-                                         classes=self.dataset.classes,
-                                         settings=self.settings,
-                                         checkpoint_file=model_path)
+        classes = getattr(self.dataset, "classes", None)
+        if classes is None:
+            classes = getattr(self.dataset, "labels", None)
+        if classes is None:
+            classes = getattr(self.settings.benchmark, "class_filter", None)
+        detector = MODELS.create(detector_name,
+                                 dataset=self.dataset,
+                                 config_file=self.settings.paths.config_file,
+                                 classes=classes,
+                                 settings=self.settings,
+                                 checkpoint_file=model_path)
         return detector.detect()
 
     def evaluate_detection(self,
