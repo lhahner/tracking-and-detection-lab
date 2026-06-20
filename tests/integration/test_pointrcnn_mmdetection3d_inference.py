@@ -2,7 +2,6 @@ import importlib.util
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
-
 from definitions import ROOT_DIR
 from inference_engine import InferenceEngine
 
