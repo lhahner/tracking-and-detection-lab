@@ -30,7 +30,9 @@ class TestPointpillarsEvaluationPipeline(unittest.TestCase):
         detection_path = "output/"
         model_path = f"{ROOT_DIR}/third_party/pointpillars/_ext_src/pretrained/epoch_160.pth"
         inference_engine = InferenceEngine(settings=self.build_settings())
-        inference_engine.load(split="val", max_samples=10)
+        inference_engine.load(split="val", 
+                              max_samples=10,
+                              labels=[1, 2, 3])
         predictions = inference_engine.predict(
                 detector_name=detector_name,
                 dataset_path=dataset_path,

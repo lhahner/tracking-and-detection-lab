@@ -58,7 +58,9 @@ class TestCenterPointMMDetection3DNuScenesPipeline(unittest.TestCase):
         )
 
         inference_engine = InferenceEngine(settings=settings)
-        dataset = inference_engine.load(split="mini_val", max_samples=1)
+        dataset = inference_engine.load(split="mini_val", 
+                                        max_samples=1,
+                                        labels=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
         self.assertEqual(len(dataset), 1)
 
         predictions = inference_engine.predict(

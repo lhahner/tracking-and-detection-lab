@@ -57,24 +57,18 @@ class InferenceEngine:
             split = "mini_val" if dataset_name == "nuscenes-mini" else "val"
             self.dataset = NuScenesDataset(data_root=self.settings.paths.dataset_path,
                                            version=version,
-                                           split=split
+                                           split=split,
+                                           labels=labels
                                            )
             if max_samples is not None:
                 self.dataset.sample_records = self.dataset.sample_records[:max_samples]
         return self.dataset
 
     def predict(self, detector_name, dataset_path, detection_path, model_path):
-        classes = getattr(self.dataset, "classes", None)
-        if classes is None:
-            classes = getattr(self.dataset, "labels", None)
-        if classes is None:
-            classes = getattr(self.settings.dataset, "classes", None)
-        if classes is None:
-            classes = getattr(self.settings.benchmark, "class_filter", None)
         detector = MODELS.create(detector_name,
                                  dataset=self.dataset,
                                  config_file=self.settings.paths.config_file,
-                                 classes=classes,
+                                 classes=getattr(self.dataset, "labels", None),
                                  settings=self.settings,
                                  checkpoint_file=model_path)
         return detector.detect()
