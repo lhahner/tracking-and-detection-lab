@@ -71,7 +71,7 @@ class TestVoxelNextOpenpcdetNuScenesPipeline(unittest.TestCase):
         self.assertTrue(len(dataset) > 1)
 
         predictions = inference_engine.predict(
-            detector_name="second_openpcdet",
+            detector_name="voxelnext_openpcdet",
             dataset_path=str(dataset_path),
             detection_path=str(Path(settings.paths.detection_path)),
             model_path=str(checkpoint_file),

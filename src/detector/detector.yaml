@@ -6,3 +6,5 @@ detectors:
   regnet_mmdetection3d: detector.regnet.regnet_mmdetection3d
   ssn_mmdetection3d: detector.ssn.ssn_mmdetection3d
   second_openpcdet: detector.second.second_openpcdet
+  transfusion_openpcdet: detector.transfusion.transfusion_openpcdet
+  voxelnext_openpcdet: detector.voxelnext.voxelnext_openpcdet

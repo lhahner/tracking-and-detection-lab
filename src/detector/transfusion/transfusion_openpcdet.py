@@ -1,10 +1,9 @@
-import os
 import numpy as np
 import torch
 try:
-    from pcdet.config import cfg, cfg_from_yaml_file
     from pcdet.models import build_network, load_data_to_gpu
     from pcdet.utils import common_utils
+    from detector.openpcdet_config import load_openpcdet_config
 except ImportError as exc:
     raise ImportError("TransfusionOpenPCDet requires MMDetection3D. Install the OpenMMLab stack first.") from exc
 
@@ -38,14 +37,9 @@ class TransfusionOpenPCDet(Detector):
         self.classes = classes
         self.batch_size = batch_size
         self.settings = settings
-        cwd = Path.cwd()
-        os.chdir(Path(self.config_file).resolve().parents[2])
-        try:
-            cfg_from_yaml_file(str(self.config_file), cfg)
-        finally:
-            os.chdir(cwd)
+        self.cfg = load_openpcdet_config(self.config_file)
         self.model = build_network(
-            cfg.MODEL,
+            self.cfg.MODEL,
             num_class=len(self.dataset.class_names),
             dataset=self.dataset
         )
