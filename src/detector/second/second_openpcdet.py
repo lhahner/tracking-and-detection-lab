@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import torch
 try:
@@ -14,6 +15,7 @@ from detector.detector_registry import MODELS
 from entities.detection import Detection, DetectionSequence, FrameDetection
 from definitions import ROOT_DIR
 from config.logging_config import LoggingConfig
+from easydict import EasyDict
 
 PROJECT_DIR = Path(__file__).resolve().parent
 DEFAULT_CONFIG_FILE = (
@@ -34,7 +36,7 @@ logger = logging_config.get_logger(__name__)
 
 
 @MODELS.register("second_openpcdet")
-class CenterPointMMDetections3D(Detector):
+class SecondOpenPCDet(Detector):
     def __init__(self,
                  dataset,
                  classes,
@@ -48,26 +50,42 @@ class CenterPointMMDetections3D(Detector):
         self.classes = classes
         self.batch_size = batch_size
         self.settings = settings
+        cwd = Path.cwd()
+        os.chdir(Path(self.config_file).resolve().parents[2])
+        try:
+            cfg_from_yaml_file(str(self.config_file), cfg)
+        finally:
+            os.chdir(cwd)
         self.model = build_network(
-            str(self.config_file),
-            num_class=self.classes,
+            cfg.MODEL,
+            num_class=len(self.dataset.class_names),
             dataset=self.dataset
         )
-        model.load_params_from_file(filename=self.checkpoint_file,
-                                    logger=logger,
-                                    to_cpu=True)
-        model.cuda()
-        mode.eval()
+        checkpoint = torch.load(self.checkpoint_file, map_location="cpu")
+        if isinstance(checkpoint, dict) and "model_state" in checkpoint:
+            self.model.load_params_from_file(filename=self.checkpoint_file,
+                                             logger=logger,
+                                             to_cpu=True)
+        else:
+            load_result = self.model.load_state_dict(checkpoint.get("state_dict", checkpoint), strict=False)
+            if len(load_result.missing_keys) == len(self.model.state_dict()):
+                raise ValueError(f"Checkpoint {self.checkpoint_file} is not compatible with OpenPCDet SECOND")
+        self.model.cuda()
+        self.model.eval()
         self.class_map = self.__build_class_map(self.classes)
 
     def detect(self):
         detection_sequence = DetectionSequence()
         with torch.no_grad():
-            for idx, data_dict in self.dataset:
-                data_dict = self.dataset.collate_batch([data_dict])
+            sample_count = getattr(self.dataset, "max_samples", None) or len(self.dataset)
+            for idx in range(sample_count):
+                sample = self.dataset[idx]
+                target = sample.pop("target", [])
+                data_dict = self.dataset.collate_batch([sample])
+                sample_id = data_dict["frame_id"][0]
                 load_data_to_gpu(data_dict)
-                instance_data, _ = model.forward(data_dict)
-                detections, highest_score_index = self.__convert_instances(instance_data)
+                instance_data, _ = self.model.forward(data_dict)
+                detections, highest_score_index = self.__convert_instances(instance_data[0])
                 detection_sequence.frames.append(FrameDetection(frame=sample_id,
                                                             highest_score_index=highest_score_index,
                                                             dets=detections,
@@ -76,6 +94,8 @@ class CenterPointMMDetections3D(Detector):
 
     def __build_class_map(self, classes):
         if not isinstance(classes, dict):
+            if classes and isinstance(classes[0], str):
+                return torch.tensor([classes.index(name) + 1 for name in self.dataset.class_names], dtype=torch.long)
             return torch.as_tensor(classes, dtype=torch.long)
 
         model_classes = None
@@ -115,7 +135,15 @@ class CenterPointMMDetections3D(Detector):
         return point
 
     def __convert_instances(self, instance_data):
-        breakpoint() 
+        boxes = instance_data["pred_boxes"].detach().cpu()
+        scores = instance_data["pred_scores"].detach().cpu()
+        labels = self.__map_labels(instance_data["pred_labels"].detach().cpu() - 1)
+        highest_score_index = int(torch.argmax(scores).item()) if scores.numel() else -1
+        detections = [
+            Detection(score=float(score.item()), label=int(label.item()), box=box[:7])
+            for box, score, label in zip(boxes, scores, labels)
+        ]
+        return detections, highest_score_index
 
     def __map_labels(self, labels_reference):
         if self.class_map.numel() == 0:

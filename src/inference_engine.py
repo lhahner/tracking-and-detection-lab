@@ -26,7 +26,7 @@ from detector.detector_registry import MODELS
 # Datasets
 from datasets.nuScenes import NuScenesDataset
 from datasets.kitti3D import Kitti3D
-
+from datasets.nuScenes_openpcdet_adapter import NuScenesOpenPCDetAdapter
 
 class InferenceEngine:
     def __init__(self, settings):
@@ -52,6 +52,27 @@ class InferenceEngine:
                                    split=split,
                                    max_samples=max_samples,
                                    labels=labels)
+        elif dataset_name in {"nuscenes_openpcdet", "nuscenes-mini_openpcdet"}:
+            version = "v1.0-mini" if dataset_name == "nuscenes-mini_openpcdet" else "v1.0-trainval"
+            split = "mini_val" if dataset_name == "nuscenes-mini_openpcdet" else "val"
+            nuScenes = NuScenesDataset(data_root=self.settings.paths.dataset_path,
+                                           version=version,
+                                           split=split
+                                           )
+            self.dataset = NuScenesOpenPCDetAdapter(nuScenes=nuScenes,
+                                                    root_path=self.settings.paths.dataset_path,
+                                                    max_samples=max_samples,
+                                                    class_names=["car", 
+                                                                 "truck", 
+                                                                 "construction_vehicle", 
+                                                                 "bus", 
+                                                                 "trailer", 
+                                                                 "barrier", 
+                                                                 "motorcycle", 
+                                                                 "bicycle", 
+                                                                 "pedestrian", 
+                                                                 "traffic_cone"])
+
         elif dataset_name in {"nuscenes", "nuscenes-mini"}:
             version = "v1.0-mini" if dataset_name == "nuscenes-mini" else "v1.0-trainval"
             split = "mini_val" if dataset_name == "nuscenes-mini" else "val"

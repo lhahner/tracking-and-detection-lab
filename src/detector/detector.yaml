@@ -5,3 +5,4 @@ detectors:
   pointrcnn_mmdetection3d: detector.pointrcnn.pointrcnn_mmdetection3d
   regnet_mmdetection3d: detector.regnet.regnet_mmdetection3d
   ssn_mmdetection3d: detector.ssn.ssn_mmdetection3d
+  second_openpcdet: detector.second.second_openpcdet

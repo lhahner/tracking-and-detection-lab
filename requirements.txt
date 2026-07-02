@@ -26,3 +26,4 @@ PyYAML
 setuptools
 tensorboard
 nuscenes-devkit
+easydict

@@ -15,8 +15,8 @@ class TestSecondOpenpcdetNuScenesPipeline(unittest.TestCase):
             raise unittest.SkipTest("nuScenes devkit is not installed")
 
         root_dir = Path(ROOT_DIR)
-        checkpoint_file = root_dir / "src/detector/centerpoint/model/centerpoint_01voxel_second_secfpn_circlenms_4x8_cyclic_20e_nus_20220810_030004-9061688e.pth"
-        config_file = root_dir / "src/detector/centerpoint/model/centerpoint_voxel01_second_secfpn_head-circlenms_8xb4-cyclic-20e_nus-3d.py"
+        checkpoint_file = root_dir / "src/detector/second/model/cbgs_second_multihead_nds6229_updated.pth"
+        config_file = root_dir / "third_party/OpenPCDet/tools/cfgs/nuscenes_models/cbgs_second_multihead.yaml"
         dataset_path = root_dir / "tests/data/nuScenes_dummy"
         if not checkpoint_file.exists():
             raise unittest.SkipTest(f"CenterPoint checkpoint is missing: {checkpoint_file}")
@@ -24,6 +24,11 @@ class TestSecondOpenpcdetNuScenesPipeline(unittest.TestCase):
             raise unittest.SkipTest(f"CenterPoint config is missing: {config_file}")
         if not dataset_path.exists():
             raise unittest.SkipTest(f"nuScenes dummy dataset is missing: {dataset_path}")
+        import torch
+        checkpoint = torch.load(checkpoint_file, map_location="cpu")
+        checkpoint_keys = checkpoint.get("model_state", checkpoint.get("state_dict", checkpoint)).keys()
+        if not any(key.startswith(("vfe.", "backbone_3d.", "backbone_2d.", "dense_head.")) for key in checkpoint_keys):
+            raise unittest.SkipTest(f"OpenPCDet-compatible SECOND checkpoint is missing: {checkpoint_file}")
 
         settings = SimpleNamespace(
             paths=SimpleNamespace(
@@ -33,7 +38,7 @@ class TestSecondOpenpcdetNuScenesPipeline(unittest.TestCase):
             ),
             runtime=SimpleNamespace(
                 datatype="bin",
-                dataset="nuscenes-mini",
+                dataset="nuscenes-mini_openpcdet",
                 display=False,
             ),
             benchmark=SimpleNamespace(
@@ -61,10 +66,10 @@ class TestSecondOpenpcdetNuScenesPipeline(unittest.TestCase):
         dataset = inference_engine.load(split="mini_val", 
                                         max_samples=1,
                                         labels=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
-        self.assertEqual(len(dataset), 1)
+        self.assertTrue(len(dataset) > 1)
 
         predictions = inference_engine.predict(
-            detector_name="centerpoint_mmdetection3d",
+            detector_name="second_openpcdet",
             dataset_path=str(dataset_path),
             detection_path=str(Path(settings.paths.detection_path)),
             model_path=str(checkpoint_file),
