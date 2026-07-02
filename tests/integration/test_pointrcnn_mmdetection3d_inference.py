@@ -4,10 +4,12 @@ from pathlib import Path
 from types import SimpleNamespace
 from definitions import ROOT_DIR
 from inference_engine import InferenceEngine
-
+import torch
 
 class TestPointRCNNMMDetection3DKitti3DPipeline(unittest.TestCase):
     def test_predict_and_evaluate_from_inference_engine_with_kitti3d(self):
+        if not torch.cuda.is_available():
+            raise unittest.SkipTest("CUDA GPU required for this test")
         if importlib.util.find_spec("mmdet3d") is None:
             raise unittest.SkipTest("MMDetection3D is not installed")
 

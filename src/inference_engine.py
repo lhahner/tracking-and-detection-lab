@@ -26,7 +26,6 @@ from detector.detector_registry import MODELS
 # Datasets
 from datasets.nuScenes import NuScenesDataset
 from datasets.kitti3D import Kitti3D
-from datasets.nuScenes_openpcdet_adapter import NuScenesOpenPCDetAdapter
 
 class InferenceEngine:
     def __init__(self, settings):
@@ -53,6 +52,8 @@ class InferenceEngine:
                                    max_samples=max_samples,
                                    labels=labels)
         elif dataset_name in {"nuscenes_openpcdet", "nuscenes-mini_openpcdet"}:
+            from datasets.nuScenes_openpcdet_adapter import NuScenesOpenPCDetAdapter
+
             version = "v1.0-mini" if dataset_name == "nuscenes-mini_openpcdet" else "v1.0-trainval"
             split = "mini_val" if dataset_name == "nuscenes-mini_openpcdet" else "val"
             nuScenes = NuScenesDataset(data_root=self.settings.paths.dataset_path,

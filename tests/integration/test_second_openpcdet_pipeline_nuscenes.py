@@ -5,10 +5,12 @@ from types import SimpleNamespace
 
 from definitions import ROOT_DIR
 from inference_engine import InferenceEngine
-
+import torch
 
 class TestSecondOpenpcdetNuScenesPipeline(unittest.TestCase):
     def test_predict_and_evaluate_from_inference_engine_with_nuscenes_mini(self):
+        if not torch.cuda.is_available():
+            raise unittest.SkipTest("Needs GPU")
         if importlib.util.find_spec("pcdet") is None:
             raise unittest.SkipTest("OpenPcDet is not installed")
         if importlib.util.find_spec("nuscenes") is None:
@@ -24,7 +26,6 @@ class TestSecondOpenpcdetNuScenesPipeline(unittest.TestCase):
             raise unittest.SkipTest(f"CenterPoint config is missing: {config_file}")
         if not dataset_path.exists():
             raise unittest.SkipTest(f"nuScenes dummy dataset is missing: {dataset_path}")
-        import torch
         checkpoint = torch.load(checkpoint_file, map_location="cpu")
         checkpoint_keys = checkpoint.get("model_state", checkpoint.get("state_dict", checkpoint)).keys()
         if not any(key.startswith(("vfe.", "backbone_3d.", "backbone_2d.", "dense_head.")) for key in checkpoint_keys):

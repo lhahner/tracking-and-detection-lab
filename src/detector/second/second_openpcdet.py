@@ -1,12 +1,14 @@
 import os
 import numpy as np
+if not hasattr(np, "int"):
+    np.int = int
 import torch
 try:
     from pcdet.config import cfg, cfg_from_yaml_file
     from pcdet.models import build_network, load_data_to_gpu
     from pcdet.utils import common_utils
 except ImportError as exc:
-    raise ImportError("CenterPointMMDetections3D requires MMDetection3D. Install the OpenMMLab stack first.") from exc
+    raise ImportError("SecondOpenPCDet requires MMDetection3D. Install the OpenMMLab stack first.") from exc
 
 from torch.utils.data import DataLoader
 from pathlib import Path
@@ -18,19 +20,7 @@ from config.logging_config import LoggingConfig
 from easydict import EasyDict
 
 PROJECT_DIR = Path(__file__).resolve().parent
-DEFAULT_CONFIG_FILE = (
-    Path(ROOT_DIR)
-    / "third_party"
-    / "mmdetection3d"
-    / "configs"
-    / "centerpoint"
-    / "centerpoint_voxel01_second_secfpn_head-circlenms_8xb4-cyclic-20e_nus-3d.py"
-)
-DEFAULT_CHECKPOINT_FILE = (
-        PROJECT_DIR
-        / "model"
-        / "centerpoint_01voxel_second_secfpn_circlenms_4x8_cyclic_20e_nus_20220810_030004-9061688e.pth"
-)
+
 logging_config = LoggingConfig()
 logger = logging_config.get_logger(__name__)
 
@@ -41,8 +31,8 @@ class SecondOpenPCDet(Detector):
                  dataset,
                  classes,
                  settings,
-                 config_file=DEFAULT_CONFIG_FILE,
-                 checkpoint_file=DEFAULT_CHECKPOINT_FILE,
+                 config_file,
+                 checkpoint_file,
                  batch_size=16):
         self.dataset = dataset
         self.config_file = config_file

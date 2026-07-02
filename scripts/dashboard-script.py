@@ -64,12 +64,6 @@ results = [
             "implemented": False
         },
         {
-            "name": "Real-Aug++ (2)",
-            "mAP": "70.2", # custom - not implemented
-            "year": "2023-5-22",
-            "implemented": False
-        },
-        {
             "name": "SSN",
             "mAP": "40.92", # mmdetection3d - implemented
             "year": "2020-4-6",
