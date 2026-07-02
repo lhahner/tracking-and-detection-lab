@@ -1,9 +1,15 @@
 import torch
 import unittest
 from evaluation import Evaluation, MeanAveragePrecision3D
+from evaluation.metrics.mean_average_precision_3D import box3d_overlap
+
+
+PYTORCH3D_REQUIRED_REASON = "requires pytorch3d for 3D IoU computation"
+requires_pytorch3d = unittest.skipIf(box3d_overlap is None, PYTORCH3D_REQUIRED_REASON)
 
 
 class TestmAPEvaluation(unittest.TestCase):
+    @requires_pytorch3d
     def test_simple_mAP_evaluation(self):
         # Each list item is one frame with all predictions.
         # x,y,z,dx,dy,dz,yaw,score,laebl
@@ -21,6 +27,7 @@ class TestmAPEvaluation(unittest.TestCase):
                                             classes=classes)
         self.assertIsInstance(results, torch.Tensor)
 
+    @requires_pytorch3d
     def test_perfect_detection_returns_one(self):
         predictions = torch.tensor([[1.8, 2.7, 3.1, 2.2, 4.3, 1.1, 0.8, 0.8, 2]])
         ground_truth = torch.tensor([[1.8, 2.7, 3.1, 2.2, 4.3, 1.1, 0.8, 1.0, 2]])
@@ -34,6 +41,7 @@ class TestmAPEvaluation(unittest.TestCase):
 
         self.assertTrue(torch.isclose(results, torch.tensor(1.0)))
 
+    @requires_pytorch3d
     def test_prediction_order_does_not_change_map(self):
         sorted_predictions = torch.tensor([[1.8, 2.7, 3.1, 2.2, 4.3, 1.1, 0.8, 0.9, 2],
                                            [8.0, 8.0, 8.0, 2.2, 4.3, 1.1, 0.8, 0.2, 2]])
@@ -55,6 +63,7 @@ class TestmAPEvaluation(unittest.TestCase):
 
         self.assertTrue(torch.isclose(sorted_results, unsorted_results))
 
+    @requires_pytorch3d
     def test_duplicate_predictions_do_not_inflate_map_above_one(self):
         predictions = torch.tensor([
             [1.8, 2.7, 3.1, 2.2, 4.3, 1.1, 0.8, 0.9, 2],
@@ -82,6 +91,7 @@ class TestmAPEvaluation(unittest.TestCase):
                     classes=classes)
         self.assertEqual(result, torch.tensor([0]))
 
+    @requires_pytorch3d
     def test_metric_accumulates_validation_batches(self):
         classes = torch.tensor([2])
         metric = MeanAveragePrecision3D(iou_threshold=0.5)
@@ -100,3 +110,15 @@ class TestmAPEvaluation(unittest.TestCase):
         result = metric.compute()
 
         self.assertTrue(torch.isclose(result, torch.tensor(0.5)), result)
+
+    def test_compute_iou_raises_when_pytorch3d_is_not_available(self):
+        if box3d_overlap is not None:
+            self.skipTest("pytorch3d is installed")
+
+        metric = MeanAveragePrecision3D(iou_threshold=0.5)
+
+        with self.assertRaisesRegex(ImportError, "requires pytorch3d"):
+            metric._MeanAveragePrecision3D__compute_iou_3d(
+                    torch.tensor([[0.0, 0.0, 0.0, 2.0, 2.0, 2.0, 0.0]]),
+                    torch.tensor([[0.0, 0.0, 0.0, 2.0, 2.0, 2.0, 0.0]]),
+                    )

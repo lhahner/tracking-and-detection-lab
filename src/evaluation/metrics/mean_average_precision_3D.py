@@ -235,7 +235,10 @@ class MeanAveragePrecision3D(Metric):
             _, iou_3d_class = box3d_overlap(prediction_corner_boxes, ground_truth_corner_boxes)
             return iou_3d_class
 
-        return self.__axis_aligned_iou_3d(prediction_boxes, ground_truth_boxes)
+        raise ImportError(
+                "MeanAveragePrecision3D requires pytorch3d to compute 3D IoU. "
+                "Install pytorch3d or skip tests that require 3D IoU."
+                )
 
     def __compute_average_precision(self, precision, recall: torch.Tensor):
         metric = AveragePrecision3D()
