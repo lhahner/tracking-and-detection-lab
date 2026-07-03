@@ -57,15 +57,14 @@ class InferenceEngine:
             version = "v1.0-mini" if dataset_name == "nuscenes-mini_openpcdet" else "v1.0-trainval"
             split = "mini_val" if dataset_name == "nuscenes-mini_openpcdet" else "val"
             nuScenes = NuScenesDataset(data_root=self.settings.paths.dataset_path,
-                                           version=version,
-                                           split=split
-                                           )
+                                       version=version,
+                                       split=split)
             self.dataset = NuScenesOpenPCDetAdapter(nuScenes=nuScenes,
                                                     root_path=self.settings.paths.dataset_path,
                                                     max_samples=max_samples,
-                                                    class_names=["car", 
-                                                                 "truck", 
-                                                                 "construction_vehicle", 
+                                                    class_names=["car",
+                                                                 "truck",
+                                                                 "construction_vehicle",
                                                                  "bus", 
                                                                  "trailer", 
                                                                  "barrier", 

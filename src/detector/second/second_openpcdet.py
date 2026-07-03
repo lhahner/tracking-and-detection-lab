@@ -61,7 +61,10 @@ class SecondOpenPCDet(Detector):
     def detect(self):
         detection_sequence = DetectionSequence()
         with torch.no_grad():
-            sample_count = getattr(self.dataset, "max_samples", None) or len(self.dataset)
+            sample_count = getattr(self.dataset, "max_samples", len(self.dataset))
+            if sample_count > len(self.dataset):
+                logger.warning(f"The given upper bound max_samples {sample_count} exceeds dataset lengths, iterating over complete dataset.")
+                sample_count = len(self.dataset)
             for idx in range(sample_count):
                 sample = self.dataset[idx]
                 target = sample.pop("target", [])
