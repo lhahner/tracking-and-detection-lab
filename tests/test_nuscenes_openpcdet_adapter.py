@@ -15,7 +15,7 @@ class TestNuScenesOpenPCDetAdapter(unittest.TestCase):
             raise unittest.SkipTest("nuScenes devkit is not installed")
         from datasets.nuScenes_openpcdet_adapter import NuScenesOpenPCDetAdapter
         nuScenes = NuScenesDataset(data_root=f"{ROOT_DIR}/tests/data/nuscenes",
-                                   split="mini-val")
+                                   split="mini_val")
         nuScenesOpenPCDetAdapter = NuScenesOpenPCDetAdapter(nuScenes=nuScenes,
                                                             class_names=["car",
                                                                          "pedestrian"])
