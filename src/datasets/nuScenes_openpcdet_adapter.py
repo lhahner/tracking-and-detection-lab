@@ -13,21 +13,21 @@ class NuScenesOpenPCDetAdapter(DatasetTemplate):
             root_path=".",
             logger=None,
             max_samples=None,
-        ):
-            cfg = EasyDict()
-            cfg_from_yaml_file(str(Path(__file__).resolve().parents[2] / "third_party/OpenPCDet/tools/cfgs/dataset_configs/nuscenes_dataset.yaml"), cfg)
-            dataset_cfg = cfg
-            super().__init__(
+    ):
+        cfg = EasyDict()
+        cfg_from_yaml_file(str(Path(__file__).resolve().parents[2] / "third_party/OpenPCDet/tools/cfgs/dataset_configs/nuscenes_dataset.yaml"), cfg)
+        dataset_cfg = cfg
+        super().__init__(
                 dataset_cfg=dataset_cfg,
                 class_names=class_names,
                 training=False,
                 root_path=Path(root_path),
                 logger=logger,
-            )
-            self.nuScenes = nuScenes
-            self.max_samples = max_samples
-            self.sample_records = self.nuScenes.sample_records
-    
+        )
+        self.nuScenes = nuScenes
+        self.max_samples = max_samples
+        self.sample_records = self.nuScenes.sample_records
+
     def __len__(self):
         return len(self.sample_records)
 
