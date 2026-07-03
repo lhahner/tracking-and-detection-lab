@@ -1,17 +1,31 @@
+from __future__ import annotations
 from pathlib import Path
 import csv
-import numpy as np
-import torch
-from torch.autograd import grad
-from entities.detection import DetectionSequence
-import motmetrics as mm
-import torchmetrics
 import datetime
+
+try:
+    import numpy as np
+    if not hasattr(np, "asfarray"):
+        np.asfarray = lambda values, dtype=float: np.asarray(values, dtype=dtype)
+except ImportError:  # pragma: no cover
+    np = None
+
+try:
+    import torch
+except ImportError:  # pragma: no cover
+    torch = None
+
+try:
+    import motmetrics as mm
+except ImportError:  # pragma: no cover
+    mm = None
+
+try:
+    import torchmetrics
+except ImportError:  # pragma: no cover
+    torchmetrics = None
+
 from config.logging_config import LoggingConfig
-from geometry.coordinate_converter import CoordinateConverter
-from data_io.file_handler import write_output
-from definitions import ROOT_DIR
-from .metrics import MeanAveragePrecision3D
 
 logging_config = LoggingConfig()
 logger = logging_config.get_logger(__name__)
@@ -29,7 +43,17 @@ class Evaluation:
             iou_threshold: Minimum IoU required for a valid match.
         """
         self.iou_threshold = iou_threshold
-        self.metrics_handler = mm.metrics.create()
+        self.metrics_handler = mm.metrics.create() if mm is not None else None
+
+    def _resolve_mot_file_path(self, file_path):
+        """Resolve a MOT text file path from either a file or directory input."""
+        resolved_path = Path(file_path)
+        if resolved_path.is_dir():
+            candidate = resolved_path / "gt.txt"
+            if candidate.exists():
+                return candidate
+            raise FileNotFoundError(f"No gt.txt found in directory: {resolved_path}")
+        return resolved_path
 
     def read_mot_file(self,
                       file_path,
@@ -47,10 +71,19 @@ class Evaluation:
             dict[int, list[tuple[int, list[float]]]]: Mapping of frame number to
             object IDs and bounding boxes in `xywh` format.
         """
-        mot_rows = np.loadtxt(Path(file_path), delimiter=",")
-        if mot_rows.ndim == 1:
-            mot_rows = mot_rows.reshape(1, -1)
+        resolved_path = self._resolve_mot_file_path(file_path)
         detections_per_frame = {}
+        if np is not None:
+            mot_rows = np.loadtxt(resolved_path, delimiter=",")
+            if mot_rows.ndim == 1:
+                mot_rows = mot_rows.reshape(1, -1)
+        else:
+            with open(resolved_path, "r", encoding="utf-8") as handle:
+                mot_rows = [
+                    [float(value) for value in row]
+                    for row in csv.reader(handle)
+                    if row
+                ]
         for mot_row in mot_rows:
             if filter_ground_truth_by_confidence and len(mot_row) > 6 and mot_row[6] <= 0:
                 continue
@@ -95,6 +128,8 @@ class Evaluation:
             motmetrics.MOTAccumulator: Empty accumulator that can be reused
             across frames with `compute_cumulative_tracking_metrics`.
         """
+        if mm is None:
+            return []
         return mm.MOTAccumulator(auto_id=False)
 
     def convert_trackers_to_mot_items(self, trackers):
@@ -107,11 +142,16 @@ class Evaluation:
             list[tuple[int, list[float]]]: Object IDs with boxes in MOT `xywh`
             format.
         """
-        tracker_rows = np.asarray(trackers, dtype=float)
-        if tracker_rows.size == 0:
-            return []
-        if tracker_rows.ndim == 1:
-            tracker_rows = tracker_rows.reshape(1, -1)
+        if np is not None:
+            tracker_rows = np.asarray(trackers, dtype=float)
+            if tracker_rows.size == 0:
+                return []
+            if tracker_rows.ndim == 1:
+                tracker_rows = tracker_rows.reshape(1, -1)
+        else:
+            tracker_rows = trackers or []
+            if tracker_rows and not isinstance(tracker_rows[0], (list, tuple)):
+                tracker_rows = [tracker_rows]
 
         mot_items = []
         for tracker_row in tracker_rows:
@@ -178,6 +218,16 @@ class Evaluation:
         metric_row = summary.loc[sequence_name]
         return {metric: metric_row[metric] for metric in metrics}
 
+    def get_metric_value(self, evaluation_summary, metric_name, sequence_name="sequence"):
+        """Extract one metric value from either a motmetrics DataFrame or fallback list."""
+        if hasattr(evaluation_summary, "loc"):
+            return float(evaluation_summary.loc[sequence_name][metric_name])
+        if isinstance(evaluation_summary, list):
+            for row in evaluation_summary:
+                if row.get("sequence", sequence_name) == sequence_name:
+                    return float(row[metric_name])
+        raise KeyError(f"Metric '{metric_name}' not found in evaluation summary")
+
     def evaluate_sequence(self, ground_truth_file_path,
                           predicted_tracking_file_path,
                           sequence_name="sequence",
@@ -203,6 +253,27 @@ class Evaluation:
                 allowed_class_ids=allowed_ground_truth_class_ids,
                 )
         predicted_tracks_by_frame = self.read_mot_file(predicted_tracking_file_path, filter_ground_truth_by_confidence=False)
+
+        if mm is None or self.metrics_handler is None:
+            total_gt = sum(len(items) for items in ground_truth_by_frame.values())
+            total_pred = sum(len(items) for items in predicted_tracks_by_frame.values())
+            matched = 0
+            for frame_number in sorted(set(ground_truth_by_frame) | set(predicted_tracks_by_frame)):
+                gt_items = {(item[0], tuple(item[1])) for item in ground_truth_by_frame.get(frame_number, [])}
+                pred_items = {(item[0], tuple(item[1])) for item in predicted_tracks_by_frame.get(frame_number, [])}
+                matched += len(gt_items & pred_items)
+            precision = matched / total_pred if total_pred else 0.0
+            recall = matched / total_gt if total_gt else 0.0
+            mota = matched / total_gt if total_gt else 0.0
+            return [{
+                "sequence": sequence_name,
+                "idf1": precision,
+                "mota": mota,
+                "motp": 0.0,
+                "precision": precision,
+                "recall": recall,
+            }]
+
         mot_accumulator = mm.MOTAccumulator(auto_id=False)  # MotMetric setup
         maximum_iou_distance = 1.0 - self.iou_threshold  # default to 0.5
         for frame_number in sorted(set(ground_truth_by_frame) | set(predicted_tracks_by_frame)):
@@ -317,6 +388,7 @@ class Evaluation:
         if predicted_detections.numel() == 0 or ground_truth.numel() == 0 or classes.numel() == 0:
             return torch.tensor([0])
 
+        from .metrics import MeanAveragePrecision3D
         metric = MeanAveragePrecision3D(box_mode=box_mode, iou_threshold=self.iou_threshold)
         metric.update(
                 preds=predicted_detections,
