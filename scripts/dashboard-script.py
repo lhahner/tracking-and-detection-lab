@@ -53,7 +53,7 @@ results = [
         },
         {
             "name": "TransFusion (28)",
-            "mAP": "64.58", # openpcdet - not implemented 
+            "mAP": "64.58", # openpcdet - implemented 
             "year": "2021-8-31",
             "implemented": False
         },
@@ -71,7 +71,7 @@ results = [
         },
         {
             "name": "VoxelNeXt",
-            "mAP": "66.2", # openpcdet - not implemented
+            "mAP": "66.2", # openpcdet - implemented
             "year": "2023-3-20",
             "implemented": False
         }
