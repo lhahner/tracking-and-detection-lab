@@ -239,8 +239,8 @@ fi
 # SimpleTrack depends on NumPy but does not constrain it; keep the project-wide
 # NumPy < 2 pin so motmetrics stays compatible.
 echo "Installing SimpleTrack requirements"
-python -m pip install -r "$(pwd)/third_party/SimpleTrack/requirements.txt" "numpy<2"
-python -m pip install -e "$(pwd)/third_party/SimpleTrack"
+python -m pip install -r "third_party/SimpleTrack/requirements.txt" "numpy<2"
+python -m pip install -e "third_party/SimpleTrack"
 
 echo "Verifying GLIBCXX version"
 if [[ "$(uname -s)" == "Linux" && $CONDA_DEFAULT_ENV == track-lab ]]; then
