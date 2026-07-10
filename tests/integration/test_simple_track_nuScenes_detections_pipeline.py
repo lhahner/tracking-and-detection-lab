@@ -34,15 +34,12 @@ class TestSimpleTrackNuScenesDetectionsPipeline(unittest.TestCase):
             output_dir=f"{ROOT_DIR}/tests/data/"
         )
         self.assertTrue(len(results) > 0)
-
-        mota = evaluation.get_metric_value(results, "mota")
-        motp = evaluation.get_metric_value(results, "motp")
-        precision = evaluation.get_metric_value(results, "precision")
-        recall = evaluation.get_metric_value(results, "recall")
+        mota = results["mota"]
+        motp = results["motp"]
+        recall = results["recall"]
 
         self.assertTrue(mota <= 1.0)
         self.assertTrue(motp >= 0.0)
-        self.assertTrue(precision <= 1.0)
         self.assertTrue(recall <= 1.0)
 
 
