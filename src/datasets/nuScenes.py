@@ -1,17 +1,3 @@
-"""nuScenes dataset adapter for the tracking and detection lab.
-
-The adapter uses the official nuScenes devkit for metadata and coordinate
-transforms. It deliberately avoids SECOND-specific preprocessing, registries,
-pickle schemas, and evaluation code.
-
-Internal 3D boxes use LiDAR coordinates and the layout:
-    [x, y, z, length, width, height, yaw]
-
-Point clouds use:
-    [x, y, z, intensity] when ``include_time_lag`` is false, otherwise
-    [x, y, z, intensity, time_lag_seconds].
-"""
-
 from __future__ import annotations
 
 import math
@@ -89,20 +75,19 @@ CAMERA_CHANNELS = (
 
 
 class NuScenesDataset(Dataset):
-    """Expose scene-ordered nuScenes keyframes through the project dataset API."""
-
     def __init__(
         self,
         data_root,
-        version="v1.0-mini",
         split="mini_train",
-        max_sweeps=1,
+        version="v1.0-mini",
         include_time_lag=False,
         load_images=True,
         camera_channel="CAM_FRONT",
         class_names=None,
         transform=None,
+        max_sweeps=1,
         verbose=False,
+        labels=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
     ):
         """Load nuScenes metadata and build a scene-preserving sample index.
 
@@ -138,6 +123,7 @@ class NuScenesDataset(Dataset):
         selected_classes = (
             DETECTION_CLASSES.keys() if class_names is None else class_names
         )
+        self.labels=labels
         self.classes = DETECTION_CLASSES
         self.class_names = set(selected_classes)
         self.class_names.discard("Background")

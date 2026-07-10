@@ -65,24 +65,25 @@ These cover the current runtime code in [src/app.py](/home/lennart/Dokumente/gau
 
 ## Recommended environment setup
 
-The repository includes a setup script that creates a fresh conda environment, installs a compatible PyTorch build, pins `numpy<2` for `motmetrics`, keeps `setuptools>=65.5,<81` for `detectron2` and `mmcv`, installs the project requirements, and optionally installs `detectron2`.
+The repository includes a setup script that creates a fresh conda environment, installs a compatible PyTorch build, pins `numpy<2` for `motmetrics`, keeps `setuptools>=65.5,<81` for `detectron2` and `mmcv`, installs the project requirements, and optionally installs `detectron2`, OpenPCDet import dependencies, and MMDetection3D.
 
 From the repository root, run one of:
 
 ```bash
 bash install.sh
 bash install.sh --cuda cu121
-bash install.sh --cuda cu124
 bash install.sh --without-detectron2
+bash install.sh --with-openpcdet
 ```
 
 The script defaults to:
 
 - conda environment name `track-lab`
 - Python `3.10`
-- PyTorch `2.5.1`
-- torchvision `0.20.1`
+- PyTorch `2.1.0`
+- torchvision `0.16.0`
 - CPU-only install unless `--cuda` is passed
+- OpenPCDet setup skipped unless `--with-openpcdet` is passed
 
 If you want to install manually instead of using the script, follow the same order:
 
@@ -91,7 +92,8 @@ If you want to install manually instead of using the script, follow the same ord
 3. Install `torch`, `torchvision`, and `torchaudio` from the official PyTorch index for your CPU/CUDA target.
 4. Install `numpy<2`.
 5. Install `-r requirements.txt`.
-6. Install `detectron2` from source with `--no-build-isolation` if you need the `frcnn` or `detectron2` backends.
+6. Optional: install OpenPCDet import dependencies such as `SharedArray`, `tensorboardX`, and `pyquaternion`, then add `third_party/OpenPCDet` to Python with a `.pth` file or `PYTHONPATH`.
+7. Install `detectron2` from source with `--no-build-isolation` if you need the `frcnn` or `detectron2` backends.
 
 After installation, activate the environment and run the project from the repository root:
 

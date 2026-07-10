@@ -101,14 +101,6 @@ class Evaluation:
         return detections_per_frame
 
     def should_filter_ground_truth_to_pedestrians(self, sequence_name):
-        """Determine whether a sequence should keep only pedestrian labels.
-
-        Args:
-            sequence_name: Sequence identifier used to infer dataset type.
-
-        Returns:
-            bool: `True` when the sequence belongs to a pedestrian benchmark.
-        """
         pedestrian_sequences = (
                 "KITTI-",
                 "MOT",
@@ -122,26 +114,11 @@ class Evaluation:
         return normalized_name.startswith(pedestrian_sequences)
 
     def create_mot_accumulator(self):
-        """Create an accumulator for incremental MOT metric computation.
-
-        Returns:
-            motmetrics.MOTAccumulator: Empty accumulator that can be reused
-            across frames with `compute_cumulative_tracking_metrics`.
-        """
         if mm is None:
             return []
         return mm.MOTAccumulator(auto_id=False)
 
     def convert_trackers_to_mot_items(self, trackers):
-        """Convert tracker output from `x1, y1, x2, y2, id` to MOT items.
-
-        Args:
-            trackers: One or more tracker rows in `x1, y1, x2, y2, id` form.
-
-        Returns:
-            list[tuple[int, list[float]]]: Object IDs with boxes in MOT `xywh`
-            format.
-        """
         if np is not None:
             tracker_rows = np.asarray(trackers, dtype=float)
             if tracker_rows.size == 0:
@@ -169,22 +146,6 @@ class Evaluation:
                                             ground_truth_by_frame,
                                             trackers,
                                             sequence_name="sequence"):
-        """Update cumulative MOT metrics for one frame of tracker output.
-
-        This method is intended for live visualization. Pass the same
-        accumulator on every frame and it returns the cumulative IDF1, MOTA,
-        and MOTP values after the current frame has been added.
-
-        Args:
-            mot_accumulator: Accumulator created by `create_mot_accumulator`.
-            frame_number: Current frame number.
-            ground_truth_by_frame: Mapping produced by `read_mot_file`.
-            trackers: Tracker rows in `x1, y1, x2, y2, id` form.
-            sequence_name: Name used in the metrics summary index.
-
-        Returns:
-            dict[str, float]: Cumulative `idf1`, `mota`, and `motp` values.
-        """
         ground_truth_items = ground_truth_by_frame.get(frame_number, [])
         predicted_items = self.convert_trackers_to_mot_items(trackers)
 
@@ -219,7 +180,6 @@ class Evaluation:
         return {metric: metric_row[metric] for metric in metrics}
 
     def get_metric_value(self, evaluation_summary, metric_name, sequence_name="sequence"):
-        """Extract one metric value from either a motmetrics DataFrame or fallback list."""
         if hasattr(evaluation_summary, "loc"):
             return float(evaluation_summary.loc[sequence_name][metric_name])
         if isinstance(evaluation_summary, list):
@@ -227,22 +187,38 @@ class Evaluation:
                 if row.get("sequence", sequence_name) == sequence_name:
                     return float(row[metric_name])
         raise KeyError(f"Metric '{metric_name}' not found in evaluation summary")
+    
+    def evaluate_simpletrack_nuscenes_result_file(
+            self,
+            result_path,
+            dataroot,
+            version="v1.0-mini",
+            eval_set="mini_val",
+            output_dir="output/nuscenes_tracking_eval"
+        ):
+        from nuscenes.eval.tracking.evaluate import TrackingEval
+
+        try:
+            from nuscenes.eval.common.config import config_factory
+        except ImportError:
+            from nuscenes.eval.tracking.config import config_factory
+
+        cfg = config_factory("tracking_nips_2019")
+        evaluator = TrackingEval(
+                config=cfg,
+                result_path=str(result_path),
+                eval_set=eval_set,
+                output_dir=str(output_dir),
+                nusc_dataroot=str(dataroot),
+                nusc_version=version,
+                verbose=True
+                )
+        return evaluator.main(render_curves=False)
 
     def evaluate_sequence(self, ground_truth_file_path,
                           predicted_tracking_file_path,
                           sequence_name="sequence",
                           metrics=None):
-        """Evaluate one predicted tracking file against ground truth.
-
-        Args:
-            ground_truth_file_path: Path to the ground-truth MOT file.
-            predicted_tracking_file_path: Path to the predicted tracking file.
-            sequence_name: Name used in the resulting metrics table.
-            metrics: Metrics to compute. Defaults to common MOT metrics.
-
-        Returns:
-            pandas.DataFrame: MOT metrics summary for the evaluated sequence.
-        """
         if metrics is None:
             metrics = ["idf1", "mota", "motp", "precision", "recall"]
 

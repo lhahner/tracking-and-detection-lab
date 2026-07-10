@@ -7,3 +7,6 @@
 [submodule "third_party/SimpleTrack"]
 	path = third_party/SimpleTrack
 	url = https://github.com/tusen-ai/SimpleTrack
+[submodule "third_party/OpenPCDet"]
+	path = third_party/OpenPCDet
+	url = https://github.com/open-mmlab/OpenPCDet.git

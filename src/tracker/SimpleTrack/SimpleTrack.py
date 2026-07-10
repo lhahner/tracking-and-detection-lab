@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from pathlib import Path
+import json
+import math
 import sys
 from typing import Iterable
 
@@ -18,13 +20,6 @@ from mot_3d.mot import MOTModel
 
 
 class SimpleTrack:
-    """Project wrapper around the vendored upstream SimpleTrack tracker.
-
-    The wrapper accepts frame-wise 3D LiDAR detections, forwards them to the
-    upstream ``MOTModel``, and persists a lightweight MOT-style BEV projection
-    for the project's existing tracking evaluation helper.
-    """
-
     def __init__(
         self,
         config_path: str | Path | None = None,
@@ -38,16 +33,6 @@ class SimpleTrack:
         self._tracker = MOTModel(self._load_config(self.config_path))
 
     def track(self, detections) -> list[dict]:
-        """Track a frame sequence using upstream SimpleTrack.
-
-        Args:
-            detections: Sequence of frame dictionaries. Each frame contains
-                3D detector output in ``bbox_3d`` format:
-                ``[x, y, z, yaw, length, width, height, score]``.
-
-        Returns:
-            list[dict]: One item per frame containing normalized track output.
-        """
         frame_entries = self._normalize_frames(detections)
         tracking_results: list[dict] = []
         mot_rows: list[list[float]] = []
@@ -67,14 +52,100 @@ class SimpleTrack:
                         "bbox_3d": bbox_array,
                         "state": state,
                         "label": det_type,
+                        "score": float(bbox.s if bbox is not None else 1.0)
                     }
                 )
                 mot_rows.append(self._bbox_to_mot_row(frame_number, public_track_id, bbox))
 
-            tracking_results.append({"frame": frame_number, "tracks": normalized_tracks})
+            tracking_results.append({"frame": frame_number,
+                                     "sample_token": frame_entry.get("sample_token"),
+                                     "lidar_to_global": frame_entry.get("lidar_to_global"),
+                                     "tracks": normalized_tracks})
 
-        self._write_tracks(mot_rows)
+        self.write_nuscenes_tracking_json(tracking_results, self.output_path) 
         return tracking_results
+
+    def write_nuscenes_tracking_json(self, tracking_results, output_path):
+        valid_classes = {
+            "bicycle",
+            "bus",
+            "car",
+            "motorcycle",
+            "pedestrian",
+            "trailer",
+            "truck",
+        }
+        payload = {
+            "meta": {
+                "use_camera": False,
+                "use_lidar": True,
+                "use_radar": False,
+                "use_map": False,
+                "use_external": False,
+            },
+            "results": {},
+        }
+
+        for frame_result in tracking_results:
+            sample_token = frame_result.get("sample_token")
+            if sample_token is None:
+                raise ValueError("nuScenes tracking output requires 'sample_token' per frame")
+
+            lidar_to_global = frame_result.get("lidar_to_global")
+            if lidar_to_global is None:
+                raise ValueError("nuScenes tracking output requires 'lidar_to_global' per frame")
+            lidar_to_global = np.asarray(lidar_to_global, dtype=float)
+            if lidar_to_global.shape != (4, 4):
+                raise ValueError(
+                    f"Expected lidar_to_global with shape (4, 4), got {lidar_to_global.shape}"
+                )
+
+            sample_results = []
+            for track in frame_result.get("tracks", []):
+                tracking_name = str(track.get("label", "")).lower()
+                if tracking_name not in valid_classes:
+                    continue
+
+                bbox = np.asarray(track.get("bbox_3d"), dtype=float)
+                if bbox.shape[0] < 7:
+                    raise ValueError(
+                        "SimpleTrack boxes must contain [x,y,z,yaw,length,width,height]"
+                    )
+
+                x, y, z, yaw, length, width, height = bbox[:7]
+                center = lidar_to_global @ np.asarray([x, y, z, 1.0], dtype=float)
+                global_yaw = float(yaw) + math.atan2(lidar_to_global[1, 0], lidar_to_global[0, 0])
+                half_yaw = global_yaw / 2.0
+                score = float(track.get("score", bbox[7] if bbox.shape[0] > 7 else 1.0))
+
+                sample_results.append(
+                    {
+                        "sample_token": str(sample_token),
+                        "translation": [
+                            float(center[0]),
+                            float(center[1]),
+                            float(center[2]),
+                        ],
+                        "size": [float(width), float(length), float(height)],
+                        "rotation": [
+                            float(math.cos(half_yaw)),
+                            0.0,
+                            0.0,
+                            float(math.sin(half_yaw)),
+                        ],
+                        "velocity": [0.0, 0.0],
+                        "tracking_id": str(track["track_id"]),
+                        "tracking_name": tracking_name,
+                        "tracking_score": score,
+                    }
+                )
+
+            payload["results"][str(sample_token)] = sample_results
+
+        output_path = Path(output_path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        return output_path
 
     def _load_config(self, config_path: Path) -> dict:
         with config_path.open("r", encoding="utf-8") as handle:

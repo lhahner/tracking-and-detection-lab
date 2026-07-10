@@ -4,7 +4,12 @@ from inference_engine import InferenceEngine
 from types import SimpleNamespace
 from definitions import ROOT_DIR
 from evaluation import Evaluation
+from evaluation.metrics.mean_average_precision_3D import box3d_overlap
 import os
+
+
+PYTORCH3D_REQUIRED_REASON = "requires pytorch3d for 3D IoU computation"
+requires_pytorch3d = unittest.skipIf(box3d_overlap is None, PYTORCH3D_REQUIRED_REASON)
 
 class TestPointpillarsEvaluationPipeline(unittest.TestCase):
     def build_settings(self):
@@ -24,13 +29,16 @@ class TestPointpillarsEvaluationPipeline(unittest.TestCase):
             dataset=SimpleNamespace(classes=["Pedestrian", "Cyclist", "Car"]),
         )
 
+    @requires_pytorch3d
     def test_predict_and_evaluate_from_inference_engine_with_kitti3D(self):
         detector_name = "pointpillars"
         dataset_path = "tests/data/kitti3d_dummy/"
         detection_path = "output/"
-        model_path = "{ROOT_DIR}/third_party/pointpillars/_ext_src/pretrained/epoch_160.pth"
+        model_path = f"{ROOT_DIR}/third_party/pointpillars/_ext_src/pretrained/epoch_160.pth"
         inference_engine = InferenceEngine(settings=self.build_settings())
-        inference_engine.load(split="val", max_samples=10)
+        inference_engine.load(split="val", 
+                              max_samples=10,
+                              labels=[1, 2, 3])
         predictions = inference_engine.predict(
                 detector_name=detector_name,
                 dataset_path=dataset_path,

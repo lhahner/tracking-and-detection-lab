@@ -1,64 +1,82 @@
-import os
-import sys
-import torch
+import importlib.util
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
+from definitions import ROOT_DIR
+from inference_engine import InferenceEngine
+import torch
 
-TESTS_DIR = os.path.dirname(__file__)
-PROJECT_ROOT = os.path.dirname(os.path.dirname(TESTS_DIR))
-SRC_ROOT = os.path.join(PROJECT_ROOT, "src")
-MMDET3D_SRC_ROOT = os.path.join(PROJECT_ROOT, "third_party", "mmdetection3d")
-if SRC_ROOT not in sys.path:
-    sys.path.insert(0, SRC_ROOT)
-if MMDET3D_SRC_ROOT not in sys.path:
-    sys.path.insert(0, MMDET3D_SRC_ROOT)
-
-from datasets.kitti3D import Kitti3D
-from config.settings_loader import SettingsLoader
-from config.logging_config import LoggingConfig
-
-KITTI3D_DUMMY_PATH = Path(os.path.join(TESTS_DIR, "..", "data", "kitti3d_dummy"))
-
-logging_config = LoggingConfig()
-logger = logging_config.get_logger(__name__)
-
-CLASSES = {
-    0: "Car",
-    1: "Van",
-    2: "Truck",
-    3: "Pedestrian",
-    4: "Person_sitting",
-    5: "Cyclist",
-    6: "Tram",
-    7: "Misc",
-    8: "DontCare"
-}
-
-
-class TestPointRCNNMMDetection3DInference(unittest.TestCase):
-    def load_mmdet3d_path_from_settings(self):
-        settings_loader = SettingsLoader()
-        return settings_loader.load("settings.yaml")
-
-    def test_non_gpu_test(self):
+class TestPointRCNNMMDetection3DKitti3DPipeline(unittest.TestCase):
+    def test_predict_and_evaluate_from_inference_engine_with_kitti3d(self):
         if not torch.cuda.is_available():
-            with self.assertRaises(EnvironmentError):
-                from detector.pointrcnn.pointrcnn_mmdetection3d import PointRCNNmmDetections3D
-        else:
-            self.skipTest("Test test requires CPU")
+            raise unittest.SkipTest("CUDA GPU required for this test")
+        if importlib.util.find_spec("mmdet3d") is None:
+            raise unittest.SkipTest("MMDetection3D is not installed")
 
-    def test_kitti3d_dummy_detection(self):
-        if torch.cuda.is_available():
-            from detector.pointrcnn.pointrcnn_mmdetection3d import PointRCNNmmDetections3D
+        root_dir = Path(ROOT_DIR)
+        checkpoint_file = root_dir / "src/detector/pointrcnn/model/point_rcnn_2x8_kitti-3d-3classes_20211208_151344.pth"
+        config_file = root_dir / "third_party/mmdetection3d/configs/point_rcnn/point-rcnn_8xb2_kitti-3d-3class.py"
+        dataset_path = root_dir / "tests/data/kitti3d_dummy"
+        if not checkpoint_file.exists():
+            raise unittest.SkipTest(f"PointRCNN checkpoint is missing: {checkpoint_file}")
+        if not config_file.exists():
+            raise unittest.SkipTest(f"PointRCNN config is missing: {config_file}")
+        if not dataset_path.exists():
+            raise unittest.SkipTest(f"Kitti3d dummy dataset is missing: {dataset_path}")
 
-            kitti3d: Kitti3D = Kitti3D(KITTI3D_DUMMY_PATH)
-            pointrcnn: PointRCNNmmDetections3D = PointRCNNmmDetections3D(
-                dataset=kitti3d,
-                config_file=Path(SRC_ROOT) / "detector/pointrcnn/model/point-rcnn_8xb2_kitti-3d-3class_legacyckpt.py",
-                classes=CLASSES,
-                batch_size=1,
-                settings=self.load_mmdet3d_path_from_settings())
-            out: list = pointrcnn.detect()
-            self.assertTrue(len(out) > 0)
-        else:
-            self.skipTest("Test requires GPU")  # Smoke Test
+        settings = SimpleNamespace(
+            paths=SimpleNamespace(
+                detection_path=str(root_dir / "output"),
+                dataset_path=str(dataset_path),
+                config_file=str(config_file),
+            ),
+            runtime=SimpleNamespace(
+                datatype="bin",
+                dataset="kitti3d",
+                display=False,
+            ),
+            benchmark=SimpleNamespace(
+                iou_threshold=0.4,
+            ),
+            tracker=SimpleNamespace(max_age=3, min_hits=2, iou_threshold=0.2),
+            dataset=SimpleNamespace(
+                classes={
+                    "Car": 3,
+                    "Pedestrian": 1,
+                    "Cyclist": 2,
+                }
+            ),
+        )
+
+        inference_engine = InferenceEngine(settings=settings)
+        dataset = inference_engine.load(split="val", 
+                                        max_samples=1,
+                                        labels={
+                                            "Car": 3,
+                                            "Pedestrian": 1,
+                                            "Cyclist": 2,
+                                        })
+        self.assertEqual(len(dataset), 1)
+
+        predictions = inference_engine.predict(
+            detector_name="pointrcnn_mmdetection3d",
+            dataset_path=str(dataset_path),
+            detection_path=str(Path(settings.paths.detection_path)),
+            model_path=str(checkpoint_file),
+        )
+        self.assertEqual(len(predictions.frames), 1)
+        self.assertIsInstance(predictions.frames[0].dets, list)
+
+        results = inference_engine.evaluate_detection(
+            detections=predictions,
+            classes=[3, 1, 2],
+        )
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]["frame"], predictions.frames[0].frame)
+        self.assertIn("mAP", results[0])
+        self.assertGreater(float(results[0]["mAP"]), 0.0)
+        self.assertLessEqual(float(results[0]["mAP"]), 1.0)
+
+
+if __name__ == "__main__":
+    unittest.main()

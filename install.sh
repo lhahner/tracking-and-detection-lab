@@ -7,9 +7,10 @@ PYTHON_VERSION="${PYTHON_VERSION:-3.10.20}"
 PYTORCH_VERSION="${PYTORCH_VERSION:-2.1.0}"
 TORCHVISION_VERSION="${TORCHVISION_VERSION:-0.16.0}"
 TORCHAUDIO_VERSION="${TORCHAUDIO_VERSION:-2.1.0}"
-CUDA_FLAVOR="${CUDA_FLAVOR:-cu118}"
+CUDA_FLAVOR="${CUDA_FLAVOR:-cpu}"
 INSTALL_DETECTRON2="${INSTALL_DETECTRON2:-1}"
 INSTALL_MMDET3D="${INSTALL_MMDET3D:-0}"
+INSTALL_OPENPCDET="${INSTALL_OPENPCDET:-0}"
 MMDET3D_REPO_URL="${MMDET3D_REPO_URL:-https://github.com/lhahner/mmdetection3d-cpu-only.git}"
 
 usage() {
@@ -20,8 +21,9 @@ Usage:
 Options:
   --env NAME              Conda environment name. Default: track-lab
   --python VERSION        Python version. Default: 3.10
-  --cuda FLAVOR           One of: cpu, cu118, cu121, cu124. Default: cu118
+  --cuda FLAVOR           One of: cpu, cu118, cu121. Default: cpu
   --without-detectron2    Skip detectron2 installation
+  --with-openpcdet        Install OpenPCDet Python import dependencies
   --with-mmdet3d          Install MMDetection3D and its OpenMMLab dependencies
   --help                  Show this help
 
@@ -29,6 +31,7 @@ Examples:
   bash install.sh
   bash install.sh --cuda cu118
   bash install.sh --env track-lab-gpu --cuda cu121
+  bash install.sh --with-openpcdet
   bash install.sh --with-mmdet3d
 EOF
 }
@@ -64,6 +67,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --without-detectron2)
       INSTALL_DETECTRON2=0
+      shift
+      ;;
+    --with-openpcdet)
+      INSTALL_OPENPCDET=1
       shift
       ;;
     --with-mmdet3d)
@@ -159,6 +166,41 @@ if [[ "${OPEN3D_VIA_CONDA}" == "1" ]]; then
   conda install -n "${ENV_NAME}" -c conda-forge open3d -y
 else
   python -m pip install -r "${REPO_ROOT}/requirements.txt"
+fi
+
+if [[ "${INSTALL_OPENPCDET}" == "1" ]]; then
+  OPENPCDET_PATH="${REPO_ROOT}/third_party/OpenPCDet"
+  if [[ ! -d "${OPENPCDET_PATH}/pcdet" ]]; then
+    echo "OpenPCDet source tree was not found at ${OPENPCDET_PATH}; initializing submodule"
+    git -C "${REPO_ROOT}" submodule update --init --recursive third_party/OpenPCDet
+  fi
+  if [[ ! -d "${OPENPCDET_PATH}/pcdet" ]]; then
+    echo "OpenPCDet source tree is still missing at ${OPENPCDET_PATH}" >&2
+    exit 1
+  fi
+
+  echo "Installing OpenPCDet Python import dependencies"
+  if ! conda install -n "${ENV_NAME}" -c conda-forge sharedarray -y; then
+    echo "conda-forge sharedarray install failed; falling back to pip SharedArray"
+    python -m pip install SharedArray
+  fi
+  python -m pip install tensorboardX pyquaternion
+
+  echo "Registering vendored OpenPCDet package path"
+  python - "${OPENPCDET_PATH}" <<'PY'
+import site
+import sys
+from pathlib import Path
+
+openpcdet_path = Path(sys.argv[1]).resolve()
+site_packages = Path(site.getsitepackages()[0])
+site_packages.mkdir(parents=True, exist_ok=True)
+pth_file = site_packages / "openpcdet-local.pth"
+pth_file.write_text(f"{openpcdet_path}\n")
+print(f"OpenPCDet path registered in {pth_file}")
+PY
+else
+  echo "Skipping OpenPCDet Python import setup"
 fi
 
 if [[ "${INSTALL_DETECTRON2}" == "1" ]]; then
@@ -271,6 +313,19 @@ if importlib.util.find_spec("mmdet3d") is not None:
     print(f"mmdet3d={getattr(mmdet3d, '__version__', 'installed')}")
 else:
     print("mmdet3d=not-installed")
+
+if importlib.util.find_spec("pcdet") is not None:
+    try:
+        from pcdet.datasets.dataset import DatasetTemplate
+        from pcdet.config import cfg_from_yaml_file
+    except Exception as exc:
+        print(f"pcdet=not-importable ({type(exc).__name__}: {exc})")
+    else:
+        print("pcdet=importable")
+        print("pcdet_dataset_template=importable")
+        print("pcdet_cfg_loader=importable")
+else:
+    print("pcdet=not-installed")
 
 print(f"timm_installed={importlib.util.find_spec('timm') is not None}")
 PY

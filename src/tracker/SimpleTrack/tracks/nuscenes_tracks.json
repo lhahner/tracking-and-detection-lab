@@ -1,0 +1,67 @@
+{
+  "meta": {
+    "use_camera": false,
+    "use_lidar": true,
+    "use_radar": false,
+    "use_map": false,
+    "use_external": false
+  },
+  "results": {
+    "abc123": [
+      {
+        "sample_token": "abc123",
+        "translation": [
+          20.0,
+          22.0,
+          0.8
+        ],
+        "size": [
+          1.8,
+          4.2,
+          1.6
+        ],
+        "rotation": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "velocity": [
+          0.0,
+          0.0
+        ],
+        "tracking_id": "1",
+        "tracking_name": "car",
+        "tracking_score": 0.95
+      }
+    ],
+    "abc124": [
+      {
+        "sample_token": "abc124",
+        "translation": [
+          20.599761146496817,
+          22.099960191082804,
+          0.8
+        ],
+        "size": [
+          1.8,
+          4.2,
+          1.6
+        ],
+        "rotation": [
+          0.9999579864053048,
+          0.0,
+          0.0,
+          0.009166538291434417
+        ],
+        "velocity": [
+          0.0,
+          0.0
+        ],
+        "tracking_id": "1",
+        "tracking_name": "car",
+        "tracking_score": 0.92
+      }
+    ]
+  }
+}

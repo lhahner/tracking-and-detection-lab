@@ -30,6 +30,7 @@ class Deserializer:
         source_path = Path(source)
         if source_path.exists():
             return json.loads(source_path.read_text(encoding="utf-8"))
+        breakpoint()
         return json.loads(source)
 
     def __decode_detection_value(self, value):
