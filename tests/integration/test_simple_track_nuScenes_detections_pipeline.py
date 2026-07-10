@@ -1,4 +1,5 @@
 import unittest
+import os.path
 
 from types import SimpleNamespace
 from data_io.deserializer import Deserializer
@@ -10,6 +11,8 @@ from evaluation.evaluation import Evaluation
 class TestSimpleTrackNuScenesDetectionsPipeline(unittest.TestCase):
     def test_read_and_process_dummy_detections_for_nuScenes(self):
         nuScenes_data_root = f"{ROOT_DIR}/tests/data/nuScenes_dummy/"
+        if not os.path.exists(nuScenes_data_root):
+            raise unittest.SkipTest("NuScenes Dataset not found skipping test")
         settings = SimpleNamespace(
             paths=SimpleNamespace(
                 ground_truth_file_path=f"{ROOT_DIR}/tests/data/nuScenes_dummy/v1.0-mini/",
