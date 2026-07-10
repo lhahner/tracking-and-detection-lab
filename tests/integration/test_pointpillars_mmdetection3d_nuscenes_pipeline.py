@@ -1,16 +1,16 @@
 import importlib.util
 import unittest
-import torch
 import os
 from pathlib import Path
 from types import SimpleNamespace
 from definitions import ROOT_DIR
 from data_io import Serializer
+import torch
 
 class TestPointPillarsMMDetection3DNuScenesPipeline(unittest.TestCase):
     def test_predict_and_evaluate_from_inference_engine_with_nuscenes_mini(self):
         if not torch.cuda.is_available():
-            unittest.SkipTest("CUDA GPU required for this test")
+            raise unittest.SkipTest("GPU not there")
         if importlib.util.find_spec("mmdet3d") is None:
             raise unittest.SkipTest("MMDetection3D is not installed")
         if importlib.util.find_spec("nuscenes") is None:
@@ -84,7 +84,7 @@ class TestPointPillarsMMDetection3DNuScenesPipeline(unittest.TestCase):
 
     def test_prediction_and_serialization_on_nuScenes_mini(self):
         if not torch.cuda.is_available():
-            unittest.SkipTest("CUDA GPU required for this test")
+            raise unittest.SkipTest("CUDA GPU required for this test")
         if importlib.util.find_spec("mmdet3d") is None:
             raise unittest.SkipTest("MMDetection3D is not installed")
         if importlib.util.find_spec("nuscenes") is None:

@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 from detector.detector import Detector
+from detector.detector_registry import MODELS
 from third_party.pointpillars._ext_src.model.pointpillars import PointPillars
 from third_party.pointpillars._ext_src.dataset import point_range_filter
 from torch.utils.data import DataLoader
@@ -10,6 +11,7 @@ from definitions import ROOT_DIR
 CHECKPOINT_FILE = f"{ROOT_DIR}/third_party/pointpillars/_ext_src/pretrained/epoch_160.pth"
 
 
+@MODELS.register("pointpillars")
 class Pointpillars(Detector):
     """
     Wrapper for the Pointpillars model used to detect

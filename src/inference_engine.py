@@ -21,13 +21,11 @@ from tracker.SORT.sort import Sort
 from entities.detection import convert_to_tensor, convert_classes_to_tensor
 
 # Detection systems
-from detector.detr.detr_huggingface import DetrHuggingFaceDetector
-from detector.pointpillars.pointpillars import Pointpillars
+from detector.detector_registry import MODELS
 
 # Datasets
 from datasets.nuScenes import NuScenesDataset
 from datasets.kitti3D import Kitti3D
-
 
 class InferenceEngine:
     def __init__(self, settings):
@@ -46,12 +44,35 @@ class InferenceEngine:
         )
         self.dataset = None
 
-    def load(self, split, max_samples):
+    def load(self, split, max_samples, labels=None):
         dataset_name = self.settings.runtime.dataset.lower()
         if dataset_name == "kitti3d":
             self.dataset = Kitti3D(data_root=self.settings.paths.dataset_path,
                                    split=split,
-                                   max_samples=max_samples)
+                                   max_samples=max_samples,
+                                   labels=labels)
+        elif dataset_name in {"nuscenes_openpcdet", "nuscenes-mini_openpcdet"}:
+            from datasets.nuScenes_openpcdet_adapter import NuScenesOpenPCDetAdapter
+
+            version = "v1.0-mini" if dataset_name == "nuscenes-mini_openpcdet" else "v1.0-trainval"
+            split = "mini_val" if dataset_name == "nuscenes-mini_openpcdet" else "val"
+            nuScenes = NuScenesDataset(data_root=self.settings.paths.dataset_path,
+                                       version=version,
+                                       split=split)
+            self.dataset = NuScenesOpenPCDetAdapter(nuScenes=nuScenes,
+                                                    root_path=self.settings.paths.dataset_path,
+                                                    max_samples=max_samples,
+                                                    class_names=["car",
+                                                                 "truck",
+                                                                 "construction_vehicle",
+                                                                 "bus", 
+                                                                 "trailer", 
+                                                                 "barrier", 
+                                                                 "motorcycle", 
+                                                                 "bicycle", 
+                                                                 "pedestrian", 
+                                                                 "traffic_cone"])
+
         elif dataset_name in {"nuscenes", "nuscenes-mini"}:
             version = "v1.0-mini" if dataset_name == "nuscenes-mini" else "v1.0-trainval"
             split = "mini_val" if dataset_name == "nuscenes-mini" else "val"
@@ -64,59 +85,19 @@ class InferenceEngine:
         return self.dataset
 
     def predict(self, detector_name, dataset_path, detection_path, model_path):
-        """Instantiate and run the configured detector implementation.
-
-        Args:
-            detector_name: Short name of the detector to execute.
-            dataset_path: Directory that contains the input frames.
-            detection_path: Directory where `det.txt` should be written.
-            model_path: Path to the detector model weights if required.
-        """
-        detector = None
-        if detector_name == "frcnn":
-            detector = FasterRCNNDetector(
-                input_path=dataset_path, output_path=detection_path, threshold=0.9
-            )
-        if detector_name == "detr":
-            detector = DetrHuggingFaceDetector(
-                input_path=dataset_path,
-                output_path=detection_path,
-            )
-        if detector_name == "yolo":
-            detector = YoloDetector(
-                input_path=dataset_path,
-                output_path=detection_path,
-                model_path=model_path,
-            )
-        if detector_name == "detectron2":
-            detector = MaskFasterRCNNDetector(
-                input_path=dataset_path, output_path=detection_path, threshold=0.9
-            )
-        if detector_name == "pointrcnn":
-            from detector.pointrcnn.pointrcnn_mmdetection3d import PointRCNNmmDetections3D
-            detector = PointRCNNmmDetections3D(dataset=self.dataset,
-                                               config_file=self.settings.paths.config_file,
-                                               classes=self.settings.benchmark.class_filter,
-                                               settings=self.settings)
-        if detector_name == "pointpillars":
-            detector = Pointpillars(dataset=self.dataset,
-                                               config_file=self.settings.paths.config_file,
-                                               classes=self.settings.benchmark.class_filter,
-                                               settings=self.settings)
-        if detector_name == "pointpillars_mmdetection3d":
-            from detector.pointpillars.pointpillars_mmdetection3d import PointPillarsMMDetections3D
-            detector = PointPillarsMMDetections3D(dataset=self.dataset,
-                                                  config_file=self.settings.paths.config_file,
-                                                  classes=self.dataset.classes,
-                                                  settings=self.settings,
-                                                  checkpoint_file=model_path)
-        if detector_name == "centerpoint_mmdetection3d":
-            from detector.centerpoint.centerpoint_mmdetection3d import CenterPointMMDetections3D
-            detector = CenterPointMMDetections3D(dataset=self.dataset,
-                                                 config_file=self.settings.paths.config_file,
-                                                 classes=self.dataset.classes,
-                                                 settings=self.settings,
-                                                 checkpoint_file=model_path)
+        classes = getattr(self.dataset, "classes", None)
+        if classes is None:
+            classes = getattr(self.dataset, "labels", None)
+        if classes is None:
+            classes = getattr(self.settings.dataset, "classes", None)
+        if classes is None:
+            classes = getattr(self.settings.benchmark, "class_filter", None)
+        detector = MODELS.create(detector_name,
+                                 dataset=self.dataset,
+                                 config_file=self.settings.paths.config_file,
+                                 classes=classes,
+                                 settings=self.settings,
+                                 checkpoint_file=model_path)
         return detector.detect()
 
     def evaluate_detection(self,

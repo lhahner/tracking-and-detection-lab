@@ -8,6 +8,7 @@ except ImportError as exc:
 from torch.utils.data import DataLoader
 from pathlib import Path
 from detector.detector import Detector
+from detector.detector_registry import MODELS
 from entities.detection import Detection, DetectionSequence, FrameDetection
 from definitions import ROOT_DIR
 from config.logging_config import LoggingConfig
@@ -29,7 +30,7 @@ DEFAULT_CHECKPOINT_FILE = (
 logging_config = LoggingConfig()
 logger = logging_config.get_logger(__name__)
 
-
+@MODELS.register("centerpoint_mmdetection3d")
 class CenterPointMMDetections3D(Detector):
     def __init__(self,
                  dataset,

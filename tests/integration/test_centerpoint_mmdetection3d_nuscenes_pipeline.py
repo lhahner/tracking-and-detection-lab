@@ -5,10 +5,12 @@ from types import SimpleNamespace
 
 from definitions import ROOT_DIR
 from inference_engine import InferenceEngine
-
+import torch
 
 class TestCenterPointMMDetection3DNuScenesPipeline(unittest.TestCase):
     def test_predict_and_evaluate_from_inference_engine_with_nuscenes_mini(self):
+        if not torch.cuda.is_available():
+            raise unittest.SkipTest("No GPU skipping test")
         if importlib.util.find_spec("mmdet3d") is None:
             raise unittest.SkipTest("MMDetection3D is not installed")
         if importlib.util.find_spec("nuscenes") is None:
@@ -58,7 +60,9 @@ class TestCenterPointMMDetection3DNuScenesPipeline(unittest.TestCase):
         )
 
         inference_engine = InferenceEngine(settings=settings)
-        dataset = inference_engine.load(split="mini_val", max_samples=1)
+        dataset = inference_engine.load(split="mini_val", 
+                                        max_samples=1,
+                                        labels=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
         self.assertEqual(len(dataset), 1)
 
         predictions = inference_engine.predict(

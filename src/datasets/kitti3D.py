@@ -36,8 +36,6 @@ logging_config = LoggingConfig()
 logger = logging_config.get_logger(__name__)
 
 class Kitti3D(Dataset):
-    """Single KITTI dataset entry point for frame and object-crop access."""
-
     def __init__(
         self,
         data_root,
