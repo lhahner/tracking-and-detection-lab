@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections import defaultdict
+from copy import deepcopy
 from pathlib import Path
 import json
 import math
@@ -30,7 +32,10 @@ class SimpleTrack:
 
         self.config_path = Path(config_path) if config_path is not None else default_config
         self.output_path = Path(output_path) if output_path is not None else default_output
-        self._tracker = MOTModel(self._load_config(self.config_path))
+        self._config = self._load_config(self.config_path)
+        self._trackers_by_label: dict[str, MOTModel] = {}
+        self._public_track_ids: dict[tuple[str, int], int] = {}
+        self._next_public_track_id = 1
 
     def track(self, detections) -> list[dict]:
         frame_entries = self._normalize_frames(detections)
@@ -39,12 +44,22 @@ class SimpleTrack:
 
         for frame_entry in frame_entries:
             frame_number = int(frame_entry["frame"])
-            frame_data = self._build_frame_data(frame_entry)
-            frame_tracks = self._tracker.frame_mot(frame_data)
+            detections_by_label = self._detections_by_label(frame_entry.get("detections", []))
+            for label in detections_by_label:
+                self._tracker_for_label(label)
+
+            frame_tracks = []
+            labels_to_update = sorted(set(self._trackers_by_label) | set(detections_by_label))
+            for label in labels_to_update:
+                class_frame_entry = dict(frame_entry)
+                class_frame_entry["detections"] = detections_by_label.get(label, [])
+                frame_data = self._build_frame_data(class_frame_entry)
+                class_tracks = self._trackers_by_label[label].frame_mot(frame_data)
+                frame_tracks.extend((label, *track) for track in class_tracks)
 
             normalized_tracks = []
-            for bbox, track_id, state, det_type in frame_tracks:
-                public_track_id = int(track_id) + 1
+            for tracker_label, bbox, track_id, state, det_type in frame_tracks:
+                public_track_id = self._public_track_id(tracker_label, int(track_id))
                 bbox_array = BBox.bbox2array(bbox).astype(float).tolist()
                 normalized_tracks.append(
                     {
@@ -151,6 +166,18 @@ class SimpleTrack:
         with config_path.open("r", encoding="utf-8") as handle:
             return yaml.safe_load(handle)
 
+    def _tracker_for_label(self, label: str) -> MOTModel:
+        if label not in self._trackers_by_label:
+            self._trackers_by_label[label] = MOTModel(deepcopy(self._config))
+        return self._trackers_by_label[label]
+
+    def _public_track_id(self, label: str, tracker_track_id: int) -> int:
+        key = (label, tracker_track_id)
+        if key not in self._public_track_ids:
+            self._public_track_ids[key] = self._next_public_track_id
+            self._next_public_track_id += 1
+        return self._public_track_ids[key]
+
     def _normalize_frames(self, detections) -> list[dict]:
         if isinstance(detections, dict):
             frames = detections.get("frames", [detections])
@@ -166,9 +193,18 @@ class SimpleTrack:
             normalized.append(frame_entry)
         return normalized
 
+    def _detections_by_label(self, detections: Iterable[dict]) -> dict[str, list[dict]]:
+        grouped = defaultdict(list)
+        for detection in detections:
+            grouped[self._normalize_label(detection)].append(detection)
+        return dict(grouped)
+
+    def _normalize_label(self, detection: dict) -> str:
+        return str(detection.get("label", "object")).lower()
+
     def _build_frame_data(self, frame_entry: dict) -> FrameData:
         det_arrays = [self._normalize_detection(det) for det in frame_entry.get("detections", [])]
-        det_types = [det.get("label", "object") for det in frame_entry.get("detections", [])]
+        det_types = [self._normalize_label(det) for det in frame_entry.get("detections", [])]
         aux_info = dict(frame_entry.get("aux_info", {}))
         aux_info.setdefault("is_key_frame", True)
 
