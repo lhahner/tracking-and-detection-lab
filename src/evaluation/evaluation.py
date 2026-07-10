@@ -23,7 +23,7 @@ logger = logging_config.get_logger(__name__)
 class Evaluation:
     def __init__(self, iou_threshold=0.5):
         self.iou_threshold = iou_threshold
-        self.metrics_handler = mm.metrics.create() if mm is not None else None
+        self.metrics_handler = mm.metrics.create()
 
     def read_mot_file(self,
                       file_path,
@@ -34,7 +34,7 @@ class Evaluation:
             mot_rows = mot_rows.reshape(1, -1)
         detections_per_frame = {}
         if np is not None:
-            mot_rows = np.loadtxt(resolved_path, delimiter=",")
+            mot_rows = np.loadtxt(Path(file_path), delimiter=",")
             if mot_rows.ndim == 1:
                 mot_rows = mot_rows.reshape(1, -1)
         else:
@@ -74,8 +74,6 @@ class Evaluation:
         return normalized_name.startswith(pedestrian_sequences)
 
     def create_mot_accumulator(self):
-        if mm is None:
-            return []
         return mm.MOTAccumulator(auto_id=False)
 
     def convert_trackers_to_mot_items(self, trackers):

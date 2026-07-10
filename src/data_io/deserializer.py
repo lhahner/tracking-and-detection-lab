@@ -19,7 +19,7 @@ class Deserializer:
         if document_path is Detection:
             return self.__decode_detection_value(value=raw)
 
-        raise ValueError(f"Cannot deserialize into {into}")
+        raise ValueError(f"Cannot deserialize into {document_path}")
 
     def __deserialize_document(self, source):
         source_path = Path(source)

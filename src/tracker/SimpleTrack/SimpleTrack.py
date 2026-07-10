@@ -47,10 +47,9 @@ class SimpleTrack:
         config_path=None
     ):
         default_config = THIRD_PARTY_SIMPLETRACK_ROOT / "configs" / "nu_configs" / "giou.yaml"
-        default_output = Path("src/tracker/simpleTrack/tracks/nuScenes_tracks.txt")
 
         self.config_path = Path(config_path) if config_path is not None else default_config
-        self.output_path = Path(output_path) if output_path is not None else default_output
+        self.output_path = Path(output_path)
         self.config = self.__load_config(self.config_path)
         self.trackers_by_label: dict[str, MOTModel] = {}
         self._public_track_ids: dict[tuple[str, int], int] = {}
@@ -113,8 +112,18 @@ class SimpleTrack:
             tracking_results, 
             output_path,
             valid_classes=VALID_CLASSES,
-            payload=PAYLOAD
     ):
+        payload = {
+            "meta": {
+                "use_camera": False,
+                "use_lidar": True,
+                "use_radar": False,
+                "use_map": False,
+                "use_external": False
+                },
+            "results": {}
+        }
+
         for frame_result in tracking_results:
             sample_token = frame_result.get("sample_token")
             lidar_to_global = frame_result.get("lidar_to_global")
