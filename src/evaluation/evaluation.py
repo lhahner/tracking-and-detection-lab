@@ -2,6 +2,10 @@ from __future__ import annotations
 from pathlib import Path
 import csv
 import datetime
+import numpy
+import torch
+import motmetrics as mm
+import torchmetrics
 
 try:
     import numpy as np
@@ -10,21 +14,6 @@ try:
 except ImportError:  # pragma: no cover
     np = None
 
-try:
-    import torch
-except ImportError:  # pragma: no cover
-    torch = None
-
-try:
-    import motmetrics as mm
-except ImportError:  # pragma: no cover
-    mm = None
-
-try:
-    import torchmetrics
-except ImportError:  # pragma: no cover
-    torchmetrics = None
-
 from config.logging_config import LoggingConfig
 
 logging_config = LoggingConfig()
@@ -32,46 +21,17 @@ logger = logging_config.get_logger(__name__)
 
 
 class Evaluation:
-    """
-    API for evaluation of various metrics based on
-    torchmetrics or motmetrics package.
-    """
     def __init__(self, iou_threshold=0.5):
-        """Create an evaluation helper for MOT-style tracking metrics.
-
-        Args:
-            iou_threshold: Minimum IoU required for a valid match.
-        """
         self.iou_threshold = iou_threshold
         self.metrics_handler = mm.metrics.create() if mm is not None else None
-
-    def _resolve_mot_file_path(self, file_path):
-        """Resolve a MOT text file path from either a file or directory input."""
-        resolved_path = Path(file_path)
-        if resolved_path.is_dir():
-            candidate = resolved_path / "gt.txt"
-            if candidate.exists():
-                return candidate
-            raise FileNotFoundError(f"No gt.txt found in directory: {resolved_path}")
-        return resolved_path
 
     def read_mot_file(self,
                       file_path,
                       filter_ground_truth_by_confidence=False,
                       allowed_class_ids=None):
-        """Read a MOT-format file and group detections by frame.
-
-        Args:
-            file_path: Path to a MOT-format text file.
-            filter_ground_truth_by_confidence: Whether to discard rows with
-                non-positive confidence values.
-            allowed_class_ids: Optional set of class IDs to keep.
-
-        Returns:
-            dict[int, list[tuple[int, list[float]]]]: Mapping of frame number to
-            object IDs and bounding boxes in `xywh` format.
-        """
-        resolved_path = self._resolve_mot_file_path(file_path)
+        mot_rows = np.loadtxt(Path(file_path), delimiter=",")
+        if mot_rows.ndim == 1:
+            mot_rows = mot_rows.reshape(1, -1)
         detections_per_frame = {}
         if np is not None:
             mot_rows = np.loadtxt(resolved_path, delimiter=",")
@@ -179,15 +139,6 @@ class Evaluation:
         metric_row = summary.loc[sequence_name]
         return {metric: metric_row[metric] for metric in metrics}
 
-    def get_metric_value(self, evaluation_summary, metric_name, sequence_name="sequence"):
-        if hasattr(evaluation_summary, "loc"):
-            return float(evaluation_summary.loc[sequence_name][metric_name])
-        if isinstance(evaluation_summary, list):
-            for row in evaluation_summary:
-                if row.get("sequence", sequence_name) == sequence_name:
-                    return float(row[metric_name])
-        raise KeyError(f"Metric '{metric_name}' not found in evaluation summary")
-    
     def evaluate_simpletrack_nuscenes_result_file(
             self,
             result_path,
@@ -197,7 +148,6 @@ class Evaluation:
             output_dir="output/nuscenes_tracking_eval"
         ):
         from nuscenes.eval.tracking.evaluate import TrackingEval
-
         try:
             from nuscenes.eval.common.config import config_factory
         except ImportError:
@@ -230,28 +180,8 @@ class Evaluation:
                 )
         predicted_tracks_by_frame = self.read_mot_file(predicted_tracking_file_path, filter_ground_truth_by_confidence=False)
 
-        if mm is None or self.metrics_handler is None:
-            total_gt = sum(len(items) for items in ground_truth_by_frame.values())
-            total_pred = sum(len(items) for items in predicted_tracks_by_frame.values())
-            matched = 0
-            for frame_number in sorted(set(ground_truth_by_frame) | set(predicted_tracks_by_frame)):
-                gt_items = {(item[0], tuple(item[1])) for item in ground_truth_by_frame.get(frame_number, [])}
-                pred_items = {(item[0], tuple(item[1])) for item in predicted_tracks_by_frame.get(frame_number, [])}
-                matched += len(gt_items & pred_items)
-            precision = matched / total_pred if total_pred else 0.0
-            recall = matched / total_gt if total_gt else 0.0
-            mota = matched / total_gt if total_gt else 0.0
-            return [{
-                "sequence": sequence_name,
-                "idf1": precision,
-                "mota": mota,
-                "motp": 0.0,
-                "precision": precision,
-                "recall": recall,
-            }]
-
-        mot_accumulator = mm.MOTAccumulator(auto_id=False)  # MotMetric setup
-        maximum_iou_distance = 1.0 - self.iou_threshold  # default to 0.5
+        mot_accumulator = mm.MOTAccumulator(auto_id=False)
+        maximum_iou_distance = 1.0 - self.iou_threshold
         for frame_number in sorted(set(ground_truth_by_frame) | set(predicted_tracks_by_frame)):
             ground_truth_items = ground_truth_by_frame.get(frame_number, [])
             predicted_items = predicted_tracks_by_frame.get(frame_number, [])
@@ -273,17 +203,6 @@ class Evaluation:
                                             )
 
     def presist_evaluation(self, evaluation_summary, dataset, detector_name, tracking_name):
-        """Persist an evaluation summary to a timestamped benchmark file.
-
-        Args:
-            evaluation_summary: Evaluation result object or string summary.
-            dataset: Dataset name included in the output filename and content.
-            detector_name: Detector name included in the output metadata.
-            tracking_name: Tracker name included in the output metadata.
-
-        Returns:
-            Path: Path to the written benchmark file.
-        """
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         safe_dataset = str(dataset).replace("/", "_")
         safe_detector = str(detector_name).replace("/", "_")
@@ -311,9 +230,6 @@ class Evaluation:
         return benchmark_file_path
 
     def compute_IoU_3D(self, predicted_detections: list, ground_truth: list):
-        """
-        Standalone wrapper for PyTorch3D IoU computation. PyTorch3D Requires Linux.
-        """
         try:
             from pytorch3d.ops import box3d_overlap
             if predicted_detections.numel() == 0 or ground_truth.numel() == 0:
@@ -327,9 +243,6 @@ class Evaluation:
                                      predicted_detection_classes: torch.tensor,
                                      ground_truth: torch.tensor,
                                      num_classes) -> tuple[torch.tensor, torch.tensor]:
-        """
-        Standalone wrapper for torchmetrics recall and precision computations.
-        """
         if predicted_detection_classes.shape[0] == ground_truth.shape[0]:
             precision = torchmetrics.Precision(task="multiclass", average="macro", num_classes=num_classes)
             recall = torchmetrics.Recall(task="multiclass", average="macro", num_classes=num_classes)
@@ -344,9 +257,6 @@ class Evaluation:
     def compute_average_precision(self,
                                   recall: torch.tensor,
                                   precision: torch.tensor):
-        """
-        Standalone Average Precision interaction.
-        """
         from .metrics import AveragePrecision3D
         metric = AveragePrecision3D()
         metric.update(recall=recall,
@@ -358,9 +268,6 @@ class Evaluation:
                        ground_truth: torch.tensor,
                        classes,
                        box_mode="camera"):
-        """
-        Frame-wise standalone mAP interaction.
-        """
         if predicted_detections.numel() == 0 or ground_truth.numel() == 0 or classes.numel() == 0:
             return torch.tensor([0])
 
