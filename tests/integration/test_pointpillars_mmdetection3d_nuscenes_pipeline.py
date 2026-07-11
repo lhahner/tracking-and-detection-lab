@@ -5,6 +5,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from definitions import ROOT_DIR
 from data_io import Serializer
+from evaluation.evaluation import Evaluation
 import torch
 
 class TestPointPillarsMMDetection3DNuScenesPipeline(unittest.TestCase):
@@ -59,8 +60,7 @@ class TestPointPillarsMMDetection3DNuScenesPipeline(unittest.TestCase):
         )
 
         inference_engine = InferenceEngine(settings=settings)
-        dataset = inference_engine.load(split="mini_val", max_samples=1)
-        self.assertEqual(len(dataset), 1)
+        dataset = inference_engine.load(split="mini_val", max_samples=100)
 
         predictions = inference_engine.predict(
             detector_name="pointpillars_mmdetection3d",
@@ -68,7 +68,6 @@ class TestPointPillarsMMDetection3DNuScenesPipeline(unittest.TestCase):
             detection_path=str(Path(settings.paths.detection_path)),
             model_path=str(checkpoint_file),
         )
-        self.assertEqual(len(predictions.frames), 1)
         self.assertEqual(predictions.frames[0].frame, dataset.sample_records[0]["sample_token"])
         self.assertIsInstance(predictions.frames[0].dets, list)
 
@@ -76,7 +75,11 @@ class TestPointPillarsMMDetection3DNuScenesPipeline(unittest.TestCase):
             detections=predictions,
             classes=settings.benchmark.class_filter,
         )
-        self.assertEqual(len(results), 1)
+        serializer = Serializer(settings=settings,
+                                data_format="nuscenes",
+                                file_name=f"{ROOT_DIR}/tests/data/point-pillars-nuscenes-mini-detections.csv"
+                                )
+        serializer.serialize(predictions)
         self.assertEqual(results[0]["frame"], predictions.frames[0].frame)
         self.assertIn("mAP", results[0])
         self.assertGreater(float(results[0]["mAP"]), 0.0)

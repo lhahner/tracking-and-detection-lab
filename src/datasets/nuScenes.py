@@ -178,11 +178,9 @@ class NuScenesDataset(Dataset):
             )
 
     def __len__(self) -> int:
-        """Return the number of keyframe samples in the selected split."""
         return len(self.sample_records)
 
     def __getitem__(self, idx: int) -> dict[str, Any]:
-        """Load one keyframe, its optional past sweeps, image, and annotations."""
         index_record = self.sample_records[idx]
         sample = self.nusc.get("sample", index_record["sample_token"])
         lidar_token = sample["data"]["LIDAR_TOP"]
