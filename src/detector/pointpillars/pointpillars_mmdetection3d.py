@@ -59,14 +59,20 @@ class PointPillarsMMDetections3D(Detector):
                                      batch_size=self.batch_size,
                                      collate_fn=self.dataset.custom_collate)
         detection_sequence = DetectionSequence()
-        for points, targets, samples in test_dataloader:
-            for point, target, sample_id in zip(points, targets, samples):
+        for batch in test_dataloader:
+            if len(batch) == 4:
+                points, targets, samples, metadata = batch
+            else:
+                points, targets, samples = batch
+                metadata = [None] * len(samples)
+            for point, target, sample_id, frame_metadata in zip(points, targets, samples, metadata):
                 instance_data = self.__predict_instances(point)
                 detections, highest_score_index = self.__convert_instances(instance_data)
                 detection_sequence.frames.append(FrameDetection(frame=sample_id,
                                                                 highest_score_index=highest_score_index,
                                                                 dets=detections,
-                                                                targets=target,))
+                                                                targets=target,
+                                                                metadata=frame_metadata))
         return detection_sequence
 
     def __build_class_map(self, classes):

@@ -163,6 +163,134 @@ class Evaluation:
                 )
         return evaluator.main(render_curves=False)
 
+    def evaluate_simpletrack_nuscenes_sample_tokens(
+            self,
+            result_path,
+            dataroot,
+            sample_tokens,
+            version="v1.0-mini",
+            score_threshold=None,
+        ):
+        from nuscenes import NuScenes
+        from nuscenes.eval.common.loaders import (
+                load_gt_of_sample_tokens,
+                load_prediction_of_sample_tokens,
+                )
+        from nuscenes.eval.tracking.data_classes import TrackingBox
+        try:
+            from nuscenes.eval.common.config import config_factory
+        except ImportError:
+            from nuscenes.eval.tracking.config import config_factory
+
+        cfg = config_factory("tracking_nips_2019")
+        nusc = NuScenes(version=version, dataroot=str(dataroot), verbose=False)
+        sample_tokens = [str(sample_token) for sample_token in sample_tokens]
+        pred_boxes, _ = load_prediction_of_sample_tokens(
+                str(result_path),
+                cfg.max_boxes_per_sample,
+                TrackingBox,
+                sample_tokens=sample_tokens,
+                verbose=False,
+                )
+        gt_boxes = load_gt_of_sample_tokens(
+                nusc,
+                sample_tokens,
+                TrackingBox,
+                verbose=False,
+                )
+
+        if score_threshold is None:
+            thresholds = {0.0}
+            for sample_token in sample_tokens:
+                thresholds.update(
+                        box.tracking_score
+                        for box in pred_boxes.boxes.get(sample_token, [])
+                        )
+            thresholds = sorted(thresholds, reverse=True)
+        else:
+            thresholds = [float(score_threshold)]
+
+        metrics = [
+                "mota",
+                "motp",
+                "recall",
+                "num_matches",
+                "num_false_positives",
+                "num_misses",
+                ]
+        best_result = None
+        for threshold in thresholds:
+            accumulator = mm.MOTAccumulator(auto_id=False)
+            ground_truth_id_map = {}
+            prediction_id_map = {}
+            frame_id = 0
+            for sample_token in sample_tokens:
+                for class_name in cfg.class_names:
+                    ground_truth = [
+                            box for box in gt_boxes.boxes.get(sample_token, [])
+                            if box.tracking_name == class_name
+                            ]
+                    predictions = [
+                            box for box in pred_boxes.boxes.get(sample_token, [])
+                            if box.tracking_name == class_name
+                            and box.tracking_score >= threshold
+                            ]
+
+                    ground_truth_ids = [
+                            self.__numeric_tracking_id(box.tracking_id, ground_truth_id_map)
+                            for box in ground_truth
+                            ]
+                    prediction_ids = [
+                            self.__numeric_tracking_id(box.tracking_id, prediction_id_map)
+                            for box in predictions
+                            ]
+                    if ground_truth and predictions:
+                        ground_truth_centers = np.asarray(
+                                [box.translation[:2] for box in ground_truth],
+                                dtype=float,
+                                )
+                        prediction_centers = np.asarray(
+                                [box.translation[:2] for box in predictions],
+                                dtype=float,
+                                )
+                        distance_matrix = np.linalg.norm(
+                                ground_truth_centers[:, None, :] - prediction_centers[None, :, :],
+                                axis=2,
+                                )
+                        distance_matrix[distance_matrix >= cfg.dist_th_tp] = np.nan
+                    else:
+                        distance_matrix = np.full(
+                                (len(ground_truth), len(predictions)),
+                                np.nan,
+                                )
+
+                    accumulator.update(
+                            ground_truth_ids,
+                            prediction_ids,
+                            distance_matrix,
+                            frameid=frame_id,
+                            )
+                    frame_id += 1
+
+            summary = self.metrics_handler.compute(
+                    accumulator,
+                    metrics=metrics,
+                    name="sample_subset",
+                    )
+            metric_row = summary.loc["sample_subset"]
+            result = {metric: metric_row[metric] for metric in metrics}
+            result["score_threshold"] = threshold
+            result["sample_count"] = len(sample_tokens)
+            if best_result is None or result["mota"] > best_result["mota"]:
+                best_result = result
+
+        return best_result
+
+    def __numeric_tracking_id(self, tracking_id, tracking_id_map):
+        if tracking_id not in tracking_id_map:
+            tracking_id_map[tracking_id] = len(tracking_id_map) + 1
+        return tracking_id_map[tracking_id]
+
     def evaluate_sequence(self, ground_truth_file_path,
                           predicted_tracking_file_path,
                           sequence_name="sequence",

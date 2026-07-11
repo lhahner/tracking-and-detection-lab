@@ -55,6 +55,8 @@ class Serializer:
             self.format_kitti3d_detections(data)
         if self.data_format == "nuscenes" and isinstance(data, DetectionSequence):
             return self.format_nuScenes_detections(data)
+        if self.data_format in {"simple_track", "simpletrack"} and isinstance(data, DetectionSequence):
+            return self.format_simple_track_detections(data)
         if self.data_format == "sort" and isinstance(data, DetectionSequence):
             pass
 
@@ -118,6 +120,103 @@ class Serializer:
         csv_path = base / (self.file_name + ".csv")
         csv_path.write_text(csv_string, encoding="utf-8")
         return csv_string
+    
+    def format_simple_track_detections(self, detection_sequence) -> str:
+        """
+        Parse the data from the DetectionSequence class to the 
+        format SimpleTrack requires.
+        Parameters:
+            :detection_sequence np.array
+        Return:
+            String with the required format
+        Example:
+            >>> {
+                    "frame": 0,
+                    "sample_token": "3e8750f331d7499e9b5123e9eb70f2e2",
+                    "time_stamp": 0.0,
+                    "lidar_to_global": [
+                        [1.0, 0.0, 0.0, 0.0],
+                        [0.0, 1.0, 0.0, 0.0],
+                        [0.0, 0.0, 1.0, 0.0]],
+                    "ego": [1.0, 0.0, 0.0, 0.0],
+                    "aux_info": {
+                        "is_key_frame": true
+                        },
+                    "detections": [
+                        {
+                            "label": "car",
+                            "score": 0.95,
+                            "bbox_3d": [
+                                635.447,
+                                1620.546,
+                                -0.326,
+                                -0.888442,
+                                4.734,
+                                2.001,
+                                1.481,
+                                0.95]
+                            }]
+                }
+        """
+        payload = {"frames": []}
+
+        for frame_index, frame in enumerate(detection_sequence.frames):
+            metadata = frame.metadata
+            if metadata is None:
+                raise ValueError("FrameDetection.metadata is required for SimpleTrack serialization")
+
+            frame_entry = {
+                "frame": frame_index,
+                "sample_token": self.__metadata_value(metadata, "sample_token"),
+                "time_stamp": self.__to_float(self.__metadata_value(metadata, "time_stamp")),
+                "lidar_to_global": self.__matrix_4x4(
+                    self.__metadata_value(metadata, "lidar_to_global"),
+                    "lidar_to_global",
+                ),
+                "ego": self.__matrix_4x4(self.__metadata_value(metadata, "ego"), "ego"),
+                "aux_info": dict(self.__metadata_value(metadata, "aux_info")),
+                "detections": [],
+            }
+
+            for det in frame.dets:
+                box = self.__to_numpy(det.box)
+                if box.shape[0] < 7:
+                    raise IndexError(
+                        "SimpleTrack detections require boxes with at least 7 values: "
+                        "[x, y, z, length, width, height, yaw]"
+                    )
+
+                score = self.__to_float(det.score)
+                label = self.__format_detection_label(det.label)
+                x, y, z, length, width, height, yaw = box[:7]
+                frame_entry["detections"].append(
+                    {
+                        "label": label,
+                        "score": score,
+                        "bbox_3d": [
+                            float(x),
+                            float(y),
+                            float(z),
+                            float(yaw),
+                            float(length),
+                            float(width),
+                            float(height),
+                            score,
+                        ],
+                    }
+                )
+
+            payload["frames"].append(frame_entry)
+
+        json_string = json.dumps(payload, default=self.__encode_value)
+        json_path = Path(self.file_name)
+        if not json_path.is_absolute():
+            json_path = Path(self.detection_path) / json_path
+        if json_path.suffix != ".json":
+            json_path = json_path.with_suffix(".json")
+        json_path.parent.mkdir(parents=True, exist_ok=True)
+        json_path.write_text(json_string, encoding="utf-8")
+        return json_string
 
     def format_kitti3d_detections(self, detection_sequence) -> str:
         """
@@ -215,6 +314,45 @@ class Serializer:
         score_value = score.item() if hasattr(score, "item") else score
         return f"{obj_type} {truncated} {occluded} {alpha} {arr_str} {round(rotation_y_value, 2)} {round(score_value, 2)}"
 
+    def __metadata_value(self, metadata, field_name):
+        if not hasattr(metadata, field_name):
+            raise ValueError(
+                f"FrameDetection.metadata must provide {field_name!r} for SimpleTrack serialization"
+            )
+        value = getattr(metadata, field_name)
+        if value is None:
+            raise ValueError(
+                f"FrameDetection.metadata.{field_name} is required for SimpleTrack serialization"
+            )
+        return value
+
+    def __matrix_4x4(self, value, field_name):
+        matrix = self.__to_numpy(value)
+        if matrix.shape != (4, 4):
+            raise ValueError(f"Expected {field_name} with shape (4, 4), got {matrix.shape}")
+        return matrix.astype(float).tolist()
+
+    def __format_detection_label(self, label):
+        label = self.__to_scalar(label)
+        if isinstance(label, str):
+            return label.lower()
+        return DETECTION_CLASSES_BY_INDEX[int(label)]
+
+    def __to_numpy(self, value):
+        if hasattr(value, "detach"):
+            value = value.detach().cpu()
+        if hasattr(value, "numpy"):
+            value = value.numpy()
+        return np.asarray(value)
+
+    def __to_scalar(self, value):
+        if hasattr(value, "item"):
+            return value.item()
+        return value
+
+    def __to_float(self, value):
+        return float(self.__to_scalar(value))
+
     def __round_value(self, value):
         if hasattr(value, "item"):
             value = value.item()
@@ -225,6 +363,14 @@ class Serializer:
         if dataclasses.is_dataclass(data):
             return dataclasses.asdict(data)
         raise ValueError("Dataclass not supported")
+
+    @__encode_value.register(np.ndarray)
+    def _(self, data: np.ndarray):
+        return data.tolist()
+
+    @__encode_value.register(np.generic)
+    def _(self, data: np.generic):
+        return data.item()
 
     @__encode_value.register(torch.Tensor)
     def _(self, data: torch.tensor):

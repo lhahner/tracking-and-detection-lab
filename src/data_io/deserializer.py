@@ -7,7 +7,7 @@ class Deserializer:
         self.data_format = data_format
 
     def deserialize(self, document_path, serialized=None):
-        if self.data_format != "json":
+        if self.data_format not in {"json", "simple_track", "simpletrack"}:
             raise NotImplementedError(f"Unsupported data format: {self.data_format}")
         
         if serialized is None:

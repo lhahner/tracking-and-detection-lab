@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 import torch
 import torch.nn.functional as F
-
+from entities.metadata import Metadata
 
 @dataclass(frozen=True)
 class Detection:
@@ -16,6 +16,7 @@ class FrameDetection:
     highest_score_index: int
     dets: list[Detection]
     targets: list = field(default_factory=list)
+    metadata: Metadata | None = None
 
 
 @dataclass(frozen=True)
