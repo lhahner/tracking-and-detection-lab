@@ -33,14 +33,20 @@ class NuScenesOpenPCDetAdapter(DatasetTemplate):
 
     def __getitem__(self, index):
         sample = self.nuScenes[self.nuScenes.sample_records.index(self.sample_records[index])]
+        index_record = self.nuScenes.sample_records[index]
+        sample_ = self.nuScenes.nusc.get("sample", index_record["sample_token"])
         points = sample["points"].astype(np.float32)
         if points.shape[1] == 4:
-            points = np.concatenate([points, np.zeros((points.shape[0], 1), dtype=np.float32)], axis=1)
+            points = np.concatenate(
+                    [points, np.zeros((points.shape[0], 1), dtype=np.float32)], 
+                    axis=1)
         sample_id = sample["sample_id"]
-
+        calibration = self.nuScenes._load_calibration(sample_)
+        metadata = self.nuScenes._build_metadata(sample_, calibration)
         input_dict = {
                 "points": points,
-                "frame_id": sample_id
+                "frame_id": sample_id,
+                "metadata": metadata
                 }
         data_dict = self.prepare_data(data_dict=input_dict)
         data_dict["target"] = sample["target"]

@@ -9,6 +9,7 @@ import torch
 from PIL import Image
 from torch.utils.data import Dataset
 from nuscenes.nuscenes import NuScenes
+from entities.metadata import NuScenesMetadata
 
 DETECTION_CLASSES = {
     "Background": 0,
@@ -177,11 +178,9 @@ class NuScenesDataset(Dataset):
             )
 
     def __len__(self) -> int:
-        """Return the number of keyframe samples in the selected split."""
         return len(self.sample_records)
 
     def __getitem__(self, idx: int) -> dict[str, Any]:
-        """Load one keyframe, its optional past sweeps, image, and annotations."""
         index_record = self.sample_records[idx]
         sample = self.nusc.get("sample", index_record["sample_token"])
         lidar_token = sample["data"]["LIDAR_TOP"]
@@ -190,6 +189,7 @@ class NuScenesDataset(Dataset):
         points, sweep_paths = self._load_lidar_sweeps(lidar_record)
         image, image_path = self._load_camera_image(sample)
         calibration = self._load_calibration(sample)
+        metadata = self._build_metadata(sample, calibration)
         targets = self._load_annotations(lidar_token)
 
         if self.transform is not None and image is not None:
@@ -213,6 +213,7 @@ class NuScenesDataset(Dataset):
             "scene_name": index_record["scene_name"],
             "frame_index": index_record["frame_index"],
             "timestamp": sample["timestamp"],
+            "metadata": metadata,
             "is_first_frame": index_record["is_first_frame"],
             "is_last_frame": index_record["is_last_frame"],
         }
@@ -375,6 +376,24 @@ class NuScenesDataset(Dataset):
             "camera_paths": camera_paths,
         }
 
+    def _build_metadata(self, sample: dict[str, Any], calibration: dict[str, Any]) -> NuScenesMetadata:
+        lidar_calibration = calibration["lidar"]
+        sensor_to_ego = self._transform_matrix(
+            lidar_calibration["translation"],
+            lidar_calibration["rotation"],
+        )
+        ego_to_global = self._transform_matrix(
+            lidar_calibration["ego_translation"],
+            lidar_calibration["ego_rotation"],
+        )
+        return NuScenesMetadata(
+            sample_token=sample["token"],
+            time_stamp=sample["timestamp"] / 1e6,
+            lidar_to_global=(ego_to_global @ sensor_to_ego).tolist(),
+            ego=ego_to_global.tolist(),
+            aux_info={"is_key_frame": True},
+        )
+
     def _load_annotations(self, lidar_token: str) -> list[dict[str, Any]]:
         """Convert keyframe annotations to the internal LiDAR box convention."""
         _, boxes, _ = self.nusc.get_sample_data(lidar_token)
@@ -530,11 +549,13 @@ class NuScenesDataset(Dataset):
         filtered_data = []
         filtered_targets = []
         filtered_samples = []
+        filtered_metadata = []
         for item in batch:
             filtered_data.append(item["points"])
             filtered_targets.append(item["target"])
             filtered_samples.append(item["sample_id"])
-        return filtered_data, filtered_targets, filtered_samples
+            filtered_metadata.append(item.get("metadata"))
+        return filtered_data, filtered_targets, filtered_samples, filtered_metadata
 
     def _resolve_data_path(self, filename: str) -> Path:
         """Resolve devkit-relative filenames against the dataset root."""

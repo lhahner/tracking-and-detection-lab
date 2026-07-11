@@ -55,7 +55,12 @@ class Pointpillars(Detector):
         detection_sequence: DetectionSequence = DetectionSequence()
         self.model.eval()
         with torch.no_grad():
-            for points, targets, samples in test_dataloader:
+            for batch in test_dataloader:
+                if len(batch) == 4:
+                    points, targets, samples, metadata = batch
+                else:
+                    points, targets, samples = batch
+                    metadata = [None] * len(samples)
                 filtered_points = self.__filter_points_for_inference(points)
                 results = self.model(batched_pts=filtered_points, mode='test')
                 for batch_idx, result in enumerate(results):
@@ -64,7 +69,8 @@ class Pointpillars(Detector):
                             frame=samples[batch_idx],
                             highest_score_index=None,
                             dets=[],
-                            targets=targets[batch_idx]))
+                            targets=targets[batch_idx],
+                            metadata=metadata[batch_idx]))
                         continue
                     scores: torch.tensor = torch.from_numpy(result['scores'])
                     bboxes: torch.tensor = torch.from_numpy(result['lidar_bboxes'])
@@ -80,7 +86,8 @@ class Pointpillars(Detector):
                                 box=box)
                             for score, box, label in zip(scores, bboxes, labels)
                         ],
-                        targets=targets[batch_idx]))
+                        targets=targets[batch_idx],
+                        metadata=metadata[batch_idx]))
             return detection_sequence
 
     def __filter_points_for_inference(self, points, point_range=[0, -39.68, -3, 69.12, 39.68, 1]):

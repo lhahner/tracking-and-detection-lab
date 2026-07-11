@@ -1,33 +1,27 @@
+from __future__ import annotations
 from pathlib import Path
 import csv
-import numpy as np
+import datetime
+import numpy
 import torch
-from torch.autograd import grad
-from entities.detection import DetectionSequence
 import motmetrics as mm
 import torchmetrics
-import datetime
+
+try:
+    import numpy as np
+    if not hasattr(np, "asfarray"):
+        np.asfarray = lambda values, dtype=float: np.asarray(values, dtype=dtype)
+except ImportError:  # pragma: no cover
+    np = None
+
 from config.logging_config import LoggingConfig
-from geometry.coordinate_converter import CoordinateConverter
-from data_io.file_handler import write_output
-from definitions import ROOT_DIR
-from .metrics import MeanAveragePrecision3D
 
 logging_config = LoggingConfig()
 logger = logging_config.get_logger(__name__)
 
 
 class Evaluation:
-    """
-    API for evaluation of various metrics based on
-    torchmetrics or motmetrics package.
-    """
     def __init__(self, iou_threshold=0.5):
-        """Create an evaluation helper for MOT-style tracking metrics.
-
-        Args:
-            iou_threshold: Minimum IoU required for a valid match.
-        """
         self.iou_threshold = iou_threshold
         self.metrics_handler = mm.metrics.create()
 
@@ -35,22 +29,21 @@ class Evaluation:
                       file_path,
                       filter_ground_truth_by_confidence=False,
                       allowed_class_ids=None):
-        """Read a MOT-format file and group detections by frame.
-
-        Args:
-            file_path: Path to a MOT-format text file.
-            filter_ground_truth_by_confidence: Whether to discard rows with
-                non-positive confidence values.
-            allowed_class_ids: Optional set of class IDs to keep.
-
-        Returns:
-            dict[int, list[tuple[int, list[float]]]]: Mapping of frame number to
-            object IDs and bounding boxes in `xywh` format.
-        """
         mot_rows = np.loadtxt(Path(file_path), delimiter=",")
         if mot_rows.ndim == 1:
             mot_rows = mot_rows.reshape(1, -1)
         detections_per_frame = {}
+        if np is not None:
+            mot_rows = np.loadtxt(Path(file_path), delimiter=",")
+            if mot_rows.ndim == 1:
+                mot_rows = mot_rows.reshape(1, -1)
+        else:
+            with open(resolved_path, "r", encoding="utf-8") as handle:
+                mot_rows = [
+                    [float(value) for value in row]
+                    for row in csv.reader(handle)
+                    if row
+                ]
         for mot_row in mot_rows:
             if filter_ground_truth_by_confidence and len(mot_row) > 6 and mot_row[6] <= 0:
                 continue
@@ -68,14 +61,6 @@ class Evaluation:
         return detections_per_frame
 
     def should_filter_ground_truth_to_pedestrians(self, sequence_name):
-        """Determine whether a sequence should keep only pedestrian labels.
-
-        Args:
-            sequence_name: Sequence identifier used to infer dataset type.
-
-        Returns:
-            bool: `True` when the sequence belongs to a pedestrian benchmark.
-        """
         pedestrian_sequences = (
                 "KITTI-",
                 "MOT",
@@ -89,29 +74,19 @@ class Evaluation:
         return normalized_name.startswith(pedestrian_sequences)
 
     def create_mot_accumulator(self):
-        """Create an accumulator for incremental MOT metric computation.
-
-        Returns:
-            motmetrics.MOTAccumulator: Empty accumulator that can be reused
-            across frames with `compute_cumulative_tracking_metrics`.
-        """
         return mm.MOTAccumulator(auto_id=False)
 
     def convert_trackers_to_mot_items(self, trackers):
-        """Convert tracker output from `x1, y1, x2, y2, id` to MOT items.
-
-        Args:
-            trackers: One or more tracker rows in `x1, y1, x2, y2, id` form.
-
-        Returns:
-            list[tuple[int, list[float]]]: Object IDs with boxes in MOT `xywh`
-            format.
-        """
-        tracker_rows = np.asarray(trackers, dtype=float)
-        if tracker_rows.size == 0:
-            return []
-        if tracker_rows.ndim == 1:
-            tracker_rows = tracker_rows.reshape(1, -1)
+        if np is not None:
+            tracker_rows = np.asarray(trackers, dtype=float)
+            if tracker_rows.size == 0:
+                return []
+            if tracker_rows.ndim == 1:
+                tracker_rows = tracker_rows.reshape(1, -1)
+        else:
+            tracker_rows = trackers or []
+            if tracker_rows and not isinstance(tracker_rows[0], (list, tuple)):
+                tracker_rows = [tracker_rows]
 
         mot_items = []
         for tracker_row in tracker_rows:
@@ -129,22 +104,6 @@ class Evaluation:
                                             ground_truth_by_frame,
                                             trackers,
                                             sequence_name="sequence"):
-        """Update cumulative MOT metrics for one frame of tracker output.
-
-        This method is intended for live visualization. Pass the same
-        accumulator on every frame and it returns the cumulative IDF1, MOTA,
-        and MOTP values after the current frame has been added.
-
-        Args:
-            mot_accumulator: Accumulator created by `create_mot_accumulator`.
-            frame_number: Current frame number.
-            ground_truth_by_frame: Mapping produced by `read_mot_file`.
-            trackers: Tracker rows in `x1, y1, x2, y2, id` form.
-            sequence_name: Name used in the metrics summary index.
-
-        Returns:
-            dict[str, float]: Cumulative `idf1`, `mota`, and `motp` values.
-        """
         ground_truth_items = ground_truth_by_frame.get(frame_number, [])
         predicted_items = self.convert_trackers_to_mot_items(trackers)
 
@@ -178,21 +137,164 @@ class Evaluation:
         metric_row = summary.loc[sequence_name]
         return {metric: metric_row[metric] for metric in metrics}
 
+    def evaluate_simpletrack_nuscenes_result_file(
+            self,
+            result_path,
+            dataroot,
+            version="v1.0-mini",
+            eval_set="mini_val",
+            output_dir="output/nuscenes_tracking_eval"
+        ):
+        from nuscenes.eval.tracking.evaluate import TrackingEval
+        try:
+            from nuscenes.eval.common.config import config_factory
+        except ImportError:
+            from nuscenes.eval.tracking.config import config_factory
+
+        cfg = config_factory("tracking_nips_2019")
+        evaluator = TrackingEval(
+                config=cfg,
+                result_path=str(result_path),
+                eval_set=eval_set,
+                output_dir=str(output_dir),
+                nusc_dataroot=str(dataroot),
+                nusc_version=version,
+                verbose=True
+                )
+        return evaluator.main(render_curves=False)
+
+    def evaluate_simpletrack_nuscenes_sample_tokens(
+            self,
+            result_path,
+            dataroot,
+            sample_tokens,
+            version="v1.0-mini",
+            score_threshold=None,
+        ):
+        from nuscenes import NuScenes
+        from nuscenes.eval.common.loaders import (
+                load_gt_of_sample_tokens,
+                load_prediction_of_sample_tokens,
+                )
+        from nuscenes.eval.tracking.data_classes import TrackingBox
+        try:
+            from nuscenes.eval.common.config import config_factory
+        except ImportError:
+            from nuscenes.eval.tracking.config import config_factory
+
+        cfg = config_factory("tracking_nips_2019")
+        nusc = NuScenes(version=version, dataroot=str(dataroot), verbose=False)
+        sample_tokens = [str(sample_token) for sample_token in sample_tokens]
+        pred_boxes, _ = load_prediction_of_sample_tokens(
+                str(result_path),
+                cfg.max_boxes_per_sample,
+                TrackingBox,
+                sample_tokens=sample_tokens,
+                verbose=False,
+                )
+        gt_boxes = load_gt_of_sample_tokens(
+                nusc,
+                sample_tokens,
+                TrackingBox,
+                verbose=False,
+                )
+
+        if score_threshold is None:
+            thresholds = {0.0}
+            for sample_token in sample_tokens:
+                thresholds.update(
+                        box.tracking_score
+                        for box in pred_boxes.boxes.get(sample_token, [])
+                        )
+            thresholds = sorted(thresholds, reverse=True)
+        else:
+            thresholds = [float(score_threshold)]
+
+        metrics = [
+                "mota",
+                "motp",
+                "recall",
+                "num_matches",
+                "num_false_positives",
+                "num_misses",
+                ]
+        best_result = None
+        for threshold in thresholds:
+            accumulator = mm.MOTAccumulator(auto_id=False)
+            ground_truth_id_map = {}
+            prediction_id_map = {}
+            frame_id = 0
+            for sample_token in sample_tokens:
+                for class_name in cfg.class_names:
+                    ground_truth = [
+                            box for box in gt_boxes.boxes.get(sample_token, [])
+                            if box.tracking_name == class_name
+                            ]
+                    predictions = [
+                            box for box in pred_boxes.boxes.get(sample_token, [])
+                            if box.tracking_name == class_name
+                            and box.tracking_score >= threshold
+                            ]
+
+                    ground_truth_ids = [
+                            self.__numeric_tracking_id(box.tracking_id, ground_truth_id_map)
+                            for box in ground_truth
+                            ]
+                    prediction_ids = [
+                            self.__numeric_tracking_id(box.tracking_id, prediction_id_map)
+                            for box in predictions
+                            ]
+                    if ground_truth and predictions:
+                        ground_truth_centers = np.asarray(
+                                [box.translation[:2] for box in ground_truth],
+                                dtype=float,
+                                )
+                        prediction_centers = np.asarray(
+                                [box.translation[:2] for box in predictions],
+                                dtype=float,
+                                )
+                        distance_matrix = np.linalg.norm(
+                                ground_truth_centers[:, None, :] - prediction_centers[None, :, :],
+                                axis=2,
+                                )
+                        distance_matrix[distance_matrix >= cfg.dist_th_tp] = np.nan
+                    else:
+                        distance_matrix = np.full(
+                                (len(ground_truth), len(predictions)),
+                                np.nan,
+                                )
+
+                    accumulator.update(
+                            ground_truth_ids,
+                            prediction_ids,
+                            distance_matrix,
+                            frameid=frame_id,
+                            )
+                    frame_id += 1
+
+            summary = self.metrics_handler.compute(
+                    accumulator,
+                    metrics=metrics,
+                    name="sample_subset",
+                    )
+            metric_row = summary.loc["sample_subset"]
+            result = {metric: metric_row[metric] for metric in metrics}
+            result["score_threshold"] = threshold
+            result["sample_count"] = len(sample_tokens)
+            if best_result is None or result["mota"] > best_result["mota"]:
+                best_result = result
+
+        return best_result
+
+    def __numeric_tracking_id(self, tracking_id, tracking_id_map):
+        if tracking_id not in tracking_id_map:
+            tracking_id_map[tracking_id] = len(tracking_id_map) + 1
+        return tracking_id_map[tracking_id]
+
     def evaluate_sequence(self, ground_truth_file_path,
                           predicted_tracking_file_path,
                           sequence_name="sequence",
                           metrics=None):
-        """Evaluate one predicted tracking file against ground truth.
-
-        Args:
-            ground_truth_file_path: Path to the ground-truth MOT file.
-            predicted_tracking_file_path: Path to the predicted tracking file.
-            sequence_name: Name used in the resulting metrics table.
-            metrics: Metrics to compute. Defaults to common MOT metrics.
-
-        Returns:
-            pandas.DataFrame: MOT metrics summary for the evaluated sequence.
-        """
         if metrics is None:
             metrics = ["idf1", "mota", "motp", "precision", "recall"]
 
@@ -203,8 +305,9 @@ class Evaluation:
                 allowed_class_ids=allowed_ground_truth_class_ids,
                 )
         predicted_tracks_by_frame = self.read_mot_file(predicted_tracking_file_path, filter_ground_truth_by_confidence=False)
-        mot_accumulator = mm.MOTAccumulator(auto_id=False)  # MotMetric setup
-        maximum_iou_distance = 1.0 - self.iou_threshold  # default to 0.5
+
+        mot_accumulator = mm.MOTAccumulator(auto_id=False)
+        maximum_iou_distance = 1.0 - self.iou_threshold
         for frame_number in sorted(set(ground_truth_by_frame) | set(predicted_tracks_by_frame)):
             ground_truth_items = ground_truth_by_frame.get(frame_number, [])
             predicted_items = predicted_tracks_by_frame.get(frame_number, [])
@@ -226,17 +329,6 @@ class Evaluation:
                                             )
 
     def presist_evaluation(self, evaluation_summary, dataset, detector_name, tracking_name):
-        """Persist an evaluation summary to a timestamped benchmark file.
-
-        Args:
-            evaluation_summary: Evaluation result object or string summary.
-            dataset: Dataset name included in the output filename and content.
-            detector_name: Detector name included in the output metadata.
-            tracking_name: Tracker name included in the output metadata.
-
-        Returns:
-            Path: Path to the written benchmark file.
-        """
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         safe_dataset = str(dataset).replace("/", "_")
         safe_detector = str(detector_name).replace("/", "_")
@@ -264,9 +356,6 @@ class Evaluation:
         return benchmark_file_path
 
     def compute_IoU_3D(self, predicted_detections: list, ground_truth: list):
-        """
-        Standalone wrapper for PyTorch3D IoU computation. PyTorch3D Requires Linux.
-        """
         try:
             from pytorch3d.ops import box3d_overlap
             if predicted_detections.numel() == 0 or ground_truth.numel() == 0:
@@ -280,9 +369,6 @@ class Evaluation:
                                      predicted_detection_classes: torch.tensor,
                                      ground_truth: torch.tensor,
                                      num_classes) -> tuple[torch.tensor, torch.tensor]:
-        """
-        Standalone wrapper for torchmetrics recall and precision computations.
-        """
         if predicted_detection_classes.shape[0] == ground_truth.shape[0]:
             precision = torchmetrics.Precision(task="multiclass", average="macro", num_classes=num_classes)
             recall = torchmetrics.Recall(task="multiclass", average="macro", num_classes=num_classes)
@@ -297,9 +383,6 @@ class Evaluation:
     def compute_average_precision(self,
                                   recall: torch.tensor,
                                   precision: torch.tensor):
-        """
-        Standalone Average Precision interaction.
-        """
         from .metrics import AveragePrecision3D
         metric = AveragePrecision3D()
         metric.update(recall=recall,
@@ -311,12 +394,10 @@ class Evaluation:
                        ground_truth: torch.tensor,
                        classes,
                        box_mode="camera"):
-        """
-        Frame-wise standalone mAP interaction.
-        """
         if predicted_detections.numel() == 0 or ground_truth.numel() == 0 or classes.numel() == 0:
             return torch.tensor([0])
 
+        from .metrics import MeanAveragePrecision3D
         metric = MeanAveragePrecision3D(box_mode=box_mode, iou_threshold=self.iou_threshold)
         metric.update(
                 preds=predicted_detections,

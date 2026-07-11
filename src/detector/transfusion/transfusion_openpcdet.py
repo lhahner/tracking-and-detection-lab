@@ -63,6 +63,7 @@ class TransfusionOpenPCDet(Detector):
             for idx in range(sample_count):
                 sample = self.dataset[idx]
                 target = sample.pop("target", [])
+                metadata = sample.pop("metadata", None)
                 data_dict = self.dataset.collate_batch([sample])
                 sample_id = data_dict["frame_id"][0]
                 load_data_to_gpu(data_dict)
@@ -71,7 +72,8 @@ class TransfusionOpenPCDet(Detector):
                 detection_sequence.frames.append(FrameDetection(frame=sample_id,
                                                             highest_score_index=highest_score_index,
                                                             dets=detections,
-                                                            targets=target))
+                                                            targets=target,
+                                                            metadata=metadata))
         return detection_sequence
 
     def __build_class_map(self, classes):
