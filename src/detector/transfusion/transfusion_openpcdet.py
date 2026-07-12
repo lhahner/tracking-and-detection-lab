@@ -1,4 +1,6 @@
 import numpy as np
+if not hasattr(np, "int"):
+    np.int = int
 import torch
 try:
     from pcdet.models import build_network, load_data_to_gpu

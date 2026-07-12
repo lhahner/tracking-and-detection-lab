@@ -10,7 +10,8 @@ dataset_path = root_dir / "tests/data/nuScenes_dummy"
 
 def generate_nuscenes_mini_settings_with_custom_detector(detector_name, 
                                                          config_file_path,
-                                                         checkpoint_path):
+                                                         checkpoint_path,
+                                                         dataset_name="nuscenes-mini"):
     return SimpleNamespace(
             paths=SimpleNamespace(
                 detection_path=f"{ROOT_DIR}/src/detector/{detector_name}/detections/",
@@ -20,7 +21,7 @@ def generate_nuscenes_mini_settings_with_custom_detector(detector_name,
             ),
             runtime=SimpleNamespace(
                 datatype="bin",
-                dataset="nuscenes-mini",
+                dataset=dataset_name,
                 display=False,
             ),
             benchmark=SimpleNamespace(
