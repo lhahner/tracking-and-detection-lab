@@ -118,7 +118,7 @@ class TestVisualizer(unittest.TestCase):
         mock_draw.assert_called_once()
 
     def test_lidar_bin_to_bev_default_range_and_resolution(self):
-        path_to_test_bin = "tests/point_sample.bin"
+        path_to_test_bin = "tests/data/point_sample.bin"
         visualizer = Visualizer("bin")
         x_range = (0.0, 50.0)
         y_range = (-50.0, 50.0)

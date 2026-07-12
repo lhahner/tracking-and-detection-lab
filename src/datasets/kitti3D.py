@@ -15,7 +15,7 @@ from datasets.kitti_boxes import (
 from datasets.kitti_calib import parse_kitti_calibration
 from config.logging_config import LoggingConfig
 from datasets.kitti_calib import extend_to_4x4
-from third_party.pointpillars._ext_src.utils.process import bbox_camera2lidar
+from mmdet3d.structures.ops.box_np_ops import box_camera_to_lidar
 
 CLASSES = {
     "Background": 0,
@@ -324,9 +324,9 @@ class Kitti3D(Dataset):
                 ground_truth_dict["location"][0],
                 ground_truth_dict["location"][1],
                 ground_truth_dict["location"][2],
-                ground_truth_dict["dimensions"][2],
                 ground_truth_dict["dimensions"][0],
                 ground_truth_dict["dimensions"][1],
+                ground_truth_dict["dimensions"][2],
                 ground_truth_dict["rotation_y"],
                 0,
                 list(CLASSES.values())[
@@ -338,10 +338,10 @@ class Kitti3D(Dataset):
             return torch.empty((0, 9))
         ground_truth = torch.stack(tmp_list)
         calib, _ = self._load_calib(frame)
-        gt_lidar_boxes = bbox_camera2lidar(
+        gt_lidar_boxes = box_camera_to_lidar(
             ground_truth[:, :7].detach().cpu().numpy(),
-            extend_to_4x4(calib["Tr_velo_to_cam"]),
             extend_to_4x4(calib["R0_rect"]),
+            extend_to_4x4(calib["Tr_velo_to_cam"]),
         )
         ground_truth[:, :7] = torch.from_numpy(gt_lidar_boxes)
         return ground_truth

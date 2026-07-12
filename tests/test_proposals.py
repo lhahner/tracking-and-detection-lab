@@ -15,7 +15,7 @@ from detector.pointnet.proposals import dbscan_clustering, cluster_to_proposal
 
 class TestProposals(unittest.TestCase):
     def test_euclidean_clustering(self):
-        points = np.genfromtxt('tests/point_samples.csv', delimiter=',')
+        points = np.genfromtxt('tests/data/point_samples.csv', delimiter=',')
         clusters  = np.array(dbscan_clustering(points), dtype=object)
         
         max_value_x = np.max(np.array(clusters[0])[:,0])
