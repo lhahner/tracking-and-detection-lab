@@ -1,5 +1,7 @@
 import torch
 import importlib.util
+import unittest
+
 from definitions import ROOT_DIR
 from pathlib import Path
 
@@ -12,7 +14,6 @@ def validate_mmdetection3d_integration_environment():
         raise unittest.SkipTest("nuScenes devkit is not installed")
 
 def load_model(url, checkpoint_file, destination=Path(f"{ROOT_DIR}/tests/models/")):
-    
     destination.parent.mkdir(parents=True,
                            exist_ok=True)
     checkpoint_path = Path(f"{destination}/{checkpoint_file}")

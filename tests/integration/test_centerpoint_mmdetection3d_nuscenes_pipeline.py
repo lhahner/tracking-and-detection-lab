@@ -8,7 +8,6 @@ from definitions import ROOT_DIR
 from inference_engine import InferenceEngine
 import torch
 
-
 url = ("https://download.openmmlab.com/mmdetection3d/v1.0.0_models/"
        "centerpoint/"
        "centerpoint_01voxel_second_secfpn_circlenms_4x8_cyclic_20e_nus/"
