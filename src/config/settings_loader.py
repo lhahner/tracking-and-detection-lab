@@ -12,14 +12,11 @@ import os
 class PathsConfig:
     """Store resolved filesystem paths used by the application."""
     dataset_path: Path
-    output_root: Path
-    detections_root: Path
-    models_root: Path
+    checkpoint_path: Path
     detection_path: str
     ground_truth_path: str | None
     tracking_path: str | None
     logging_path: str | None
-    mmdetection3d_path: str | None
     config_file: str | None
 
 @dataclass(frozen=True)
@@ -89,15 +86,12 @@ class SettingsLoader:
 
         base = cfg_path.parent
         resolved_paths = PathsConfig(
-            dataset_path=SettingsLoader.resolve(base, paths.get("dataset_path", "../data/")),
-            output_root=SettingsLoader.resolve(base, paths.get("output_root", "./output")),
-            detections_root=SettingsLoader.resolve(base, paths.get("detections_root", "./data")),
-            models_root=SettingsLoader.resolve(base, paths.get("models_root", f"./detector/default-model.pth")),
-            detection_path=paths.get("detection_path", "data/*/*/det/det.txt"),
+            dataset_path=SettingsLoader.resolve(base, paths.get("dataset_path")),
+            tracking_path=SettingsLoader.resolve(base, paths.get("tracking_path")),
+            detection_path=SettingsLoader.resolve(base, paths.get("detection_path")),
+            checkpoint_path=SettingsLoader.resolve(base, paths.get("checkpoint_path")),
             ground_truth_path=paths.get("ground_truth_path"),
-            tracking_path=paths.get("tracking_path"),
             logging_path=paths.get("logging_path"),
-            mmdetection3d_path=paths.get("mmdetection3d_path"),
             config_file=paths.get("config_file"))
             
         settings = Settings(
