@@ -1,18 +1,15 @@
-import importlib.util
 import json
 import unittest
 import os
 import torch
 
 from pathlib import Path
-from types import SimpleNamespace
-from helpers.helpers import validate_mmdetection3d_integration_environment, load_model
+from helpers.helpers import validate_mmdetection3d_integration_environment
 validate_mmdetection3d_integration_environment()
 
 from inference_engine import InferenceEngine
 from settings.dummy_settings import generate_nuscenes_mini_settings_with_custom_detector_and_custom_tracker
 from definitions import ROOT_DIR
-from inference_engine import InferenceEngine
 from tracker.SimpleTrack import SimpleTrack
 from evaluation.evaluation import Evaluation
 from data_io import Deserializer
@@ -20,36 +17,44 @@ from data_io import Serializer
 from nuscenes import NuScenes
 from nuscenes.utils.splits import create_splits_scenes
 
-url = ("https://download.openmmlab.com/mmdetection3d/v1.0.0_models/"
-       "pointpillars/"
-       "hv_pointpillars_fpn_sbn-all_4x8_2x_nus-3d"
-)
-mmdet3d_config_folder = f"{ROOT_DIR}/" \
-                         "third_party/mmdetection3d/configs/" \
-                         "pointpillars/"
 
-
-class TestPointPillarsSimpleTrack(unittest.TestCase):
+class TestSecondOpenpcdetSimpleTrack(unittest.TestCase):
     def test_predict_and_evaluate_from_inference_engine_with_nuscenes_mini(self):
-        config_file = "pointpillars_hv_fpn_sbn-all_8xb2-amp-2x_nus-3d.py"
-        checkpoint_file = "hv_pointpillars_fpn_sbn-all_4x8_2x_nus-3d_20210826_104936-fca299c1.pth"
-        checkpoint_path = load_model(url=f"{url}/{checkpoint_file}",
-                                   checkpoint_file=checkpoint_file
-        )
-        settings = generate_nuscenes_mini_settings_with_custom_detector_and_custom_tracker(detector_name="pointpillars",
-                                                                                           config_file_path=f"{mmdet3d_config_folder}/{config_file}",
-                                                                                           checkpoint_path=checkpoint_path,
-                                                                                           tracker_name="SimpleTrack")
+        checkpoint_file = f"{ROOT_DIR}/src/detector/second" \
+                            "/model/cbgs_second_multihead_nds6229_updated.pth"
+        config_file = f"{ROOT_DIR}/third_party/OpenPCDet/tools/cfgs/nuscenes_models/" \
+                       "cbgs_second_multihead.yaml"
+        dataset_path = f"{ROOT_DIR}/tests/data/nuScenes_dummy"
+        
+        checkpoint = torch.load(checkpoint_file, map_location="cpu")
+        checkpoint_keys = checkpoint.get("model_state", 
+                                         checkpoint.get("state_dict", checkpoint)).keys()
+        if not any(key.startswith(("vfe.", 
+                                   "backbone_3d.", 
+                                   "backbone_2d.", 
+                                   "dense_head.")) for key in checkpoint_keys):
+            raise unittest.SkipTest(f"OpenPCDet-compatible SECOND checkpoint is missing: "
+                                     f"{checkpoint_file}")
+        
+        settings = generate_nuscenes_mini_settings_with_custom_detector_and_custom_tracker(detector_name="second",
+                                                                                           config_file_path=config_file,
+                                                                                           checkpoint_path=checkpoint_file,
+                                                                                           tracker_name="SimpleTrack",
+                                                                                           dataset_name="nuscenes-mini_openpcdet")
+        settings.runtime.dataset = "nuscenes-mini_openpcdet"
         inference_engine = InferenceEngine(settings=settings)
-        dataset = inference_engine.load(split="mini_val", max_samples=1)
-        self.assertEqual(len(dataset), 1)
+        dataset = inference_engine.load(split="mini_val", 
+                                        max_samples=1,
+                                        labels=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+        self.assertTrue(len(dataset) > 1)
 
         predictions = inference_engine.predict(
-            detector_name="pointpillars_mmdetection3d",
-            dataset_path=str(settings.paths.dataset_path),
+            detector_name="second_openpcdet",
+            dataset_path=str(dataset_path),
             detection_path=str(Path(settings.paths.detection_path)),
-            model_path=str(checkpoint_path),
+            model_path=str(checkpoint_file),
         )
+
         self.assertEqual(len(predictions.frames), 1)
         self.assertEqual(predictions.frames[0].frame, dataset.sample_records[0]["sample_token"])
         self.assertIsInstance(predictions.frames[0].dets, list)
@@ -111,7 +116,7 @@ class TestPointPillarsSimpleTrack(unittest.TestCase):
         recall = results_tracker["recall"]
         self.assertTrue(mota <= 1.0)
         self.assertTrue(motp >= 0.0)
-        self.assertTrue(recall <= 1.0)        
+        self.assertTrue(recall <= 1.0)
 
     def __pad_nuscenes_results_for_split(self, result_path, dataroot, version, split):
         nusc = NuScenes(version=version, dataroot=dataroot, verbose=False)

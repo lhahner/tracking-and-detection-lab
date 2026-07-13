@@ -3,6 +3,8 @@ import unittest
 from pathlib import Path
 from types import SimpleNamespace
 from helpers.helpers import validate_mmdetection3d_integration_environment, load_model
+validate_mmdetection3d_integration_environment()
+
 from settings.dummy_settings import generate_nuscenes_mini_settings_with_custom_detector
 from definitions import ROOT_DIR
 from inference_engine import InferenceEngine
@@ -23,7 +25,6 @@ class TestCenterPointMMDetection3DNuScenesPipeline(unittest.TestCase):
         checkpoint_path = load_model(url=f"{url}/{checkpoint_file}",
                                    checkpoint_file=checkpoint_file
         )
-        validate_mmdetection3d_integration_environment()
         settings = generate_nuscenes_mini_settings_with_custom_detector(detector_name="centerpoint_mmdetection3d",
                                                                         config_file_path=f"{mmdet3d_config_folder}/{config_file}",
                                                                         checkpoint_path=checkpoint_path

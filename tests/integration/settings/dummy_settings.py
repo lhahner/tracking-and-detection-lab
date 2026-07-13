@@ -48,3 +48,43 @@ def generate_nuscenes_mini_settings_with_custom_detector(detector_name,
                 ]
             ),
         )
+
+def generate_nuscenes_mini_settings_with_custom_detector_and_custom_tracker(detector_name, 
+                                                                            config_file_path,
+                                                                            tracker_name,
+                                                                            checkpoint_path,
+                                                                            dataset_name="nuscenes-mini"):
+    return SimpleNamespace(
+            paths=SimpleNamespace(
+                detection_path=f"{ROOT_DIR}/src/detector/{detector_name}/detections/",
+                dataset_path=root_dir / "tests/data/nuScenes_dummy",
+                checkpoint_path=checkpoint_path,
+                config_file=config_file_path,
+                tracking_path=f"{ROOT_DIR}/src/tracker/{tracker_name}/tracks/{detector_name}_simpletrack.json"
+            ),
+            runtime=SimpleNamespace(
+                datatype="bin",
+                dataset="nuscenes-mini",
+                display=False,
+            ),
+            benchmark=SimpleNamespace(
+                iou_threshold=0.4,
+                class_filter=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+            ),
+            tracker=SimpleNamespace(max_age=3, min_hits=2, iou_threshold=0.2),
+            dataset=SimpleNamespace(
+                classes=[
+                    "barrier",
+                    "bicycle",
+                    "bus",
+                    "car",
+                    "construction_vehicle",
+                    "motorcycle",
+                    "pedestrian",
+                    "traffic_cone",
+                    "trailer",
+                    "truck",
+                ]
+            ),
+        )
+

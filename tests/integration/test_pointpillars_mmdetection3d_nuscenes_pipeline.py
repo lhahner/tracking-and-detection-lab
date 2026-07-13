@@ -1,14 +1,17 @@
 import os
 import importlib.util
 import unittest
+import torch
+
 from pathlib import Path
 from types import SimpleNamespace
 from helpers.helpers import validate_mmdetection3d_integration_environment, load_model
+validate_mmdetection3d_integration_environment()
+
 from settings.dummy_settings import generate_nuscenes_mini_settings_with_custom_detector
 from definitions import ROOT_DIR
 from inference_engine import InferenceEngine
 from data_io.serializer import Serializer
-import torch
 
 url = ("https://download.openmmlab.com/mmdetection3d/v1.0.0_models/"
        "pointpillars/"
@@ -25,7 +28,6 @@ class TestPointPillarsMMDetection3DNuScenesPipeline(unittest.TestCase):
         checkpoint_path = load_model(url=f"{url}/{checkpoint_file}",
                                    checkpoint_file=checkpoint_file
         )
-        validate_mmdetection3d_integration_environment()
         settings = generate_nuscenes_mini_settings_with_custom_detector(detector_name="pointpillars_mmdetection3d",
                                                                         config_file_path=f"{mmdet3d_config_folder}/{config_file}",
                                                                         checkpoint_path=checkpoint_path
@@ -62,7 +64,6 @@ class TestPointPillarsMMDetection3DNuScenesPipeline(unittest.TestCase):
                                                                         config_file_path=f"{mmdet3d_config_folder}/{config_file}",
                                                                         checkpoint_path=checkpoint_path
         )
-
         inference_engine = InferenceEngine(settings=settings)
         dataset = inference_engine.load(split="mini_val", max_samples=100000)
         predictions = inference_engine.predict(

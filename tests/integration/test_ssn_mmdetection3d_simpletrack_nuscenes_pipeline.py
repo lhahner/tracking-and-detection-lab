@@ -1,18 +1,14 @@
-import importlib.util
 import json
 import unittest
 import os
-import torch
 
 from pathlib import Path
-from types import SimpleNamespace
 from helpers.helpers import validate_mmdetection3d_integration_environment, load_model
 validate_mmdetection3d_integration_environment()
 
 from inference_engine import InferenceEngine
 from settings.dummy_settings import generate_nuscenes_mini_settings_with_custom_detector_and_custom_tracker
 from definitions import ROOT_DIR
-from inference_engine import InferenceEngine
 from tracker.SimpleTrack import SimpleTrack
 from evaluation.evaluation import Evaluation
 from data_io import Deserializer
@@ -21,22 +17,21 @@ from nuscenes import NuScenes
 from nuscenes.utils.splits import create_splits_scenes
 
 url = ("https://download.openmmlab.com/mmdetection3d/v1.0.0_models/"
-       "pointpillars/"
-       "hv_pointpillars_fpn_sbn-all_4x8_2x_nus-3d"
-)
+       "ssn/"
+       "hv_ssn_regnet-400mf_secfpn_sbn-all_2x16_2x_nus-3d")
 mmdet3d_config_folder = f"{ROOT_DIR}/" \
                          "third_party/mmdetection3d/configs/" \
-                         "pointpillars/"
+                         "ssn"
 
 
-class TestPointPillarsSimpleTrack(unittest.TestCase):
+class TestSSNSimpleTrack(unittest.TestCase):
     def test_predict_and_evaluate_from_inference_engine_with_nuscenes_mini(self):
-        config_file = "pointpillars_hv_fpn_sbn-all_8xb2-amp-2x_nus-3d.py"
-        checkpoint_file = "hv_pointpillars_fpn_sbn-all_4x8_2x_nus-3d_20210826_104936-fca299c1.pth"
+        config_file = "ssn_hv_regnet-400mf_secfpn_sbn-all_16xb2-2x_nus-3d.py"
+        checkpoint_file = "hv_ssn_regnet-400mf_secfpn_sbn-all_2x16_2x_nus-3d_20210829_210615-361e5e04.pth"
         checkpoint_path = load_model(url=f"{url}/{checkpoint_file}",
                                    checkpoint_file=checkpoint_file
         )
-        settings = generate_nuscenes_mini_settings_with_custom_detector_and_custom_tracker(detector_name="pointpillars",
+        settings = generate_nuscenes_mini_settings_with_custom_detector_and_custom_tracker(detector_name="ssn",
                                                                                            config_file_path=f"{mmdet3d_config_folder}/{config_file}",
                                                                                            checkpoint_path=checkpoint_path,
                                                                                            tracker_name="SimpleTrack")
@@ -45,11 +40,12 @@ class TestPointPillarsSimpleTrack(unittest.TestCase):
         self.assertEqual(len(dataset), 1)
 
         predictions = inference_engine.predict(
-            detector_name="pointpillars_mmdetection3d",
+            detector_name="ssn_mmdetection3d",
             dataset_path=str(settings.paths.dataset_path),
             detection_path=str(Path(settings.paths.detection_path)),
             model_path=str(checkpoint_path),
         )
+
         self.assertEqual(len(predictions.frames), 1)
         self.assertEqual(predictions.frames[0].frame, dataset.sample_records[0]["sample_token"])
         self.assertIsInstance(predictions.frames[0].dets, list)
@@ -111,7 +107,7 @@ class TestPointPillarsSimpleTrack(unittest.TestCase):
         recall = results_tracker["recall"]
         self.assertTrue(mota <= 1.0)
         self.assertTrue(motp >= 0.0)
-        self.assertTrue(recall <= 1.0)        
+        self.assertTrue(recall <= 1.0)
 
     def __pad_nuscenes_results_for_split(self, result_path, dataroot, version, split):
         nusc = NuScenes(version=version, dataroot=dataroot, verbose=False)
