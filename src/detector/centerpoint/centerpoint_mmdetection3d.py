@@ -49,6 +49,7 @@ class CenterPointMMDetections3D(Detector):
             str(self.config_file),
             str(self.checkpoint_file)
         )
+        self.__remove_multisweep_transform_for_preloaded_points()
         self.class_map = self.__build_class_map(self.classes)
 
     def detect(self):
@@ -119,8 +120,8 @@ class CenterPointMMDetections3D(Detector):
         bboxes = bbox_tensor.detach().cpu().float()
         if bboxes.ndim != 2 or bboxes.shape[1] < 7:
             raise ValueError(f"Expected MMDetection3D boxes with shape [N, >=7], got {tuple(bboxes.shape)}")
-        bboxes = bboxes[:, :7].clone()
-        bboxes[:, 2] += bboxes[:, 5] / 2 
+        bboxes = bboxes[:, :9].clone()
+        bboxes[:, 2] += bboxes[:, 5] / 2
         labels_reference = instance_data.labels_3d.detach().cpu().long()
         if bboxes.shape[0] == 0:
             return [], None
@@ -139,3 +140,10 @@ class CenterPointMMDetections3D(Detector):
             raise ValueError("MMDetection3D CenterPoint returned a class index outside"
                              "the configured label map")
         return self.class_map[labels_reference]
+
+    def __remove_multisweep_transform_for_preloaded_points(self):
+        pipeline = self.model.cfg.test_dataloader.dataset.pipeline
+        self.model.cfg.test_dataloader.dataset.pipeline = [
+            transform for transform in pipeline
+            if "LoadPointsFromMultiSweeps" not in str(transform.get("type"))
+        ]

@@ -96,6 +96,8 @@ class Serializer:
                 detection_name = DETECTION_CLASSES_BY_INDEX[int(label)]
                 score = det.score.item() if hasattr(det.score, "item") else det.score
                 box = det.box.detach().cpu() if hasattr(det.box, "detach") else det.box
+                velocity_x = box[7] if len(box) > 7 else 0.0
+                velocity_y = box[8] if len(box) > 8 else 0.0
                 writer.writerow(
                     {
                         "sample_token": sample_token,
@@ -108,8 +110,8 @@ class Serializer:
                         "width": self.__round_value(box[4]),
                         "height": self.__round_value(box[5]),
                         "yaw": self.__round_value(box[6]),
-                        "velocity_x": 0.0,
-                        "velocity_y": 0.0,
+                        "velocity_x": self.__round_value(velocity_x),
+                        "velocity_y": self.__round_value(velocity_y),
                         "attribute_name": "",
                     }
                 )

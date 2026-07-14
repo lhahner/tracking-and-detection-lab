@@ -15,12 +15,12 @@ url = ("https://download.openmmlab.com/mmdetection3d/v1.0.0_models/"
        "centerpoint_01voxel_second_secfpn_circlenms_4x8_cyclic_20e_nus/"
 )
 mmdet3d_config_folder = f"{ROOT_DIR}/" \
-                         "third_party/mmdetection3d/mmdet3d/configs/" \
+                         "third_party/mmdetection3d/configs/" \
                          "centerpoint"
 
 class TestCenterPointMMDetection3DNuScenesPipeline(unittest.TestCase):
     def test_predict_and_evaluate_from_inference_engine_with_nuscenes_mini(self):
-        config_file = "centerpoint_voxel01_second_secfpn_8xb4_cyclic_20e_nus_3d.py"
+        config_file = "centerpoint_voxel01_second_secfpn_head-circlenms_8xb4-cyclic-20e_nus-3d.py"
         checkpoint_file = "centerpoint_01voxel_second_secfpn_circlenms_4x8_cyclic_20e_nus_20220810_030004-9061688e.pth"
         checkpoint_path = load_model(url=f"{url}/{checkpoint_file}",
                                    checkpoint_file=checkpoint_file

@@ -278,9 +278,8 @@ class NuScenesDataset(Dataset):
             sweep_paths.append(str(path))
 
             previous_token = sweep_record["prev"]
-            if not previous_token:
-                break
-            sweep_record = self.nusc.get("sample_data", previous_token)
+            if previous_token:
+                sweep_record = self.nusc.get("sample_data", previous_token)
 
         if not point_sets:
             feature_count = 5 if self.include_time_lag else 4
@@ -290,7 +289,7 @@ class NuScenesDataset(Dataset):
     def _load_lidar_file(
         self, sample_data_record: dict[str, Any]
     ) -> tuple[np.ndarray, Path]:
-        """Read a nuScenes LiDAR binary file as normalized XYZI points."""
+        """Read a nuScenes LiDAR binary file as XYZI points."""
         path = self._resolve_data_path(sample_data_record["filename"])
         raw_points = np.fromfile(path, dtype=np.float32)
         if raw_points.size % 5 != 0:
@@ -300,7 +299,6 @@ class NuScenesDataset(Dataset):
             )
 
         points = raw_points.reshape(-1, 5)[:, :4].copy()
-        points[:, 3] /= 255.0
         return points.astype(np.float32, copy=False), path
 
     def _load_camera_image(

@@ -57,11 +57,12 @@ class SecondOpenPCDet(Detector):
         self.model.cuda()
         self.model.eval()
         self.class_map = self.__build_class_map(self.classes)
+        self.openpcdet_annotations = []
 
     def detect(self):
         detection_sequence = DetectionSequence()
         with torch.no_grad():
-            sample_count = getattr(self.dataset, "max_samples", len(self.dataset))
+            sample_count = getattr(self.dataset, "max_samples", None) or len(self.dataset)
             if sample_count > len(self.dataset):
                 logger.warning(f"The given upper bound max_samples {sample_count} exceeds dataset lengths, iterating over complete dataset.")
                 sample_count = len(self.dataset)
@@ -73,6 +74,16 @@ class SecondOpenPCDet(Detector):
                 sample_id = data_dict["frame_id"][0]
                 load_data_to_gpu(data_dict)
                 instance_data, _ = self.model.forward(data_dict)
+                self.openpcdet_annotations.extend(
+                    self.dataset.generate_prediction_dicts(
+                        {
+                         "frame_id": [sample_id], 
+                         "metadata": [{"token": sample_id}]
+                        },
+                        instance_data,
+                        self.dataset.class_names,
+                    )
+                )
                 detections, highest_score_index = self.__convert_instances(instance_data[0])
                 detection_sequence.frames.append(FrameDetection(frame=sample_id,
                                                             highest_score_index=highest_score_index,
@@ -86,6 +97,9 @@ class SecondOpenPCDet(Detector):
             if classes and isinstance(classes[0], str):
                 return torch.tensor([classes.index(name) + 1 for name in self.dataset.class_names], dtype=torch.long)
             return torch.as_tensor(classes, dtype=torch.long)
+
+        if hasattr(self.dataset, "class_names"):
+            return torch.tensor([classes[name] for name in self.dataset.class_names], dtype=torch.long)
 
         model_classes = None
         if hasattr(self.model, "dataset_meta"):
@@ -129,7 +143,7 @@ class SecondOpenPCDet(Detector):
         labels = self.__map_labels(instance_data["pred_labels"].detach().cpu() - 1)
         highest_score_index = int(torch.argmax(scores).item()) if scores.numel() else -1
         detections = [
-            Detection(score=float(score.item()), label=int(label.item()), box=box[:7])
+            Detection(score=float(score.item()), label=int(label.item()), box=box[:9])
             for box, score, label in zip(boxes, scores, labels)
         ]
         return detections, highest_score_index
