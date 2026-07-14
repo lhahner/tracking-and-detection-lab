@@ -1,0 +1,66 @@
+[
+        {
+            "name": "PointPillars",
+            "mAP": "29.43", 
+	    "mota_simple_track": "21.93",
+	    "motp_simple_track": "51.80",
+            "year": "2019-5-7",
+            "implemented": true
+        },
+        {
+            "name": "Centerpoint-Pointpillar",
+            "mAP": "19.11", 
+	    "mota_simple_track": "25.21",
+	    "motp_simple_track": "76.54",
+            "year": "2021-1-6",
+            "implemented": true
+        },
+        {
+            "name": "Centerpoint-Voxelnet",
+            "mAP": "22.69", 
+	    "mota_simple_track": "28.40",
+	    "motp_simple_track": "71.78",            
+	    "year": "2021-1-6",
+            "implemented": true
+        },
+        {
+            "name": "SECOND",
+            "mAP": "20.84", 
+	    "mota_simple_track": "29.43",
+	    "motp_simple_track": "99.30",
+            "year": "2018-8-20",
+            "implemented": true
+        },
+        {
+            "name": "RegNet",
+            "mAP": "31.58", 
+	    "mota_simple_track": "18.90",
+	    "motp_simple_track": "48.26",
+            "year": "2020-3-30",
+            "implemented": true
+        },
+        {
+            "name": "TransFusion (28)",
+            "mAP": "16.42",  
+	    "mota_simple_track": "25.72",
+	    "motp_simple_track": "1.09",
+            "year": "2021-8-31",
+            "implemented": true
+        },
+        {
+            "name": "SSN",
+            "mAP": "33.41", 
+	    "mota_simple_track": "26.66",
+	    "motp_simple_track": "47.99",
+            "year": "2020-4-6",
+            "implemented": true
+        },
+        {
+            "name": "VoxelNeXt",
+            "mAP": "16.44", 
+	    "mota_simple_track": "27.13",
+	    "motp_simple_track": "1.09",
+            "year": "2023-3-20",
+            "implemented": true
+        }
+]

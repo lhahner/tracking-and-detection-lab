@@ -1,81 +1,15 @@
 import matplotlib.pyplot as plt
-from datetime import datetime
+import matplotlib.dates as mdates
 import numpy as np
+import json
 
-results = [
-        {
-            "name": "PointRCNN (KITTI)",
-            "mAP": "55.12", # custom - not implemented
-            "year": "2018-12-11",
-            "implemented": False
-        },
-        {
-            "name": "PointPillars",
-            "mAP": "39.7", # mmdetection3d - implemented 
-            "year": "2019-5-7",
-            "implemented": True
-        },
-        {
-            "name": "Centerpoint-Pointpillar",
-            "mAP": "48.72", # mmdetection3d - implemented 
-            "year": "2021-1-6",
-            "implemented": True
-        },
-        {
-            "name": "Centerpoint-Voxelnet",
-            "mAP": "56.11", # mmdetection3d - implemented
-            "year": "2021-1-6",
-            "implemented": True
-        },
-        {
-            "name": "SECOND",
-            "mAP": "50.6", # OpenPCDet - Implemented
-            "year": "2018-8-20",
-            "implemented": True
-        },
-        {
-            "name": "RegNet",
-            "mAP": "59.21", # mmdetection3d - implemeted
-            "year": "2020-3-30",
-            "implemented": True
-        },
-        {
-            "name": "VoxelNet (KITTI)",
-            "mAP": "56.12", # custom - not implemented
-            "year": "2017-11-17",
-            "implemented": False
-        },
-        {
-            "name": "FocalFormer3D (3)",
-            "mAP": "68.7", # custom - not implemented
-            "year": "2023-3-10",
-            "implemented": False
-        },
-        {
-            "name": "TransFusion (28)",
-            "mAP": "64.58", # openpcdet - implemented 
-            "year": "2021-8-31",
-            "implemented": False
-        },
-        {
-            "name": "LinK (8)",
-            "mAP": "69.8", # custom - not implemented
-            "year": "2022-10-31",
-            "implemented": False
-        },
-        {
-            "name": "SSN",
-            "mAP": "40.92", # mmdetection3d - implemented
-            "year": "2020-4-6",
-            "implemented": True
-        },
-        {
-            "name": "VoxelNeXt",
-            "mAP": "66.2", # openpcdet - implemented
-            "year": "2023-3-20",
-            "implemented": False
-        }
-]
+from pathlib import Path
+from datetime import datetime
+
+dashboard_results_path = Path("inputs/dashboard_data_implemented_only.json")
+with open(dashboard_results_path, "r") as file:
+    results = json.load(file)
+
 connections = [
     (1, 2),
     (2, 7),
@@ -84,15 +18,43 @@ connections = [
     (6, 11)
 ]
 
+# Gathering the data
+mota = [float(result["mota_simple_track"]) for result in results]
+motp = [float(result["motp_simple_track"]) for result in results]
+mAP = [float(result["mAP"]) for result in results]
+date = [datetime.strptime(result["year"], '%Y-%m-%d').date() for result in results]
 
-y = [float(result["mAP"]) for result in results]
-x = [datetime.strptime(result["year"], '%Y-%m-%d').date() for result in results]
+# Building the plots
 fig, ax = plt.subplots(figsize=(20, 10))
-ax.scatter(x,
-           y,
-           color="blue",
-           marker="o",
-           s=100)
+mota_mop_axis = ax.twinx()
+date_positions = mdates.date2num(date) 
+
+bar_width = 25
+bar_offset = 18
+
+mota_bars = ax.bar(
+        date_positions - bar_offset,
+        mota,
+        width=bar_width,
+        alpha=0.8,
+        label="MOTA"
+)
+motp_bars = ax.bar(
+        date_positions + bar_offset,
+        motp,
+        width=bar_width,
+        alpha=0.8,
+        label="MOTP"
+)
+ax.plot(
+    date,
+    mAP,
+    marker="o",
+    linewidth=2.5,
+    markersize=7,
+    label="mAP"
+)
+# Annotation
 for i, result in enumerate(results):
     ax.annotate(
             result["name"],
@@ -103,12 +65,36 @@ for i, result in enumerate(results):
             va="bottom",
             fontsize=10
         )
-
-for i, j in connections:
-    ax.plot([x[i], x[j]], 
-            [y[i], y[j]],
-            color="grey",
-            alpha=0.4)
+#for i, j in connections:
+#    ax.plot([date[i], mAP[j]], 
+#            [mAP[i], mAP[j]],
+#            color="grey",
+#            alpha=0.4)
 ax.set_xlabel("Year")
 ax.set_ylabel("mAP Score")
+mota_mop_axis.set_ylabel("MOTA/MOTP Score")
+ax.xaxis_date()
+ax.xaxis.set_major_locator(
+        mdates.YearLocator()
+)
+ax.xaxis.set_major_formatter(
+        mdates.DateFormatter("%Y")
+)
+ax.grid(
+        axis="y",
+        linestyle="--",
+        alpha=0.3
+)
+
+handles_1, labels_1 = ax.get_legend_handles_labels()
+handles_2, labels_2 = mota_mop_axis.get_legend_handles_labels()
+
+ax.legend(
+        handles_1 + handles_2,
+        labels_1 + labels_2,
+        loc="upper left"
+)
+
+fig.autofmt_xdate()
+fig.tight_layout()
 plt.savefig("detector-mAP-dashboard.png")
