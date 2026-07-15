@@ -3,12 +3,8 @@ import sys
 import unittest
 from unittest.mock import MagicMock, patch
 import numpy as np
-
-TESTS_DIR = os.path.dirname(__file__)
-PROJECT_ROOT = os.path.dirname(TESTS_DIR)
-SRC_ROOT = os.path.join(PROJECT_ROOT, "src")
-if SRC_ROOT not in sys.path:
-    sys.path.insert(0, SRC_ROOT)
+from helpers.helpers import validate_mmdetection3d_integration_environment, load_model
+validate_mmdetection3d_integration_environment()
 
 from datasets.kitti3D import Kitti3D
 from detector.pointnet.proposals import dbscan_clustering, cluster_to_proposal
@@ -34,7 +30,7 @@ class TestProposals(unittest.TestCase):
         self.assertTrue((max_value_z - min_value_z) < 5)
         
     def test_cluster_to_proposal(self):
-        points = np.genfromtxt('tests/point_samples.csv', delimiter=',')
+        points = np.genfromtxt('tests/data/point_samples.csv', delimiter=',')
         clusters  = np.array(dbscan_clustering(points), dtype=object)
         proposals = [cluster_to_proposal(cluster) for cluster in clusters] 
         self.assertTrue(proposals != None)

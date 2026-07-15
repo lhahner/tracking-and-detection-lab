@@ -2,6 +2,8 @@ import unittest
 import torch
 import importlib.util
 from pathlib import Path
+from helpers.helpers import validate_mmdetection3d_integration_environment, load_model
+validate_mmdetection3d_integration_environment()
 
 from definitions import ROOT_DIR
 from detector.openpcdet_config import load_openpcdet_config
@@ -16,7 +18,7 @@ class TestNuScenesOpenPCDetAdapter(unittest.TestCase):
         if importlib.util.find_spec("nuscenes") is None:
             raise unittest.SkipTest("nuScenes devkit is not installed")
 
-    def _build_adapter(self, max_samples=1):
+    def __build_adapter(self, max_samples=1):
         from datasets.nuScenes_openpcdet_adapter import NuScenesOpenPCDetAdapter
 
         config_file = Path(ROOT_DIR) / "third_party/OpenPCDet/tools/cfgs/nuscenes_models/cbgs_second_multihead.yaml"
@@ -30,17 +32,17 @@ class TestNuScenesOpenPCDetAdapter(unittest.TestCase):
         )
 
     def test_retrieve_first_sample_from_dataset_adapter(self):
-        dataset = self._build_adapter()
+        dataset = self.__build_adapter()
         data_dict = dataset[0]
         self.assertTrue(len(data_dict["points"]) > 0)
         self.assertEqual(data_dict["frame_id"], dataset.sample_records[0]["sample_token"])
 
     def test_metadata_retrieved_in_first_sample(self):
-        dataset = self._build_adapter()
+        dataset = self.__build_adapter()
         data_dict = dataset[0]
         self.assertTrue(len(data_dict["metadata"].lidar_to_global) > 0)
 
     def test_native_prediction_api_is_available(self):
-        dataset = self._build_adapter()
+        dataset = self.__build_adapter()
         self.assertTrue(hasattr(dataset, "generate_prediction_dicts"))
         self.assertTrue(hasattr(dataset, "evaluation"))

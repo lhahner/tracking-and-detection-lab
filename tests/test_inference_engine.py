@@ -2,7 +2,10 @@ import numpy as np
 import torch
 import unittest
 from types import SimpleNamespace
+from helpers.helpers import validate_mmdetection3d_integration_environment, load_model
 from unittest.mock import MagicMock, patch
+validate_mmdetection3d_integration_environment()
+
 from inference_engine import InferenceEngine
 from entities.detection import DetectionSequence, FrameDetection, Detection
 

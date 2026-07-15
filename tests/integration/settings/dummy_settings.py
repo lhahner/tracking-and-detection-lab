@@ -87,4 +87,31 @@ def generate_nuscenes_mini_settings_with_custom_detector_and_custom_tracker(dete
                 ]
             ),
         )
-
+    
+def generate_kitti3d_settings_with_custom_detector(detector_name,
+                                                       config_file_path,
+                                                       checkpoint_path):
+        return SimpleNamespace(
+            paths=SimpleNamespace(
+                detection_path=f"{ROOT_DIR}/src/detector/{detector_name}/detections/",
+                dataset_path=root_dir / "tests/data/kitti3d_dummy",
+                checkpoint_path=checkpoint_path,
+                config_file=config_file_path,
+            ),
+            runtime=SimpleNamespace(
+                datatype="bin",
+                dataset="kitti3d",
+                display=False,
+            ),
+            benchmark=SimpleNamespace(
+                iou_threshold=0.4,
+            ),
+            tracker=SimpleNamespace(max_age=3, min_hits=2, iou_threshold=0.2),
+            dataset=SimpleNamespace(
+                classes={
+                    "Car": 3,
+                    "Pedestrian": 1,
+                    "Cyclist": 2,
+                }
+            ),
+        )

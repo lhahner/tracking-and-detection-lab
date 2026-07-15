@@ -5,12 +5,13 @@ from types import SimpleNamespace
 from helpers.helpers import validate_mmdetection3d_integration_environment, load_model
 from settings.dummy_settings import generate_nuscenes_mini_settings_with_custom_detector
 from definitions import ROOT_DIR
+validate_mmdetection3d_integration_environment()
+
 from inference_engine import InferenceEngine
 import torch
 
 class TestTransfusionOpenpcdetNuScenesPipeline(unittest.TestCase):
     def test_predict_and_evaluate_from_inference_engine_with_nuscenes_mini(self):
-        validate_mmdetection3d_integration_environment()
         checkpoint_file = f"{ROOT_DIR}/src/detector/transfusion/model/cbgs_transfusion_lidar.pth"
         config_file = f"{ROOT_DIR}/third_party/OpenPCDet/tools/cfgs/nuscenes_models/" \
                        "transfusion_lidar.yaml"
