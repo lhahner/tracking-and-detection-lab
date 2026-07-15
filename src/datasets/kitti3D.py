@@ -324,9 +324,9 @@ class Kitti3D(Dataset):
                 ground_truth_dict["location"][0],
                 ground_truth_dict["location"][1],
                 ground_truth_dict["location"][2],
+                ground_truth_dict["dimensions"][2],
                 ground_truth_dict["dimensions"][0],
                 ground_truth_dict["dimensions"][1],
-                ground_truth_dict["dimensions"][2],
                 ground_truth_dict["rotation_y"],
                 0,
                 list(CLASSES.values())[

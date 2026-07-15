@@ -4,8 +4,8 @@ import os
 import torch
 
 from pathlib import Path
-from helpers.helpers import validate_mmdetection3d_integration_environment
-validate_mmdetection3d_integration_environment()
+from helpers.helpers import validate_openpcdet_integration_environment
+validate_openpcdet_integration_environment()
 
 from inference_engine import InferenceEngine
 from settings.dummy_settings import generate_nuscenes_mini_settings_with_custom_detector_and_custom_tracker

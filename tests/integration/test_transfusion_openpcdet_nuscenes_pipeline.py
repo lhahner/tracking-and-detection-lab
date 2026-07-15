@@ -2,10 +2,10 @@ import importlib.util
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
-from helpers.helpers import validate_mmdetection3d_integration_environment, load_model
+from helpers.helpers import  validate_openpcdet_integration_environment, load_model
 from settings.dummy_settings import generate_nuscenes_mini_settings_with_custom_detector
 from definitions import ROOT_DIR
-validate_mmdetection3d_integration_environment()
+validate_openpcdet_integration_environment()
 
 from inference_engine import InferenceEngine
 import torch

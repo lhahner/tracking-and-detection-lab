@@ -257,7 +257,7 @@ class Serializer:
                 else:
                     raise IndexError(f"To format the given shape does not match (N, 3) as {det.box[3:6].shape}")
                 det_file = (self.file_name + ".txt")
-                write_output((self.detection_path + det_file),
+                write_output((f"{self.detection_path}{det_file}"),
                              self.__build_kitti_gt_string(obj_type=obj_type,
                                                           truncated=truncated,
                                                           occluded=occluded,
