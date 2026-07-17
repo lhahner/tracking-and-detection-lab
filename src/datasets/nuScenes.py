@@ -280,7 +280,8 @@ class NuScenesDataset(Dataset):
             previous_token = sweep_record["prev"]
             if previous_token:
                 sweep_record = self.nusc.get("sample_data", previous_token)
-
+            else:
+                break
         if not point_sets:
             feature_count = 5 if self.include_time_lag else 4
             return np.empty((0, feature_count), dtype=np.float32), sweep_paths

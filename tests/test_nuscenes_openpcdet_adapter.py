@@ -2,12 +2,12 @@ import unittest
 import torch
 import importlib.util
 from pathlib import Path
-from helpers.helpers import validate_mmdetection3d_integration_environment, load_model
+from helpers.helpers import validate_mmdetection3d_integration_environment, validate_openpcdet_integration_environment, load_model
 validate_mmdetection3d_integration_environment()
 
 from definitions import ROOT_DIR
 from detector.openpcdet_config import load_openpcdet_config
-
+validate_openpcdet_integration_environment()
 
 class TestNuScenesOpenPCDetAdapter(unittest.TestCase):
     def setUp(self):

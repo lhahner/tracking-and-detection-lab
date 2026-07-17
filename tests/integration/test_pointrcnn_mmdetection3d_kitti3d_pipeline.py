@@ -13,7 +13,6 @@ import torch
 
 url = ("https://download.openmmlab.com/mmdetection3d/v0.1.0_models/"
        "point_rcnn/"
-       "point_rcnn_2x8_kitti-3d-3classes_20211208_151344.pth"
 )
 mmdet3d_config_folder = f"{ROOT_DIR}/" \
                          "third_party/mmdetection3d/configs/" \
