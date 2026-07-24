@@ -61,6 +61,11 @@ class TransfusionOpenPCDet(Detector):
 
     def detect(self):
         detection_sequence = DetectionSequence()
+        for frame_detection in self.iter_detections():
+            detection_sequence.frames.append(frame_detection)
+        return detection_sequence
+
+    def iter_detections(self):
         with torch.no_grad():
             sample_count = getattr(self.dataset, "max_samples", None) or len(self.dataset)
             for idx in range(sample_count):
@@ -79,12 +84,11 @@ class TransfusionOpenPCDet(Detector):
                     )
                 )
                 detections, highest_score_index = self.__convert_instances(instance_data[0])
-                detection_sequence.frames.append(FrameDetection(frame=sample_id,
-                                                            highest_score_index=highest_score_index,
-                                                            dets=detections,
-                                                            targets=target,
-                                                            metadata=metadata))
-        return detection_sequence
+                yield FrameDetection(frame=sample_id,
+                                     highest_score_index=highest_score_index,
+                                     dets=detections,
+                                     targets=target,
+                                     metadata=metadata)
 
     def __build_class_map(self, classes):
         if not isinstance(classes, dict):

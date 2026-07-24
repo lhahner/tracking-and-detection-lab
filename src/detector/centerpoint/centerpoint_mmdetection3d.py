@@ -27,7 +27,7 @@ class CenterPointMMDetections3D(DetectorMMDetection3D):
                  settings,
                  config_file=DEFAULT_CONFIG_FILE,
                  checkpoint_file=DEFAULT_CHECKPOINT_FILE,
-                 batch_size=16):
+                 batch_size=1):
         super().__init__(
                 dataset=dataset,
                 classes=classes,

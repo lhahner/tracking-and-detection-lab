@@ -8,6 +8,50 @@ config_file = root_dir / "src/detector/centerpoint/model/centerpoint_voxel01_sec
 dataset_path = root_dir / "tests/data/nuScenes_dummy"
 
 
+def generate_nuscenes_settings_with_custom_detector(detector_name, 
+                                                    config_file_path,
+                                                    checkpoint_path,
+                                                    dataset_path,
+                                                    dataset_name="nuscenes"):
+    return SimpleNamespace(
+            paths=SimpleNamespace(
+                detection_path=f"{ROOT_DIR}/src/detector/{detector_name}/detections/",
+                dataset_path=dataset_path,
+                checkpoint_path=checkpoint_path,
+                config_file=config_file_path,
+            ),
+            runtime=SimpleNamespace(
+                datatype="bin",
+                dataset=dataset_name,
+                display=False,
+            ),
+            benchmark=SimpleNamespace(
+                iou_threshold=0.4,
+                class_filter=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+            ),
+            tracker=SimpleNamespace(
+                max_age=2,
+                min_hits=2,
+                iou_threshold=0.5
+            ),
+            dataset=SimpleNamespace(
+                classes=[
+                    "barrier",
+                    "bicycle",
+                    "bus",
+                    "car",
+                    "construction_vehicle",
+                    "motorcycle",
+                    "pedestrian",
+                    "traffic_cone",
+                    "trailer",
+                    "truck",
+                ]
+            ),
+        )
+
+
+
 def generate_nuscenes_mini_settings_with_custom_detector(detector_name, 
                                                          config_file_path,
                                                          checkpoint_path,

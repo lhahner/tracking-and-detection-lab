@@ -39,10 +39,15 @@ class DetectorMMDetection3D(Detector):
         self.class_map = self.__build_class_map(self.classes)
 
     def detect(self):
+        detection_sequence = DetectionSequence()
+        for frame_detection in self.iter_detections():
+            detection_sequence.frames.append(frame_detection)
+        return detection_sequence
+
+    def iter_detections(self):
         test_dataloader = DataLoader(dataset=self.dataset,
                                      batch_size=self.batch_size,
                                      collate_fn=self.dataset.custom_collate)
-        detection_sequence = DetectionSequence()
         for batch in test_dataloader:
             if len(batch) == 4:
                 points, targets, samples, metadata = batch
@@ -52,12 +57,11 @@ class DetectorMMDetection3D(Detector):
             for point, target, sample_id, frame_metadata in zip(points, targets, samples, metadata):
                 instance_data = self.__predict_instances(point)
                 detections, highest_score_index = self.__convert_instances(instance_data)
-                detection_sequence.frames.append(FrameDetection(frame=sample_id,
-                                                                highest_score_index=highest_score_index,
-                                                                dets=detections,
-                                                                targets=target,
-                                                                metadata=frame_metadata))
-        return detection_sequence
+                yield FrameDetection(frame=sample_id,
+                                     highest_score_index=highest_score_index,
+                                     dets=detections,
+                                     targets=target,
+                                     metadata=frame_metadata)
 
     def __build_class_map(self, classes):
         if not isinstance(classes, dict):
