@@ -22,7 +22,6 @@ TRACKING_META = {
     "use_external": False,
 }
 
-
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
@@ -95,7 +94,6 @@ def discover_detection_paths(args: argparse.Namespace) -> list[Path]:
             continue
         filtered_paths.append(path)
     return filtered_paths
-
 
 def default_track_path(detection_path: Path, output_dir: Path) -> Path:
     detector_dir = detection_path.parents[1].name
@@ -247,7 +245,6 @@ def extract_single_sample_result(temp_result_path: Path) -> tuple[str, list[dict
         raise ValueError(f"Expected tracks for sample {sample_token} to be a list.")
     return str(sample_token), tracks
 
-
 def run_tracking_file(
     *,
     detection_path: Path,
@@ -340,7 +337,6 @@ def main() -> None:
                 f"-> {result['output_path']} ({result['assembled_samples']} samples assembled; "
                 f"checkpoint {result['checkpoint_path']})"
             )
-
 
 if __name__ == "__main__":
     main()

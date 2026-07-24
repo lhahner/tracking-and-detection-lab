@@ -1,5 +1,4 @@
 detectors:
-  pointpillars: detector.pointpillars.pointpillars
   pointpillars_mmdetection3d: detector.pointpillars.pointpillars_mmdetection3d
   centerpoint_mmdetection3d: detector.centerpoint.centerpoint_mmdetection3d
   pointrcnn_mmdetection3d: detector.pointrcnn.pointrcnn_mmdetection3d

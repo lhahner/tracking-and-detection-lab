@@ -15,7 +15,7 @@ from datasets.kitti_boxes import (
 from datasets.kitti_calib import parse_kitti_calibration
 from config.logging_config import LoggingConfig
 from datasets.kitti_calib import extend_to_4x4
-from third_party.pointpillars._ext_src.utils.process import bbox_camera2lidar
+from mmdet3d.structures.ops.box_np_ops import box_camera_to_lidar
 
 CLASSES = {
     "Background": 0,
@@ -90,9 +90,9 @@ class Kitti3D(Dataset):
     def __getitem__(self, idx):
         if self.mode == "object":
             return self._get_object_item(idx)
-        return self._get_frame_item(self.sample_ids[idx])
+        return self.__get_frame_item(self.sample_ids[idx])
 
-    def _get_frame_item(self, sample_id):
+    def __get_frame_item(self, sample_id):
         image, image_path = self._load_image(sample_id)
         calib, calib_path = self._load_calib(sample_id)
         points, points_path = self._load_velodyne(sample_id)
@@ -118,7 +118,7 @@ class Kitti3D(Dataset):
 
         if item[0] == "background":
             _, sample_id, center, dimensions, yaw = item
-            frame = self._get_frame_item(sample_id)
+            frame = self.__get_frame_item(sample_id)
             proposal = {
                 "center": center,
                 "dimensions": dimensions,
@@ -138,7 +138,7 @@ class Kitti3D(Dataset):
             }
 
         _, sample_id, object_idx = item
-        frame = self._get_frame_item(sample_id)
+        frame = self.__get_frame_item(sample_id)
         target_object = frame["target"][object_idx]
         proposal = image_box_to_lidar_proposal(target_object, frame["calib"])
         cropped_points = extract_points_in_box(frame["points"], proposal)
@@ -200,7 +200,7 @@ class Kitti3D(Dataset):
         """
         self.logger.info(f"Building background index with sample {sample_id}")
 
-        frame = self._get_frame_item(sample_id)
+        frame = self.__get_frame_item(sample_id)
         if frame["points"] is None or frame["points"].size == 0:
             return []
 
@@ -338,10 +338,10 @@ class Kitti3D(Dataset):
             return torch.empty((0, 9))
         ground_truth = torch.stack(tmp_list)
         calib, _ = self._load_calib(frame)
-        gt_lidar_boxes = bbox_camera2lidar(
+        gt_lidar_boxes = box_camera_to_lidar(
             ground_truth[:, :7].detach().cpu().numpy(),
-            extend_to_4x4(calib["Tr_velo_to_cam"]),
             extend_to_4x4(calib["R0_rect"]),
+            extend_to_4x4(calib["Tr_velo_to_cam"]),
         )
         ground_truth[:, :7] = torch.from_numpy(gt_lidar_boxes)
         return ground_truth

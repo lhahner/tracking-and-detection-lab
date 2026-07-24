@@ -2,13 +2,9 @@ import os
 import sys
 import unittest
 import torch
+from helpers.helpers import validate_mmdetection3d_integration_environment, load_model
 from unittest.mock import MagicMock, patch, Mock
-
-TESTS_DIR = os.path.dirname(__file__)
-PROJECT_ROOT = os.path.dirname(TESTS_DIR)
-SRC_ROOT = os.path.join(PROJECT_ROOT, "src")
-if SRC_ROOT not in sys.path:
-    sys.path.insert(0, SRC_ROOT)
+validate_mmdetection3d_integration_environment()
 
 from datasets.kitti3D import Kitti3D
 from config.logging_config import LoggingConfig
