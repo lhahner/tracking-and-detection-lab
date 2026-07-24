@@ -9,7 +9,6 @@ from skimage import io
 
 from geometry.coordinate_converter import CoordinateConverter
 from datasets.kitti_calib import extend_to_4x4
-from third_party.pointpillars._ext_src.utils.process import bbox_camera2lidar
 from evaluation import Evaluation
 from visualization.visualizer import Visualizer
 
@@ -53,39 +52,39 @@ class InferenceEngine:
                                    labels=labels)
         elif dataset_name in {"nuscenes_openpcdet", "nuscenes-mini_openpcdet"}:
             from datasets.nuScenes_openpcdet_adapter import NuScenesOpenPCDetAdapter
+            from detector.openpcdet_config import load_openpcdet_config
 
             version = "v1.0-mini" if dataset_name == "nuscenes-mini_openpcdet" else "v1.0-trainval"
-            split = "mini_val" if dataset_name == "nuscenes-mini_openpcdet" else "val"
-            nuScenes = NuScenesDataset(data_root=self.settings.paths.dataset_path,
-                                       version=version,
-                                       split=split)
-            self.dataset = NuScenesOpenPCDetAdapter(nuScenes=nuScenes,
-                                                    root_path=self.settings.paths.dataset_path,
-                                                    max_samples=max_samples,
-                                                    class_names=["car",
-                                                                 "truck",
-                                                                 "construction_vehicle",
-                                                                 "bus", 
-                                                                 "trailer", 
-                                                                 "barrier", 
-                                                                 "motorcycle", 
-                                                                 "bicycle", 
-                                                                 "pedestrian", 
-                                                                 "traffic_cone"])
+            cfg = load_openpcdet_config(self.settings.paths.config_file)
+            self.dataset = NuScenesOpenPCDetAdapter(
+                dataset_cfg=cfg.DATA_CONFIG,
+                class_names=cfg.CLASS_NAMES,
+                source_root=self.settings.paths.dataset_path,
+                version=version,
+                max_samples=max_samples,
+            )
 
         elif dataset_name in {"nuscenes", "nuscenes-mini"}:
             version = "v1.0-mini" if dataset_name == "nuscenes-mini" else "v1.0-trainval"
             split = "mini_val" if dataset_name == "nuscenes-mini" else "val"
             self.dataset = NuScenesDataset(data_root=self.settings.paths.dataset_path,
                                            version=version,
-                                           split=split
+                                           split=split,
+                                           max_sweeps=10,
+                                           include_time_lag=True,
+                                           load_images=False
                                            )
             if max_samples is not None:
                 self.dataset.sample_records = self.dataset.sample_records[:max_samples]
         return self.dataset
 
     def predict(self, detector_name, dataset_path, detection_path, model_path):
-        classes = getattr(self.dataset, "classes", None)
+        if detector_name.endswith("_openpcdet"):
+            classes = getattr(self.dataset, "labels", None)
+        else:
+            classes = getattr(self.dataset, "classes", None)
+        if classes is None:
+            classes = getattr(self.dataset, "class_names", None)
         if classes is None:
             classes = getattr(self.dataset, "labels", None)
         if classes is None:

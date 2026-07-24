@@ -9,6 +9,7 @@ from data_io.serializer import Serializer
 from config.settings_loader import SettingsLoader
 import torch.nn.functional as Functional
 from torch.utils.data import DataLoader
+from detector.detector_mmdetection3d import DetectorMMDetection3D
 
 from config.logging_config import LoggingConfig
 from definitions import ROOT_DIR
@@ -41,7 +42,7 @@ logger = logging_config.get_logger(__name__)
 
 
 @MODELS.register("pointrcnn_mmdetection3d")
-class PointRCNNmmDetections3D(Detector):
+class PointRCNNmmDetections3D(DetectorMMDetection3D):
     def __init__(
         self,
         dataset,

@@ -29,7 +29,8 @@ def convert_to_tensor(detections):
     if len(detections) == 0:
         return torch.empty((0, 9))
     for detection in detections:
-        tmp_tensor = F.pad(detection.box, (0, 2))
+        box = detection.box[:7]
+        tmp_tensor = F.pad(box, (0, 2))
         tmp_tensor[-2] = detection.score
         tmp_tensor[-1] = detection.label
         tmp_list_to_be_stacked.append(tmp_tensor)
