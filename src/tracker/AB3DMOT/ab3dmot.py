@@ -131,9 +131,12 @@ class AB3DMOT:
         self.__sequence_names: list[str] = []
 
     def track(self, detections):
+        # Format SimpleTrack Format Detections to AB3DMOT required detections
         self.__reset_runtime_state()
         frame_iterator = self.__iter_simpletrack_frames(Path(detections))
-        self.__write_formatted_detections(frame_iterator)
+        grouped_lines = self.__format_detections(frame_iterator)
+        self.__write_detections(grouped_lines)
+        # Process tracking
         tracking_results = self.__track_sequences()
         self.__write_nuscenes_tracking_json(tracking_results, self.output_path)
         return tracking_results
@@ -160,8 +163,8 @@ class AB3DMOT:
                 return
         else:
             raise ValueError("detection needs to be detection_file")
-
-    def __write_formatted_detections(self, frames: Iterable[dict[str, Any]]):
+    
+    def __format_detections(self, frames):
         """
         AB3DMOT requires a different detection format than SimpleTrack,
         therefore here the required format is applied to native SimpleTrack
@@ -206,7 +209,9 @@ class AB3DMOT:
             for sequence_name, frame_numbers in frame_order_by_sequence.items()
         }
         self.__sequence_names = sorted(self.__frame_order_by_sequence)
+        return grouped_lines
 
+    def __write_detections(self, grouped_lines):
         for class_name in self.class_map:
             target_dir = self.__formatted_category_dir(class_name)
             target_dir.mkdir(parents=True, exist_ok=True)
@@ -220,6 +225,7 @@ class AB3DMOT:
 
     def __track_sequences(self):
         tracking_results_by_sequence: dict[str, dict[int, dict[str, Any]]] = {}
+        flattened_results: list[dict[str, Any]] = []
         id_start = 1
 
         for sequence_name in self.__sequence_names:
@@ -234,29 +240,36 @@ class AB3DMOT:
             }
 
             tracking_classes = [class_name for class_name in self.__config.cat_list if class_name in self.class_map]
-            for class_name in tracking_classes:
-                tracker = self.__create_tracker(class_name, id_start)
-                sequence_file = self.__formatted_category_dir(class_name) / f"{sequence_name}.txt"
-                dets, has_detections = load_detection(str(sequence_file)) if sequence_file.exists() else ([], False)
-
-                for frame_number in self.__frame_order_by_sequence[sequence_name]:
-                    dets_frame = self.__frame_detections(dets, has_detections, frame_number)
-                    results, _ = tracker.track(dets_frame, frame_number, sequence_name)
-                    frame_results[frame_number]["tracks"].extend(
-                        self.__results_to_tracks(
-                            results[0],
-                            class_name,
-                            self.__frame_metadata_by_sequence[sequence_name][frame_number],
-                        )
-                    )
-                id_start = max(id_start, tracker.ID_count[0])
+            id_start, frame_results = self.__track_sequence_frame_by_class(tracking_classes=tracking_classes,
+                                                                           sequence_name=sequence_name,
+                                                                           frame_results=frame_results,
+                                                                           id_start=id_start)
             tracking_results_by_sequence[sequence_name] = frame_results
-
-        flattened_results: list[dict[str, Any]] = []
-        for sequence_name in self.__sequence_names:
             for frame_number in self.__frame_order_by_sequence[sequence_name]:
                 flattened_results.append(tracking_results_by_sequence[sequence_name][frame_number])
         return flattened_results
+
+    def __track_sequence_frame_by_class(self, tracking_classes, sequence_name, frame_results, id_start):
+        for class_name in tracking_classes:
+            tracker = self.__create_tracker(class_name, id_start)
+            sequence_file = self.__formatted_category_dir(class_name) / f"{sequence_name}.txt"
+            dets, has_detections = load_detection(str(sequence_file)) if sequence_file.exists() else ([], False)
+
+            for frame_number in self.__frame_order_by_sequence[sequence_name]:
+                dets_frame = self.__frame_detections(
+                        dets,
+                        has_detections,
+                        frame_number)
+                results, _ = tracker.track(dets_frame, frame_number, sequence_name)
+                frame_results[frame_number]["tracks"].extend(
+                    self.__results_to_tracks(
+                        results[0],
+                        class_name,
+                        self.__frame_metadata_by_sequence[sequence_name][frame_number],
+                    )
+                )
+            id_start = max(id_start, tracker.ID_count[0])
+        return id_start, frame_results
 
     def __create_tracker(self, class_name: str, id_start: int):
         cfg = self.__config
@@ -304,7 +317,7 @@ class AB3DMOT:
 
         for row in results:
             height, width, length, x, y, z, yaw = [float(value) for value in row[:7]]
-            score = float(row[14])
+            score = float(row[13])
             if score < MIN_TRACKING_SCORE_BY_LABEL.get(label, 0.0):
                 continue
             center = lidar_to_global @ np.asarray([x, y, z, 1.0], dtype=float)
