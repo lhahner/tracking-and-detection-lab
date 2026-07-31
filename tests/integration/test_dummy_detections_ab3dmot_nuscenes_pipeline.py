@@ -9,7 +9,7 @@ from tracker.AB3DMOT import AB3DMOT
 
 class TestAB3DMOTNuScenesDetectionsPipeline(unittest.TestCase):
     def test_read_and_process_dummy_detections_for_nuScenes(self):
-        nuscenes_data_root = f"{ROOT_DIR}/tests/data/nuScenes/"
+        nuscenes_data_root = f"{ROOT_DIR}/tests/data/nuScenes_dummy"
         if not os.path.exists(nuscenes_data_root):
             raise unittest.SkipTest("NuScenes Dataset not found skipping test")
 

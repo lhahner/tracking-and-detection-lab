@@ -20,9 +20,29 @@ if str(THIRD_PARTY_XINSHUO_TOOLBOX_ROOT) not in sys.path:
     sys.path.insert(0, str(THIRD_PARTY_XINSHUO_TOOLBOX_ROOT))
 
 from definitions import ROOT_DIR
+from AB3DMOT_libs import box as ab3dmot_box
 from AB3DMOT_libs.io import load_detection
 from AB3DMOT_libs.model import AB3DMOT as AB3DMOTModel
 from AB3DMOT_libs.utils import Config
+
+
+def __roty(angle: float) -> np.ndarray:
+    """Return AB3DMOT's Y-axis rotation matrix without invoking Numba."""
+    cosine = np.cos(angle)
+    sine = np.sin(angle)
+    return np.asarray(
+        [
+            [cosine, 0.0, sine],
+            [0.0, 1.0, 0.0],
+            [-sine, 0.0, cosine],
+        ],
+        dtype=np.float64,
+    )
+
+
+# AB3DMOT's Numba-decorated implementation fails with newer Numba releases
+# because its nested lists mix integer literals with floating-point values.
+ab3dmot_box.roty = __roty
 
 TRACKING_META = {
     "use_camera": False,

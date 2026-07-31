@@ -28,15 +28,15 @@ DEFAULT_PROJECT_ROOT = Path(
 )
 DEFAULT_CONFIG = (
     Path(ROOT_DIR)
-    / "third_party/mmdetection3d/configs/ssn"
-    / "ssn_hv_regnet-400mf_secfpn_sbn-all_16xb2-2x_nus-3d.py"
+    / "third_party/mmdetection3d/configs/centerpoint"
+    / "centerpoint_voxel01_second_secfpn_head-circlenms_8xb4-cyclic-20e_nus-3d.py"
 )
 DEFAULT_CHECKPOINT = (
     Path(ROOT_DIR)
     / "tests/models"
-    / "hv_ssn_regnet-400mf_secfpn_sbn-all_2x16_2x_nus-3d_20210829_210615-361e5e04.pth"
+    / "centerpoint_01voxel_second_secfpn_circlenms_4x8_cyclic_20e_nus_20220810_030004-9061688e.pth"
 )
-DEFAULT_DETECTOR_NAME = "ssn_mmdetection3d"
+DEFAULT_DETECTOR_NAME = "centerpoint_mmdetection3d"
 
 
 def default_output_path(detector_name: str, split: str) -> Path:
