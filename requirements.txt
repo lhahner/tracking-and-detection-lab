@@ -27,3 +27,4 @@ setuptools
 tensorboard
 nuscenes-devkit
 easydict
+glob2
