@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import math
 import sys
-import os
 
 from collections import defaultdict
 from pathlib import Path
@@ -25,8 +24,10 @@ from AB3DMOT_libs.io import load_detection
 from AB3DMOT_libs.model import AB3DMOT as AB3DMOTModel
 from AB3DMOT_libs.utils import Config
 
+from util.quaternion import yaw_to_quaternion, normalize_quaternion, quaternion_multiply, quaternion_rotation_matrix
 
-def __roty(angle: float) -> np.ndarray:
+
+def __roty(angle: float):
     """Return AB3DMOT's Y-axis rotation matrix without invoking Numba."""
     cosine = np.cos(angle)
     sine = np.sin(angle)
@@ -83,45 +84,6 @@ SUPPORTED_PARAM_DET_NAMES = {"centerpoint", "megvii"}
 DEFAULT_SEQUENCE_NAME = "default"
 
 
-def yaw_to_quaternion(yaw: float) -> np.ndarray:
-    half_yaw = yaw / 2.0
-    return np.asarray([math.cos(half_yaw), 0.0, 0.0, math.sin(half_yaw)], dtype=np.float64)
-
-
-def normalize_quaternion(quaternion: np.ndarray) -> np.ndarray:
-    quaternion = np.asarray(quaternion, dtype=np.float64)
-    norm = np.linalg.norm(quaternion)
-    if norm == 0:
-        raise ValueError("Quaternion must have a non-zero norm")
-    return quaternion / norm
-
-
-def quaternion_multiply(lhs: np.ndarray, rhs: np.ndarray) -> np.ndarray:
-    lw, lx, ly, lz = np.asarray(lhs, dtype=np.float64)
-    rw, rx, ry, rz = np.asarray(rhs, dtype=np.float64)
-    return np.asarray(
-        [
-            lw * rw - lx * rx - ly * ry - lz * rz,
-            lw * rx + lx * rw + ly * rz - lz * ry,
-            lw * ry - lx * rz + ly * rw + lz * rx,
-            lw * rz + lx * ry - ly * rx + lz * rw,
-        ],
-        dtype=np.float64,
-    )
-
-
-def quaternion_rotation_matrix(quaternion: np.ndarray) -> np.ndarray:
-    w, x, y, z = normalize_quaternion(quaternion)
-    return np.asarray(
-        [
-            [1 - 2 * (y * y + z * z), 2 * (x * y - z * w), 2 * (x * z + y * w)],
-            [2 * (x * y + z * w), 1 - 2 * (x * x + z * z), 2 * (y * z - x * w)],
-            [2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)],
-        ],
-        dtype=np.float64,
-    )
-
-
 class AB3DMOT:
     def __init__(
         self,
@@ -151,11 +113,22 @@ class AB3DMOT:
         self.__sequence_names: list[str] = []
 
     def track(self, detections):
+        """
+        Run multi-object tracking using detection coming out of one
+        object detection module.
+
+        Args:
+            detections: Object detections coming from one object detection module.
+
+        Return:
+            The tracking results and writes them in required json format to file for nuScenes evaluation
+        """
         # Format SimpleTrack Format Detections to AB3DMOT required detections
         self.__reset_runtime_state()
         frame_iterator = self.__iter_simpletrack_frames(Path(detections))
         grouped_lines = self.__format_detections(frame_iterator)
         self.__write_detections(grouped_lines)
+
         # Process tracking
         tracking_results = self.__track_sequences()
         self.__write_nuscenes_tracking_json(tracking_results, self.output_path)
@@ -166,7 +139,7 @@ class AB3DMOT:
         self.__frame_order_by_sequence = {}
         self.__sequence_names = []
 
-    def __iter_simpletrack_frames(self, detection_path: Path) -> Iterator[dict[str, Any]]:
+    def __iter_simpletrack_frames(self, detection_path):
         """
         Iterate over provided detections and yield every frame
         during call.
@@ -183,13 +156,25 @@ class AB3DMOT:
                 return
         else:
             raise ValueError("detection needs to be detection_file")
-    
+
     def __format_detections(self, frames):
         """
         AB3DMOT requires a different detection format than SimpleTrack,
         therefore here the required format is applied to native SimpleTrack
         formats. Creating files for every sequence/scene to be processed by
         AB3DMOT.
+
+        Args:
+            frames: The frames object coming from one of the used detectors.
+
+        Returns:
+            Lines containing tracks, grouped by the class
+            >>> __format_detections(...)
+                {("default", "Car"): [0.0000, -1.0000, -1.0000, ...],
+                 ("default", "Bicycle"): [....],
+                 ...
+                }
+
         """
         grouped_lines: dict[tuple[str, str], list[str]] = defaultdict(list)
         metadata_by_sequence: dict[str, dict[int, dict[str, Any]]] = defaultdict(dict)
@@ -232,6 +217,14 @@ class AB3DMOT:
         return grouped_lines
 
     def __write_detections(self, grouped_lines):
+        """
+        The detections need to be in a format AB3DMOT can handle.
+        Therefore this method expects the formated strings and
+        writes them to a file.
+
+        Args:
+            grouped_lines which should be in the format defined by format detections
+        """
         for class_name in self.class_map:
             target_dir = self.__formatted_category_dir(class_name)
             target_dir.mkdir(parents=True, exist_ok=True)
@@ -244,6 +237,30 @@ class AB3DMOT:
                     sequence_file.write_text("", encoding="utf-8")
 
     def __track_sequences(self):
+        """
+        Wrapper to perform tracking and also flatten the results.
+
+        Returns:
+            The flattend object from frame_results
+            >>> __track_sequences(...)
+                [{'frame': 0,
+                  'sample_token': '',
+                  'lidar_to_global': [[-0.10, 0.99, 0.02, 250.84],
+                                      [-0.99, -0.10, 0.08, 917.47],
+                                      ...
+                                     ],
+                  'tracks': [{
+                               'track_id': 31,
+                               'bbox_3d': [29.05, 42.89, -0.08, ...],
+                               'label': 'car',
+                               'score': 0.2,
+                               'sample_token': '',
+                               'translation': [],
+                               'size': []
+                             },
+                             ...
+                            ]
+        """
         tracking_results_by_sequence: dict[str, dict[int, dict[str, Any]]] = {}
         flattened_results: list[dict[str, Any]] = []
         id_start = 1
@@ -270,16 +287,47 @@ class AB3DMOT:
         return flattened_results
 
     def __track_sequence_frame_by_class(self, tracking_classes, sequence_name, frame_results, id_start):
+        """
+        Performs the actual tracking for a given sequence which includes a frame. 
+        The tracking is performed class-wise here.
+
+        Args:
+            tracking_classes: trackings classes AB3DMOT should run for.
+            sequence_name: The sequence to run tracking for.
+            frame_results: The DTO to be worked on.
+            id_start: Starting id of the sequence, if first 0 else continue where stopped.
+
+        Returns:
+            int: Next Id to continue.
+            frame_results: The object containing the tracking results
+                           >>> self.__track_sequences_frame_by_class(...)
+                            (1,
+                             {0:
+                                {'frame': 0,
+                                 'sample_token': '',
+                                 'lidar_to_global: '',
+                                 'tracks': [{
+                                            'track_id': ,
+                                            'bbox_3d': ,
+                                            'label': ,
+                                            'score': ,
+                                            'sample_token: ,
+                                            'translation': ,
+                                            'size': ,
+                                            'rotation': ,
+                                           }]
+                                }
+                              })
+        """
         for class_name in tracking_classes:
             tracker = self.__create_tracker(class_name, id_start)
             sequence_file = self.__formatted_category_dir(class_name) / f"{sequence_name}.txt"
             dets, has_detections = load_detection(str(sequence_file)) if sequence_file.exists() else ([], False)
 
             for frame_number in self.__frame_order_by_sequence[sequence_name]:
-                dets_frame = self.__frame_detections(
-                        dets,
-                        has_detections,
-                        frame_number)
+                dets_frame = self.__frame_detections(dets,
+                                                     has_detections,
+                                                     frame_number)
                 results, _ = tracker.track(dets_frame, frame_number, sequence_name)
                 frame_results[frame_number]["tracks"].extend(
                     self.__results_to_tracks(
@@ -291,7 +339,7 @@ class AB3DMOT:
             id_start = max(id_start, tracker.ID_count[0])
         return id_start, frame_results
 
-    def __create_tracker(self, class_name: str, id_start: int):
+    def __create_tracker(self, class_name, id_start):
         cfg = self.__config
         cfg.dataset = "nuScenes"
         cfg.split = self.split
@@ -313,7 +361,26 @@ class AB3DMOT:
             ID_init=id_start,
         )
 
-    def __frame_detections(self, dets, has_detections: bool, frame_number: int) -> dict[str, np.ndarray]:
+    def __frame_detections(self, dets, has_detections, frame_number):
+        """
+        Filter detections in a frame by the given frame_number, returns
+        empty np array of size (0, 7).
+
+        Args:
+            dets: All detections coming from the detector.
+            has_detections: Mask that provides frames with detections.
+            frame_number: Filter for the given frame_number.
+
+        Returns:
+            Object containing detetions for the frame and metadata info.
+            >>> __frame_detections(...)
+                {
+                    "dets": [[],
+                             [],
+                             ...],
+                    "info": [[],...]
+                }
+        """
         if not has_detections or len(dets) == 0:
             return {"dets": np.empty((0, 7), dtype=float), "info": np.empty((0, 7), dtype=float)}
 
@@ -326,7 +393,20 @@ class AB3DMOT:
         info = np.concatenate((orientation, other), axis=1)
         return {"dets": frame_rows[:, 7:14], "info": info}
 
-    def __results_to_tracks(self, results: np.ndarray, class_name: str, frame_metadata: dict[str, Any]) -> list[dict[str, Any]]:
+    def __results_to_tracks(self, results, class_name, frame_metadata):
+        """
+        Normalizes and transforms the tracking resuts to the required
+        format using quaternion transformation. Mainly needed
+        because nuScenes requires this format.
+
+        Args:
+            results: The results coming from AB3DMOT
+            class_name: Class to be transformed
+            frame_metadata: Metadata in the frame like sample_metadata
+
+        Returns:
+            The normalized tracks for NuScenes evaluation.
+        """
         if results.size == 0:
             return []
 
@@ -358,7 +438,14 @@ class AB3DMOT:
             )
         return normalized_tracks
 
-    def __write_nuscenes_tracking_json(self, tracking_results, output_path: Path):
+    def __write_nuscenes_tracking_json(self, tracking_results, output_path):
+        """
+        Writes the normalized Trackings to json for evaluation in NuScenes.
+
+        Args:
+            tracking_results: The AB3DMOT tracking results, normalized
+            output_path: The output path of the json containing trackings.
+        """
         payload = {"meta": dict(TRACKING_META), "results": {}}
         for frame_result in tracking_results:
             sample_token = str(frame_result["sample_token"])
@@ -380,22 +467,63 @@ class AB3DMOT:
         output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
-    def __formatted_category_dir(self, class_name: str) -> Path:
+    def __formatted_category_dir(self, class_name):
+        """
+        Since the detections needed to be reformatted for AB3DMOT to work
+        the formatted detections are grouped into classes.
+
+        Args:
+            class_name: the class name for which the folder has to be created.
+
+        Returns:
+            String name for the folder.
+        """
         result_name = f"{self.detector_name}_{class_name}_{self.split}"
         return self.formatted_detection_root / result_name
 
-    def __sequence_name(self, frame_entry: dict[str, Any]) -> str:
+    def __sequence_name(self, frame_entry):
+        """
+        Get the sequence name from the frame.
+
+        Args:
+            frame_entry: The frame to get the sequence from.
+
+        Returns:
+            The sequence string.
+        """
         for key in ("scene_name", "scene", "sequence_name", "sequence"):
             value = frame_entry.get(key)
             if value:
                 return str(value)
         return DEFAULT_SEQUENCE_NAME
 
-    def __class_name(self, detection: dict[str, Any]) -> str | None:
+    def __class_name(self, detection):
+        """
+        Get class name by label from detections.
+
+        Args:
+            detection: Detections to get the label from.
+
+        Returns:
+            Label as String.
+        """
         label = str(detection.get("label", "")).lower()
         return CLASS_NAME_BY_LABEL.get(label)
 
-    def __format_detection_line(self, frame_number: int, detection: dict[str, Any], class_name: str) -> str:
+    def __format_detection_line(self, frame_number, detection, class_name):
+        """
+        Format detections to a line which AB3DMOT can use.
+
+        Args:
+            frame_number: Current frame to format detections.
+            detection: The detection to format coming from the detector.
+            class_name: The corresponding class_name.
+
+        Returns:
+            The formatted detections line
+            >>> __format_detection_line(...)
+                [0.0, -1.0, -1.0, -1.0, -1.0, 0.27, 1.0, 203.2, 40.1, 41.2, 21.4, 23.3, 0.12, 0.3, 0.4]
+        """
         bbox = np.asarray(detection.get("bbox_3d"), dtype=float)
         if bbox.shape[0] < 7:
             raise ValueError("bbox_3d must have at least 7 values: [x,y,z,yaw,l,w,h,(score)]")
@@ -403,26 +531,23 @@ class AB3DMOT:
         x, y, z, yaw, length, width, height = [float(value) for value in bbox[:7]]
         score = float(detection.get("score", bbox[7] if bbox.shape[0] > 7 else 1.0))
         class_id = CLASS_ID_BY_CLASS_NAME[class_name]
-        row = [
-            float(frame_number),
-            -1.0,
-            -1.0,
-            -1.0,
-            -1.0,
-            score,
-            float(class_id),
-            height,
-            width,
-            length,
-            x,
-            y,
-            z,
-            yaw,
-            yaw,
-        ]
+
+        row = [float(frame_number), -1.0, -1.0, -1.0, -1.0,
+               score, float(class_id), height, width, length,
+               x, y, z, yaw, yaw]
         return ",".join(f"{value:.6f}" for value in row)
 
-    def __rotation_from_transform(self, transform: np.ndarray) -> np.ndarray:
+    def __rotation_from_transform(self, transform):
+        """
+        Defining the quaternion to scale and normalize the tracks for
+        nuScenes evaluation.
+
+        Args:
+            transform: Inlcudes the rotation matrix needed.
+
+        Return:
+            The normaliued quaternion
+        """
         rotation_matrix = np.asarray(transform[:3, :3], dtype=np.float64)
         trace = float(np.trace(rotation_matrix))
         if trace > 0.0:
