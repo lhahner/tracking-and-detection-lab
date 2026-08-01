@@ -28,3 +28,4 @@ tensorboard
 nuscenes-devkit
 easydict
 glob2
+terminaltables
