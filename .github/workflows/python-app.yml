@@ -21,6 +21,12 @@ jobs:
     - name: Initialize SimpleTrack submodule
       run: git submodule update --init --depth 1 third_party/SimpleTrack
 
+    - name: Initialize AB3DMOT submodule
+      run: git submodule update --init --depth 1 third_party/AB3DMOT
+
+    - name: Initialize Xinshuo_PyToolbox submodule
+      run: git submodule update --init --depth 1 third_party/Xinshuo_PyToolbox
+
     - name: Set up Python 3.10
       uses: actions/setup-python@v3
       with:
