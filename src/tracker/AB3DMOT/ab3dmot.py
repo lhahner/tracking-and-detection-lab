@@ -11,8 +11,19 @@ from typing import Any, Iterable, Iterator
 import numpy as np
 import io
 
-THIRD_PARTY_AB3DMOT_ROOT = Path(__file__).resolve().parents[3] / "third_party" / "AB3DMOT"
-THIRD_PARTY_XINSHUO_TOOLBOX_ROOT = Path(__file__).resolve().parents[3] / "third_party" / "Xinshuo_PyToolbox"
+def _find_repo_root() -> Path:
+    current_file = Path(__file__).resolve()
+    for candidate in current_file.parents:
+        ab3dmot_root = candidate / "third_party" / "AB3DMOT" / "AB3DMOT_libs"
+        xinshuo_root = candidate / "third_party" / "Xinshuo_PyToolbox"
+        if ab3dmot_root.is_dir() and xinshuo_root.is_dir():
+            return candidate
+    return current_file.parents[3]
+
+
+REPO_ROOT = _find_repo_root()
+THIRD_PARTY_AB3DMOT_ROOT = REPO_ROOT / "third_party" / "AB3DMOT"
+THIRD_PARTY_XINSHUO_TOOLBOX_ROOT = REPO_ROOT / "third_party" / "Xinshuo_PyToolbox"
 if str(THIRD_PARTY_AB3DMOT_ROOT) not in sys.path:
     sys.path.insert(0, str(THIRD_PARTY_AB3DMOT_ROOT))
 if str(THIRD_PARTY_XINSHUO_TOOLBOX_ROOT) not in sys.path:
