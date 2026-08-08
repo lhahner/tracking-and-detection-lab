@@ -71,3 +71,7 @@ docs/_build/
 
 src/detector/*/detections/*
 tests/models/*
+
+src/tracker/AB3DMOT/formatted_detections/*
+src/tracker/AB3DMOT/tracks/*
+src/tracker/AB3DMOT/tracks/*

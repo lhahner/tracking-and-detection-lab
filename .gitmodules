@@ -10,3 +10,9 @@
 [submodule "third_party/OpenPCDet"]
 	path = third_party/OpenPCDet
 	url = https://github.com/open-mmlab/OpenPCDet.git
+[submodule "third_party/AB3DMOT"]
+	path = third_party/AB3DMOT
+	url = https://github.com/xinshuoweng/AB3DMOT.git
+[submodule "third_party/Xinshuo_PyToolbox"]
+	path = third_party/Xinshuo_PyToolbox
+	url = https://github.com/xinshuoweng/Xinshuo_PyToolbox.git

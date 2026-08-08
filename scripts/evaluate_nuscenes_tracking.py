@@ -70,6 +70,15 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Skip evaluation if the per-file output directory already contains metrics_summary.json.",
     )
+    parser.add_argument(
+        "--max-boxes-per-sample",
+        type=int,
+        default=500,
+        help=(
+            "Maximum tracks kept per sample before devkit evaluation. "
+            "nuScenes requires <= 500. Set to 0 to disable capping."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -169,7 +178,24 @@ def pad_missing_samples(payload: dict[str, Any], sample_tokens: list[str]) -> in
     return missing_count
 
 
+def cap_boxes_per_sample(payload: dict[str, Any], max_boxes_per_sample: int) -> tuple[int, int]:
+    if max_boxes_per_sample <= 0:
+        return 0, 0
+
+    removed_count = 0
+    affected_samples = 0
+    for sample_token, tracks in payload["results"].items():
+        if len(tracks) <= max_boxes_per_sample:
+            continue
+        tracks.sort(key=lambda track: float(track.get("tracking_score", 0.0)), reverse=True)
+        removed_count += len(tracks) - max_boxes_per_sample
+        affected_samples += 1
+        payload["results"][sample_token] = tracks[:max_boxes_per_sample]
+    return removed_count, affected_samples
+
+
 def write_payload(track_path: Path, payload: dict[str, Any]) -> None:
+    track_path.parent.mkdir(parents=True, exist_ok=True)
     temporary_path = track_path.with_suffix(track_path.suffix + ".tmp")
     temporary_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     temporary_path.replace(track_path)
@@ -217,18 +243,30 @@ def main() -> None:
         missing_count = 0
         if args.pad_missing_samples:
             missing_count = pad_missing_samples(payload, sample_tokens or [])
-            if args.write_padded and missing_count:
-                write_payload(track_path, payload)
+
+        removed_count, capped_samples = cap_boxes_per_sample(
+            payload,
+            args.max_boxes_per_sample,
+        )
 
         result_count = len(payload["results"])
         box_count = sum(len(tracks) for tracks in payload["results"].values())
         print(
             f"Validated {track_path}: {box_count} tracks across {result_count} samples "
-            f"({missing_count} padded missing samples)."
+            f"({missing_count} padded missing samples, {removed_count} tracks removed "
+            f"from {capped_samples} over-limit samples)."
         )
 
         if not args.run_eval:
+            if args.write_padded and (missing_count or removed_count):
+                write_payload(track_path, payload)
             continue
+        if box_count == 0:
+            raise ValueError(
+                f"{track_path} contains zero tracking boxes. The nuScenes tracking "
+                "devkit cannot evaluate an all-empty prediction file; rerun SimpleTrack "
+                "or choose a tracking result file with non-empty per-sample tracks."
+            )
 
         per_file_output_dir = output_dir_for_track(args.output_dir, track_path)
         metrics_path = per_file_output_dir / "metrics_summary.json"
@@ -236,8 +274,17 @@ def main() -> None:
             print(f"Skipped existing evaluation for {track_path}: {metrics_path}")
             continue
         per_file_output_dir.mkdir(parents=True, exist_ok=True)
+
+        eval_track_path = track_path
+        if missing_count or removed_count:
+            if args.write_padded:
+                write_payload(track_path, payload)
+            else:
+                eval_track_path = per_file_output_dir / f"{track_path.stem}_eval_input.json"
+                write_payload(eval_track_path, payload)
+
         run_tracking_eval(
-            track_path=track_path,
+            track_path=eval_track_path,
             dataroot=args.dataroot,
             version=args.version,
             eval_set=args.eval_set,
