@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 import argparse
 import json
 import math
@@ -9,144 +8,348 @@ from typing import Any
 import numpy as np
 
 
-NUSCENES_ROOT = '/projects/scc/UGOE/UXEI/UMIN/scc_umin_baum/mthesis_lennart_hahner/dir.project/datasets/nuscenes' 
+NUSCENES_ROOT = '/projects/scc/UGOE/UXEI/UMIN/scc_umin_baum/mthesis_lennart_hahner/dir.project/datasets/nuscenes-mini' 
 DEFAULT_META = {
-	"use_camera": False,
-	"use_lidar": True,
-	"use_radar": False,
-	"use_map": False,
-	"use_external": False,
-	}
+        "use_camera": False,
+        "use_lidar": True,
+        "use_radar": False,
+        "use_map": False,
+        "use_external": False,
+        }
+
+class NuScenesTransformResolver:
+    def __init__(self, nusc: Any):
+        self.nusc = nusc
+        self._lidar_global_transforms: dict[str, np.ndarray] = {}
+        self._lidar_global_rotations: dict[str, np.ndarray] = {}
+
+    def lidar_box_to_global(
+        self,
+        sample_token: str,
+        center_lidar: np.ndarray,
+        yaw_lidar: float,
+        velocity_lidar: np.ndarray,
+    ) -> tuple[list[float], list[float], list[float]]:
+        transform = self._get_lidar_global_transform(sample_token)
+        sensor_rotation = self._get_lidar_global_rotation(sample_token)
+
+        center_global = transform_points(center_lidar.reshape(1, 3), transform)[0]
+        local_yaw_quaternion = yaw_to_quaternion(yaw_lidar)
+        global_rotation = quaternion_multiply(sensor_rotation, local_yaw_quaternion)
+        global_rotation = normalize_quaternion(global_rotation)
+
+        velocity_xyz = np.array([velocity_lidar[0], velocity_lidar[1], 0.0], dtype=np.float64)
+        velocity_global_xyz = quaternion_rotation_matrix(sensor_rotation) @ velocity_xyz
+        velocity_global = velocity_global_xyz[:2].tolist()
+
+        return center_global.tolist(), global_rotation.tolist(), velocity_global
+
+    def _get_lidar_global_transform(self, sample_token: str) -> np.ndarray:
+        if sample_token not in self._lidar_global_transforms:
+            self._populate_sample_cache(sample_token)
+        return self._lidar_global_transforms[sample_token]
+
+    def _get_lidar_global_rotation(self, sample_token: str) -> np.ndarray:
+        if sample_token not in self._lidar_global_rotations:
+            self._populate_sample_cache(sample_token)
+        return self._lidar_global_rotations[sample_token]
+
+    def _populate_sample_cache(self, sample_token: str) -> None:
+        sample = self.nusc.get("sample", sample_token)
+        lidar_token = sample["data"]["LIDAR_TOP"]
+        lidar_record = self.nusc.get("sample_data", lidar_token)
+        calibrated_sensor = self.nusc.get(
+            "calibrated_sensor", lidar_record["calibrated_sensor_token"]
+        )
+        ego_pose = self.nusc.get("ego_pose", lidar_record["ego_pose_token"])
+        sensor_to_ego = transform_matrix(
+            calibrated_sensor["translation"], calibrated_sensor["rotation"]
+        )
+        ego_to_global = transform_matrix(ego_pose["translation"], ego_pose["rotation"])
+        sensor_to_global = ego_to_global @ sensor_to_ego
+        sensor_rotation = quaternion_multiply(
+            np.asarray(ego_pose["rotation"], dtype=np.float64),
+            np.asarray(calibrated_sensor["rotation"], dtype=np.float64),
+        )
+        self._lidar_global_transforms[sample_token] = sensor_to_global
+        self._lidar_global_rotations[sample_token] = normalize_quaternion(sensor_rotation)
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("simpletrack_path",
-	    type=Path) 
+            type=Path) 
     return parser.parse_args()
 
 def load_meta():
     return dict(DEFAULT_META)
 
+def yaw_to_quaternion(yaw: float) -> np.ndarray:
+    half_yaw = yaw / 2.0
+    return np.asarray([math.cos(half_yaw), 0.0, 0.0, math.sin(half_yaw)], dtype=np.float64)
+
+
+def normalize_quaternion(quaternion: np.ndarray) -> np.ndarray:
+    quaternion = np.asarray(quaternion, dtype=np.float64)
+    norm = np.linalg.norm(quaternion)
+    if norm == 0:
+        raise ValueError("Quaternion must have a non-zero norm")
+    return quaternion / norm
+
+
+def quaternion_multiply(lhs: np.ndarray, rhs: np.ndarray) -> np.ndarray:
+    lw, lx, ly, lz = np.asarray(lhs, dtype=np.float64)
+    rw, rx, ry, rz = np.asarray(rhs, dtype=np.float64)
+    return np.asarray(
+        [
+            lw * rw - lx * rx - ly * ry - lz * rz,
+            lw * rx + lx * rw + ly * rz - lz * ry,
+            lw * ry - lx * rz + ly * rw + lz * rx,
+            lw * rz + lx * ry - ly * rx + lz * rw,
+        ],
+        dtype=np.float64,
+    )
+
+
+def quaternion_rotation_matrix(quaternion: np.ndarray) -> np.ndarray:
+    w, x, y, z = normalize_quaternion(quaternion)
+    return np.asarray(
+        [
+            [1 - 2 * (y * y + z * z), 2 * (x * y - z * w), 2 * (x * z + y * w)],
+            [2 * (x * y + z * w), 1 - 2 * (x * x + z * z), 2 * (y * z - x * w)],
+            [2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)],
+        ],
+        dtype=np.float64,
+    )
+
+
+def transform_points(points: np.ndarray, transform: np.ndarray) -> np.ndarray:
+    points = np.asarray(points, dtype=np.float64)
+    if points.ndim != 2 or points.shape[1] != 3:
+        raise ValueError(f"Expected points with shape [N, 3], got {points.shape}")
+    homogeneous = np.concatenate([points, np.ones((points.shape[0], 1), dtype=np.float64)], axis=1)
+    transformed = homogeneous @ transform.T
+    return transformed[:, :3]
+
 def load_nuscenes(version, dataroot):
     try:
-	from nuscenes.nuscenes import NuScenes
+        from nuscenes.nuscenes import NuScenes
     except ImportError as exc:
-	raise ImportError(
-		"nuScenes conversion requires nuscenes-devkit to be installed."
-		) from exc
-	return NuScenes(version=version, dataroot=str(dataroot), verbose=True)
+        raise ImportError(
+                "nuScenes conversion requires nuscenes-devkit to be installed."
+                ) from exc
+    return NuScenes(version=version, dataroot=str(dataroot), verbose=True)
 
 def load_sample_tokens_from_file(sample_list_path: Path) -> list[str]:
     return [
-	    line.strip()
-	    for line in sample_list_path.read_text(encoding="utf-8").splitlines()
-	    if line.strip()
-	    ]
+            line.strip()
+            for line in sample_list_path.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+            ]
 
-    def get_eval_sample_tokens(nusc: Any, eval_set: str) -> list[str]:
-	try:
-	    from nuscenes.utils.splits import create_splits_scenes
+def get_eval_sample_tokens(nusc: Any, eval_set: str) -> list[str]:
+    try:
+        from nuscenes.utils.splits import create_splits_scenes
     except ImportError as exc:
-	raise ImportError(
-		"nuScenes split seeding requires nuscenes-devkit to be installed."
-		) from exc
+        raise ImportError(
+            "nuScenes split seeding requires nuscenes-devkit to be installed."
+        ) from exc
 
-	split_scenes = create_splits_scenes(verbose=False)
+    split_scenes = create_splits_scenes(verbose=False)
     if eval_set not in split_scenes:
-	raise ValueError(
-		f"Unknown nuScenes eval split '{eval_set}'. Available splits: {sorted(split_scenes)}"
-		)
+        raise ValueError(
+            f"Unknown nuScenes eval split '{eval_set}'. Available splits: {sorted(split_scenes)}"
+        )
 
-	selected_scene_names = set(split_scenes[eval_set])
-    sample_tokens: list[str] 
+    selected_scene_names = set(split_scenes[eval_set])
+    sample_tokens: list[str] = []
     for scene in sorted(nusc.scene, key=lambda record: record["name"]):
-	if scene["name"] not in selected_scene_names:
-	    continue
-	sample_token = scene["first_sample_token"]
-	while sample_token:
-	    sample_tokens.append(sample_token)
-	    sample = nusc.get("sample", sample_token)
-	    sample_token = sample["next"]
+        if scene["name"] not in selected_scene_names:
+            continue
+        sample_token = scene["first_sample_token"]
+        while sample_token:
+            sample_tokens.append(sample_token)
+            sample = nusc.get("sample", sample_token)
+            sample_token = sample["next"]
     return sample_tokens
 
 def convert_simpletrack_to_results(
-	simpletrack_path: Path,
-	meta: dict[str, Any],
-	nusc: Any,
-	expected_sample_tokens: list[str] | None = None,
-	):
+        simpletrack_path: Path,
+        meta: dict[str, Any],
+        nusc: Any,
+        expected_sample_tokens: list[str] | None = None,
+        ):
     transform_resolver = NuScenesTransformResolver(nusc)
     expected_token_set = set(expected_sample_tokens or [])
     results: dict[str, list[dict[str, Any]]] = build_seeded_results(expected_sample_tokens or [])
     frames = load_simpletrack_frames(simpletrack_path)
 
     for frame_index, frame in enumerate(frames):
-	if not isinstance(frame, dict):
-	    raise ValueError(
-		    f"Frame {frame_index} must be an object with 'sample_token' and 'detections'."
-		    )
-	    sample_token = frame.get("sample_token")
-	if sample_token is None:
-	    raise ValueError(f"Frame {frame_index} is missing required field 'sample_token'.")
-	sample_token = str(sample_token)
-	if expected_token_set and sample_token not in expected_token_set:
-	    raise ValueError(
-		    f"Frame {frame_index} references sample_token '{sample_token}' that is not "
-		    "part of the expected evaluation sample set. Check --eval-set or --sample-list."
-		    )
+        if not isinstance(frame, dict):
+            raise ValueError(
+                    f"Frame {frame_index} must be an object with 'sample_token' and 'detections'."
+                    )
+        sample_token = frame.get("sample_token")
+        if sample_token is None:
+            raise ValueError(f"Frame {frame_index} is missing required field 'sample_token'.")
+        sample_token = str(sample_token)
+        if expected_token_set and sample_token not in expected_token_set:
+            raise ValueError(
+                    f"Frame {frame_index} references sample_token '{sample_token}' that is not "
+                    "part of the expected evaluation sample set. Check --eval-set or --sample-list."
+                    )
 
-	    detections = frame.get("detections")
-	if detections is None:
-	    raise ValueError(f"Frame {frame_index} is missing required field 'detections'.")
-	if not isinstance(detections, list):
-	    raise ValueError(f"Frame {frame_index} field 'detections' must be a list.")
+        detections = frame.get("detections")
+        if detections is None:
+            raise ValueError(f"Frame {frame_index} is missing required field 'detections'.")
+        if not isinstance(detections, list):
+            raise ValueError(f"Frame {frame_index} field 'detections' must be a list.")
 
-	for detection_index, simpletrack_detection in enumerate(detections):
-	    if not isinstance(simpletrack_detection, dict):
-		raise ValueError(
-			f"Frame {frame_index}, detection {detection_index} must be an object."
-			)
-		_, detection = convert_simpletrack_detection_to_nuscenes(
-			frame=frame,
-			frame_index=frame_index,
-			detection=simpletrack_detection,
-			detection_index=detection_index,
-			transform_resolver=transform_resolver,
-			)
-		results.setdefault(sample_token, []).append(detection)
+        for detection_index, simpletrack_detection in enumerate(detections):
+            if not isinstance(simpletrack_detection, dict):
+                raise ValueError(
+                        f"Frame {frame_index}, detection {detection_index} must be an object."
+                        )
+            _, detection = convert_simpletrack_detection_to_nuscenes(
+                        frame=frame,
+                        frame_index=frame_index,
+                        detection=simpletrack_detection,
+                        detection_index=detection_index,
+                        transform_resolver=transform_resolver,
+                        )
+            results.setdefault(sample_token, []).append(detection)
 
     return {"meta": meta, "results": results}
+
+def build_seeded_results(expected_sample_tokens: list[str]) -> dict[str, list[dict[str, Any]]]:
+    return {sample_token: [] for sample_token in expected_sample_tokens}
+
+def load_simpletrack_frames(simpletrack_path: Path) -> list[dict[str, Any]]:
+    with simpletrack_path.open("r", encoding="utf-8") as simpletrack_file:
+        payload = json.load(simpletrack_file)
+
+    if isinstance(payload, dict):
+        frames = payload.get("frames")
+        if frames is None and "frame" in payload and "detections" in payload:
+            frames = [payload]
+    elif isinstance(payload, list):
+        frames = payload
+    else:
+        frames = None
+
+    if not isinstance(frames, list):
+        raise ValueError(
+            "SimpleTrack detection JSON must be a frame list, a single frame object, "
+            "or an object with a 'frames' list."
+        )
+    return frames
+
 
 def write_results_json(results_payload: dict[str, Any], output_json: Path) -> None:
     output_json.parent.mkdir(parents=True, exist_ok=True)
     with output_json.open("w", encoding="utf-8") as output_file:
-	json.dump(results_payload, output_file, indent=2)
+        json.dump(results_payload, output_file, indent=2)
+
+def convert_simpletrack_detection_to_nuscenes(
+    *,
+    frame: dict[str, Any],
+    frame_index: int,
+    detection: dict[str, Any],
+    detection_index: int,
+    transform_resolver: NuScenesTransformResolver,
+) -> tuple[str, dict[str, Any]]:
+    sample_token = frame.get("sample_token")
+    if sample_token is None:
+        raise ValueError(f"Frame {frame_index} is missing required field 'sample_token'.")
+    sample_token = str(sample_token)
+
+    detection_name = detection.get("label")
+    if detection_name is None:
+        raise ValueError(
+            f"Frame {frame_index}, detection {detection_index} is missing required field 'label'."
+        )
+    detection_name = str(detection_name).lower()
+    x, y, z, yaw, length, width, height, detection_score = parse_simpletrack_box(
+        detection,
+        frame_index,
+        detection_index,
+    )
+
+    translation, rotation, velocity = transform_resolver.lidar_box_to_global(
+        sample_token=sample_token,
+        center_lidar=np.asarray([x, y, z], dtype=np.float64),
+        yaw_lidar=yaw,
+        velocity_lidar=np.asarray([0.0, 0.0], dtype=np.float64),
+    )
+    detection = {
+        "sample_token": sample_token,
+        "translation": translation,
+        "size": [width, length, height],
+        "rotation": rotation,
+        "velocity": velocity,
+        "detection_name": detection_name,
+        "detection_score": detection_score,
+        "attribute_name": "",
+    }
+    return sample_token, detection
+
+def transform_matrix(translation: list[float], quaternion: list[float]) -> np.ndarray:
+    transform = np.eye(4, dtype=np.float64)
+    transform[:3, :3] = quaternion_rotation_matrix(np.asarray(quaternion, dtype=np.float64))
+    transform[:3, 3] = np.asarray(translation, dtype=np.float64)
+    return transform
+
+
+def parse_simpletrack_box(
+    detection: dict[str, Any],
+    frame_index: int,
+    detection_index: int,
+) -> tuple[float, float, float, float, float, float, float, float]:
+    bbox = detection.get("bbox_3d")
+    if not isinstance(bbox, (list, tuple)) or len(bbox) < 7:
+        raise ValueError(
+            f"Frame {frame_index}, detection {detection_index} must provide "
+            "'bbox_3d' with at least 7 values: [x, y, z, yaw, length, width, height, (score)]."
+        )
+
+    try:
+        x, y, z, yaw, length, width, height = (float(value) for value in bbox[:7])
+        score = float(detection.get("score", bbox[7] if len(bbox) > 7 else 1.0))
+    except (TypeError, ValueError) as exc:
+        raise ValueError(
+            f"Frame {frame_index}, detection {detection_index} contains non-numeric "
+            "bbox_3d or score values."
+        ) from exc
+
+    return x, y, z, yaw, length, width, height, score
+
+
 
 def main():
     args = parse_args()
     meta = load_meta()
-    nusc = load_nuscenes("v1.0-trainval", NUSCENES_ROOT)
+    nusc = load_nuscenes("v1.0-mini", NUSCENES_ROOT)
+    simpletrack_path = args.simpletrack_path.resolve()
     expected_sample_tokens = (
-	    load_sample_tokens_from_file(get_eval_sample_tokens(nusc, "val"))
-	    )
+            get_eval_sample_tokens(nusc, "val")
+            )
     results_payload = convert_simpletrack_to_results(
-	    simpletrack_path,
-	    meta,
-	    nusc,
-	    expected_sample_tokens=expected_sample_tokens,
-	    )
+            simpletrack_path,
+            meta,
+            nusc,
+            expected_sample_tokens=expected_sample_tokens,
+            )
     for sample_token, detections in results_payload["results"].items():
-	if len(detections) > 500:
-	    detections.sort(key=lambda d: d["detection_score"], reverse=True)
-	    results_payload["results"][sample_token] = detections[:500]
-
+        if len(detections) > 500:
+            detections.sort(key=lambda d: d["detection_score"], reverse=True)
+            results_payload["results"][sample_token] = detections[:500]
+    output_json = Path("./pointpillars_mmdetection3d_nuscenes_format.json")
     write_results_json(results_payload, output_json)
     detection_count = sum(len(detections) for detections in results_payload["results"].values())
     print(
-	    f"Wrote {detection_count} detections across "
-	    f"{len(results_payload['results'])} samples to {output_json}"
-	    )
+            f"Wrote {detection_count} detections across "
+            f"{len(results_payload['results'])} samples to {output_json}"
+            )
 
-    if __name__ == "__main__":
-	main()
+if __name__ == "__main__":
+    main()

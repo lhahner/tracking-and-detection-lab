@@ -124,7 +124,10 @@ def make_settings(args: argparse.Namespace) -> SimpleNamespace:
         ),
         runtime=SimpleNamespace(
             datatype="bin",
-            dataset="nuscenes_openpcdet",
+            dataset=("nuscenes-mini_openpcdet"
+                if args.split in {"mini_train", "mini_val"}
+                else "nuscenes_openpcdet"
+            ),
             display=False,
         ),
         benchmark=SimpleNamespace(

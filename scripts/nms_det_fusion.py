@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 from collections import defaultdict
 import torch
 
@@ -20,16 +21,17 @@ if not torch.cuda.is_available():
 DEVICE = "cuda"
 
 NUSCENES_ROOT = '/projects/scc/UGOE/UXEI/UMIN/scc_umin_baum/mthesis_lennart_hahner/dir.project/datasets/nuscenes'
+RESULTS = '/projects/scc/UGOE/UXEI/UMIN/scc_umin_baum/mthesis_lennart_hahner/dir.project/results'
 
-SECOND_DETECTIONS_PATH = '/user/lennart.hahner/u28856/tracking-and-detection-lab-detections/second/second_openpcdet_nuscenes_detections/second_openpcdet_nuscenes_detections.json'
-TRANSFUSION_DETECTIONS_PATH = '/user/lennart.hahner/u28856/tracking-and-detection-lab-detections/transfusion/transfusion_openpcdet_nuscenes_detections/transfusion_openpcdet_nuscenes_detections.json'
-VOXELNEXT_DETECTIONS_PATH = '/user/lennart.hahner/u28856/tracking-and-detection-lab-detections/voxelnext/voxelnext_openpcdet_nuscenes_detections/voxelnext_openpcdet_nuscenes_detections.json'
-POINTPILLARS_DETECTIONS_PATH = '/user/lennart.hahner/u28856/tracking-and-detection-lab-detections/pointpillars/pointpillars_mmdetection3d_nuscenes_detections/pointpillars_mmdetection3d_nuscenes_detections.json'
-CENTERPOINT_VOXELNET_DETECTIONS_PATH = '/user/lennart.hahner/u28856/tracking-and-detection-lab-detections/centerpoint_voxelnet/centerpoint_voxelnet_mmdetection3d_nuscenes_detections/centerpoint_voxelnet_mmdetection3d_nuscenes_detections.json'
-SSN_DETECTIONS_PATH = '/user/lennart.hahner/u28856/tracking-and-detection-lab-detections/ssn/ssn_mmdetection3d_nuscenes_detections/ssn_mmdetection3d_nuscenes_detections.json'
-REGNET_DETECTIONS_PATH = '/user/lennart.hahner/u28856/tracking-and-detection-lab-detections/regnet/regnet_mmdetection3d_nuscenes_detections/regnet_mmdetection3d_nuscenes_detections.json'
+SECOND_DETECTIONS_PATH = f'{RESULTS}/tracking-and-detection-lab-detections/second/second_openpcdet_nuscenes_detections/second_openpcdet_nuscenes_detections.json'
+TRANSFUSION_DETECTIONS_PATH = f'{RESULTS}/tracking-and-detection-lab-detections/transfusion/transfusion_openpcdet_nuscenes_detections/transfusion_openpcdet_nuscenes_detections.json'
+VOXELNEXT_DETECTIONS_PATH = f'{RESULTS}/tracking-and-detection-lab-detections/voxelnext/voxelnext_openpcdet_nuscenes_detections/voxelnext_openpcdet_nuscenes_detections.json'
+POINTPILLARS_DETECTIONS_PATH = f'{RESULTS}/tracking-and-detection-lab-detections/pointpillars/pointpillars_mmdetection3d_nuscenes_detections/pointpillars_mmdetection3d_nuscenes_detections.json'
+CENTERPOINT_VOXELNET_DETECTIONS_PATH = f'{RESULTS}/tracking-and-detection-lab-detections/centerpoint_voxelnet/centerpoint_voxelnet_mmdetection3d_nuscenes_detections/centerpoint_voxelnet_mmdetection3d_nuscenes_detections.json'
+SSN_DETECTIONS_PATH = f'{RESULTS}/tracking-and-detection-lab-detections/ssn/ssn_mmdetection3d_nuscenes_detections/ssn_mmdetection3d_nuscenes_detections.json'
+REGNET_DETECTIONS_PATH = f'{RESULTS}/tracking-and-detection-lab-detections/regnet/regnet_mmdetection3d_nuscenes_detections/regnet_mmdetection3d_nuscenes_detections.json'
 
-OUTPUT_JSON = '/user/lennart.hahner/u28856/jupyterhub-gwdg/deep-learning-based-detection-systems-for-multi-object-tracking-in-lidar-data/notebooks/scripts/data/nms_fused_detections.json'
+OUTPUT_JSON = Path(__file__).resolve().parent / "data" / "nms_fused_detections_2_best.json"
 
 SCORE_THRESHOLD = 0.1       # tune this — drop obviously-noisy low-confidence boxes
 MAX_BOXES_PER_SAMPLE = 500  # matches nuScenes detection eval's hard limit
@@ -40,12 +42,8 @@ def load_frames(path):
     return data["frames"]
 
 detector_frames = {
-    "second": load_frames(SECOND_DETECTIONS_PATH),
     "transfusion": load_frames(TRANSFUSION_DETECTIONS_PATH),
     "voxelnext": load_frames(VOXELNEXT_DETECTIONS_PATH),
-    "pointpillars": load_frames(POINTPILLARS_DETECTIONS_PATH),
-    "centerpoint_voxelnet": load_frames(CENTERPOINT_VOXELNET_DETECTIONS_PATH),
-    "ssn": load_frames(SSN_DETECTIONS_PATH),
 }
 
 detector_by_token = {
@@ -54,7 +52,7 @@ detector_by_token = {
 }
 
 token_sets = {name: set(d.keys()) for name, d in detector_by_token.items()}
-reference_tokens = token_sets["second"]
+reference_tokens = token_sets["transfusion"]
 for name, tokens in token_sets.items():
     if tokens != reference_tokens:
         print(f"WARNING: {name} differs from 'second' — "

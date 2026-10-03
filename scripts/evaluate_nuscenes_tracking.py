@@ -5,6 +5,8 @@ import json
 import sys
 from pathlib import Path
 from typing import Any
+import os, psutil
+process = psutil.Process(os.getpid())
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 SRC_DIR = ROOT_DIR / "src"
@@ -149,8 +151,8 @@ def validate_tracking_box(
 def load_eval_sample_tokens(dataroot: Path, version: str, eval_set: str) -> list[str]:
     from nuscenes.nuscenes import NuScenes
     from nuscenes.utils.splits import create_splits_scenes
-
-    nusc = NuScenes(version=version, dataroot=str(dataroot), verbose=False)
+    nusc = NuScenes(version=version, dataroot=str(dataroot), verbose=True)
+    
     split_scenes = create_splits_scenes(verbose=False)
     if eval_set not in split_scenes:
         raise ValueError(f"Unknown eval set {eval_set!r}. Available: {sorted(split_scenes)}")
@@ -235,10 +237,12 @@ def main() -> None:
         raise FileNotFoundError("No tracking result JSON files found.")
 
     sample_tokens = None
+    print(process.memory_info().rss)
     if args.pad_missing_samples or args.run_eval:
         sample_tokens = load_eval_sample_tokens(args.dataroot, args.version, args.eval_set)
-
+    print(process.memory_info().rss)
     for track_path in track_paths:
+        print(process.memory_info().rss)
         payload = load_tracking_payload(track_path)
         missing_count = 0
         if args.pad_missing_samples:
