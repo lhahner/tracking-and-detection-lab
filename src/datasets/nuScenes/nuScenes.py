@@ -10,6 +10,7 @@ from PIL import Image
 from torch.utils.data import Dataset
 from nuscenes.nuscenes import NuScenes
 from entities.metadata import NuScenesMetadata
+from src.registry import DATASETS
 
 DETECTION_CLASSES = {
     "Background": 0,
@@ -75,12 +76,16 @@ CAMERA_CHANNELS = (
 )
 
 
+@DATASETS.register("nuScenes")
 class NuScenesDataset(Dataset):
     def __init__(
         self,
         data_root,
         split="mini_train",
         version="v1.0-mini",
+        num_points=1024,
+        include_background=True,
+        background_iou_threshold=0.1,
         include_time_lag=False,
         load_images=True,
         camera_channel="CAM_FRONT",

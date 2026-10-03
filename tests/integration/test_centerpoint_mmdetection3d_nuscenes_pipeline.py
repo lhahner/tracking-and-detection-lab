@@ -1,6 +1,7 @@
 import datetime
 import os
 import unittest
+import torch
 from pathlib import Path
 
 from helpers.helpers import (
@@ -17,7 +18,7 @@ from settings.dummy_settings import (
 )
 from definitions import ROOT_DIR
 from inference_engine import InferenceEngine
-from detector.detector_registry import MODELS
+from src.registry import MODELS
 
 url = ("https://download.openmmlab.com/mmdetection3d/v1.0.0_models/"
        "centerpoint/"
@@ -29,6 +30,8 @@ mmdet3d_config_folder = f"{ROOT_DIR}/" \
 
 class TestCenterPointMMDetection3DNuScenesPipeline(unittest.TestCase):
     def test_predict_and_evaluate_from_inference_engine_with_nuscenes_mini(self):
+        if not torch.cuda.is_available():
+            self.skipTest("No GPU availabe")
         config_file = "centerpoint_voxel01_second_secfpn_head-circlenms_8xb4-cyclic-20e_nus-3d.py"
         checkpoint_file = "centerpoint_01voxel_second_secfpn_circlenms_4x8_cyclic_20e_nus_20220810_030004-9061688e.pth"
         checkpoint_path = load_model(url=f"{url}/{checkpoint_file}",
@@ -65,6 +68,8 @@ class TestCenterPointMMDetection3DNuScenesPipeline(unittest.TestCase):
         self.assertLessEqual(float(results[0]["mAP"]), 1.0)
 
     def test_predict_and_evaluate_from_inference_engine_with_nuscenes_full(self):
+        if not torch.cuda.is_available():
+            self.skipTest("No GPU available")
         config_file = "centerpoint_voxel01_second_secfpn_head-circlenms_8xb4-cyclic-20e_nus-3d.py"
         checkpoint_file = "centerpoint_01voxel_second_secfpn_circlenms_4x8_cyclic_20e_nus_20220810_030004-9061688e.pth"
         checkpoint_path = load_model(url=f"{url}/{checkpoint_file}",
@@ -109,6 +114,8 @@ class TestCenterPointMMDetection3DNuScenesPipeline(unittest.TestCase):
 
 
     def test_predict_and_write_simpletrack_detections_from_inference_engine_with_nuscenes_full(self):
+        if not torch.cuda.is_available():
+            self.skipTest("No GPU available")
         config_file = "centerpoint_voxel01_second_secfpn_head-circlenms_8xb4-cyclic-20e_nus-3d.py"
         checkpoint_file = "centerpoint_01voxel_second_secfpn_circlenms_4x8_cyclic_20e_nus_20220810_030004-9061688e.pth"
         checkpoint_path = load_model(url=f"{url}/{checkpoint_file}",

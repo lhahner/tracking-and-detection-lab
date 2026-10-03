@@ -13,11 +13,12 @@ except ImportError as exc:
 from torch.utils.data import DataLoader
 from pathlib import Path
 from detector.detector import Detector
-from detector.detector_registry import MODELS
+from src.registry import MODELS
 from entities.detection import Detection, DetectionSequence, FrameDetection
 from definitions import ROOT_DIR
 from config.logging_config import LoggingConfig
 from easydict import EasyDict
+from detector.detector_openpcdet import DetectorOpenPCDet
 
 PROJECT_DIR = Path(__file__).resolve().parent
 
@@ -26,7 +27,7 @@ logger = logging_config.get_logger(__name__)
 
 
 @MODELS.register("voxelnext_openpcdet")
-class VoxelnextOpenPCDet(Detector):
+class VoxelnextOpenPCDet(DetectorOpenPCDet):
     def __init__(self,
                  dataset,
                  classes,

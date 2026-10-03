@@ -6,8 +6,10 @@ try:
     from deep_sort_realtime.deepsort_tracker import DeepSort as _DeepSortImpl
 except ImportError:  # pragma: no cover
     _DeepSortImpl = None
+from src.registry import TRACKER
 
 
+@TRACKER.register("DeepSORT")
 class DeepSort:
     """Wrap `deep_sort_realtime` with the project's expected interface."""
 

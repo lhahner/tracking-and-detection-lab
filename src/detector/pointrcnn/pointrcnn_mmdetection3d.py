@@ -14,7 +14,7 @@ from detector.detector_mmdetection3d import DetectorMMDetection3D
 from config.logging_config import LoggingConfig
 from definitions import ROOT_DIR
 from detector.detector import Detector
-from detector.detector_registry import MODELS
+from src.registry import MODELS
 from entities.detection import Detection, DetectionSequence, FrameDetection
 
 if torch.cuda.is_available():

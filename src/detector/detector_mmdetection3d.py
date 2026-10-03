@@ -9,7 +9,7 @@ except (ImportError, ModuleNotFoundError) as exc:
 from torch.utils.data import DataLoader
 
 from detector.detector import Detector
-from detector.detector_registry import MODELS
+from src.registry import MODELS
 from entities.detection import Detection, DetectionSequence, FrameDetection
 from config.logging_config import LoggingConfig
 from definitions import ROOT_DIR

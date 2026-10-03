@@ -4,19 +4,15 @@ if not hasattr(np, "int"):
 import torch
 try:
     from pcdet.models import build_network, load_data_to_gpu
-    from pcdet.utils import common_utils
     from detector.openpcdet_config import load_openpcdet_config
 except ImportError as exc:
     raise ImportError("TransfusionOpenPCDet requires MMDetection3D. Install the OpenMMLab stack first.") from exc
 
-from torch.utils.data import DataLoader
 from pathlib import Path
-from detector.detector import Detector
-from detector.detector_registry import MODELS
+from src.registry import MODELS
 from entities.detection import Detection, DetectionSequence, FrameDetection
-from definitions import ROOT_DIR
 from config.logging_config import LoggingConfig
-from easydict import EasyDict
+from detector.detector import DetectorOpenPCDet
 
 PROJECT_DIR = Path(__file__).resolve().parent
 
@@ -25,7 +21,7 @@ logger = logging_config.get_logger(__name__)
 
 
 @MODELS.register("transfusion_openpcdet")
-class TransfusionOpenPCDet(Detector):
+class TransfusionOpenPCDet(DetectorOpenPCDet):
     def __init__(self,
                  dataset,
                  classes,
@@ -39,7 +35,7 @@ class TransfusionOpenPCDet(Detector):
         self.classes = classes
         self.batch_size = batch_size
         self.settings = settings
-        self.cfg = load_openpcdet_config(self.config_file)
+        self.cfg = DetectorOpenPCDet.load_openpcdet_config(self.config_file)
         self.model = build_network(
             self.cfg.MODEL,
             num_class=len(self.dataset.class_names),

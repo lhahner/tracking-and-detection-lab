@@ -1,12 +1,12 @@
 import os
 from typing import Any
+from src.registry import DATASETS
 
 import numpy as np
 import torch
 from PIL import Image
 from torch.utils.data import Dataset
 
-from detector.pointnet.proposals import generate_proposals
 from datasets.kitti_boxes import (
     extract_points_in_box,
     image_box_to_lidar_proposal,
@@ -35,12 +35,14 @@ if len(SUPPORTED_OBJECT_TYPES) == 0:
 logging_config = LoggingConfig()
 logger = logging_config.get_logger(__name__)
 
+
+@DATASETS.register("kiiti3D")
 class Kitti3D(Dataset):
     def __init__(
         self,
         data_root,
         split="training",
-        mode="frame",
+        version="frame",
         num_points=1024,
         include_background=False,
         background_iou_threshold=0.1,
@@ -54,7 +56,7 @@ class Kitti3D(Dataset):
         self.logger = logger
         self.data_root = data_root
         self.split = split
-        self.mode = mode
+        self.version = version
         self.num_points = num_points
         self.include_background = include_background
         self.background_iou_threshold = background_iou_threshold
@@ -76,19 +78,19 @@ class Kitti3D(Dataset):
         if self.max_samples is not None:
             self.sample_ids = self.sample_ids[: self.max_samples]
 
-        if self.mode not in {"frame", "object"}:
+        if self.version not in {"frame", "object"}:
             raise ValueError(f"""
-                    Unsupported mode '{self.mode}'.
+                    Unsupported version '{self.version}'.
                     Expected 'frame' or 'object'.
                     """)
 
-        self.object_index = self._build_object_index() if self.mode == "object" else []
+        self.object_index = self._build_object_index() if self.version == "object" else []
 
     def __len__(self):
-        return len(self.object_index) if self.mode == "object" else len(self.sample_ids)
+        return len(self.object_index) if self.version == "object" else len(self.sample_ids)
 
     def __getitem__(self, idx):
-        if self.mode == "object":
+        if self.version == "object":
             return self._get_object_item(idx)
         return self.__get_frame_item(self.sample_ids[idx])
 

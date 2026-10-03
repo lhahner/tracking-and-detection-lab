@@ -18,6 +18,7 @@ if str(THIRD_PARTY_SIMPLETRACK_ROOT) not in sys.path:
 from mot_3d.data_protos import BBox
 from mot_3d.frame_data import FrameData
 from mot_3d.mot import MOTModel
+from src.registry import TRACKER
 
 VALID_CLASSES = {
             "bicycle",
@@ -40,6 +41,7 @@ PAYLOAD = {
             }
 
 
+@TRACKER.register("SimpleTrack")
 class SimpleTrack:
     def __init__(
         self,

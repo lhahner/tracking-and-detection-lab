@@ -20,7 +20,7 @@ from tracker.SORT.sort import Sort
 from entities.detection import convert_to_tensor, convert_classes_to_tensor
 
 # Detection systems
-from detector.detector_registry import MODELS
+from src.registry import MODELS
 
 # Datasets
 from datasets.nuScenes import NuScenesDataset

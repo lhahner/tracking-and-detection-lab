@@ -1,7 +1,7 @@
 from pathlib import Path
 from detector.detector_mmdetection3d import DetectorMMDetection3D
 from definitions import ROOT_DIR
-from detector.detector_registry import MODELS
+from src.registry import MODELS
 
 PROJECT_DIR = Path(__file__).resolve().parent
 DEFAULT_CONFIG_FILE = (

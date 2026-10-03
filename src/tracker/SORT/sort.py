@@ -21,7 +21,10 @@ import numpy as np
 np.random.seed(0)
 
 from .kalmanBoxTracker import KalmanBoxTracker
+from src.registry import TRACKER
 
+
+@TRACKER.register("SORT")
 class Sort(object):
   """Track multiple objects online using the SORT algorithm."""
 

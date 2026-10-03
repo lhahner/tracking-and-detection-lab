@@ -29,6 +29,7 @@ if str(THIRD_PARTY_AB3DMOT_ROOT) not in sys.path:
 if str(THIRD_PARTY_XINSHUO_TOOLBOX_ROOT) not in sys.path:
     sys.path.insert(0, str(THIRD_PARTY_XINSHUO_TOOLBOX_ROOT))
 
+from src.registry import TRACKER
 from definitions import ROOT_DIR
 from AB3DMOT_libs import box as ab3dmot_box
 from AB3DMOT_libs.io import load_detection
@@ -95,6 +96,7 @@ SUPPORTED_PARAM_DET_NAMES = {"centerpoint", "megvii"}
 DEFAULT_SEQUENCE_NAME = "default"
 
 
+@TRACKER.register("AB3DMOT")
 class AB3DMOT:
     def __init__(
         self,
