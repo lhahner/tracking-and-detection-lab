@@ -1,10 +1,11 @@
 from typing import MappingView
 import git
 import os
-import tomlib
+import tomli
 
+from git.exc import GitCommandError
 from importlib.metadata import entry_points
-from src.registry import MODELS, TRACKER, PRE_PROCESSING, POST_PROCESSING, DATASETS, Registry 
+from src.registry import MODELS, TRACKER, PRE_PROCESSING, POST_PROCESSING, DATASETS, Registry
 from definitions import PLUGIN_DIR, ROOT_DIR
 
 MODULES_DIR = os.path.join(ROOT_DIR, "src")
@@ -43,8 +44,15 @@ class PluginInstaller:
                              registry=GROUPS.get(group)[0],
                              group=group)
 
-    def install_plugin(self, name, source):
-        git.Git(PLUGIN_DIR).clone(source)
+    def install_plugin(self, name, source, git=False):
+        if git:
+            try:
+                git.Git(PLUGIN_DIR).clone(source)
+            except GitCommandError:
+                raise ModuleNotFoundError("Git Repository seems not to exists or is not public.\
+                                           If you dont want to make it public, clone the repo manually,\
+                                           and install plugin by providing local path while running\
+                                           installation.")
         if not os.path.exists(os.path.join(PLUGIN_DIR, name)):
             raise FileNotFoundError("The plugin path does not exists, \
                                      validate that ./plugins dir exists.")
@@ -53,7 +61,7 @@ class PluginInstaller:
             raise FileNotFoundError("Mainfest config not found, create a pyproject.tmol")
 
         with mainfest_path.open("rb") as f:
-            mainfest = tomlib.load(f)
+            mainfest = tomli.load(f)
         plugin_type = mainfest["type"]
         group = mainfest["project"]["entry-points"]["tracking-and-detection-lab"]
         registry_meta = GROUPS.get(group + "." + plugin_type)

@@ -1,0 +1,6 @@
+[project]
+name = "ai-wrapper-mistral"
+version = "0.0.1"
+
+[project.entry-points."ai_wrapper.models"]
+mistral = "ai_wrapper_mistral.model:MistralModel"
