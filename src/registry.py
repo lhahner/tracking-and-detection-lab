@@ -103,3 +103,5 @@ class Registry:
 DATASETS = Registry("src/datasets/dataset.yaml")
 TRACKER = Registry("src/tracker/tracker.yaml")
 MODELS = Registry("src/detector/detector.yaml")
+POST_PROCESSING = Registry("src/post_processing/post_processing.yaml")
+PRE_PROCESSING = Registry("src/pre_processing/pre_processing.yaml")
