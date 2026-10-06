@@ -7,6 +7,7 @@ from git.exc import GitCommandError
 from importlib.metadata import entry_points
 from src.registry import MODELS, TRACKER, PRE_PROCESSING, POST_PROCESSING, DATASETS, Registry
 from definitions import PLUGIN_DIR, ROOT_DIR
+from pathlib import Path
 
 MODULES_DIR = os.path.join(ROOT_DIR, "src")
 GROUPS = {"tracking-and-detection-lab.detector": [MODELS, os.path.join(MODULES_DIR,
@@ -56,11 +57,11 @@ class PluginInstaller:
         if not os.path.exists(os.path.join(PLUGIN_DIR, name)):
             raise FileNotFoundError("The plugin path does not exists, \
                                      validate that ./plugins dir exists.")
-        mainfest_path = os.path.join(PLUGIN_DIR, name, "pyproject.tmol")
+        mainfest_path = os.path.join(PLUGIN_DIR, name, "pyproject.toml")
         if not os.path.exists(mainfest_path):
-            raise FileNotFoundError("Mainfest config not found, create a pyproject.tmol")
+            raise FileNotFoundError("Mainfest config not found, create a pyproject.toml")
 
-        with mainfest_path.open("rb") as f:
+        with Path(mainfest_path).open("rb") as f:
             mainfest = tomli.load(f)
         plugin_type = mainfest["type"]
         group = mainfest["project"]["entry-points"]["tracking-and-detection-lab"]

@@ -16,7 +16,7 @@ from src.registry import MODELS
 class TestPluginIntegration(unittest.TestCase):
     def test_dummy_plugin(self):
         path = create_dummy_plugin()
-        PluginInstaller().install_plugin(name="ai-wrapper-mistral",
+        PluginInstaller().install_plugin(name="dummy_plugin",
                                          source=path,
                                          git=False)
         self.assertTrue(len(MODELS > 0))
