@@ -2,6 +2,7 @@ import torch
 import importlib.util
 import os
 import unittest
+import shutil
 
 from definitions import ROOT_DIR
 from pathlib import Path
@@ -44,12 +45,19 @@ def create_dummy_plugin():
     module_path.mkdir(parents=True, exist_ok=True)
 
     plugin_config = """
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "ai-wrapper-mistral"
 version = "0.0.1"
 
 [project.entry-points."ai_wrapper.models"]
 mistral = "ai_wrapper_mistral.model:MistralModel"
+
+[tool]
+type = "detector"
 """.strip()
 
     (plugin_path / "pyproject.toml").write_text(
@@ -76,4 +84,4 @@ class MistralModel:
 
 
 def clean_up_dummy_folder(path):
-    os.rmdir(path)
+    shutil.rmtree(path)

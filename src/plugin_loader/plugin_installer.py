@@ -2,41 +2,39 @@ from typing import MappingView
 import git
 import os
 import tomli
+import sys 
+import subprocess
 
 from git.exc import GitCommandError
 from importlib.metadata import entry_points
 from src.registry import MODELS, TRACKER, PRE_PROCESSING, POST_PROCESSING, DATASETS, Registry
 from definitions import PLUGIN_DIR, ROOT_DIR
 from pathlib import Path
+from plugin_loader.models.plugin_types import PluginType
 
 MODULES_DIR = os.path.join(ROOT_DIR, "src")
-GROUPS = {"tracking-and-detection-lab.detector": [MODELS, os.path.join(MODULES_DIR,
-                                                                       "detector",
-                                                                       "detector.yaml")],
-          "tracking-and-detection-lab.tracker": [TRACKER, os.path.join(MODULES_DIR,
-                                                                       "tracker",
-                                                                       "tracker.yaml")],
-          "tracking-and-detection-lab.datasets": [DATASETS, os.path.join(MODULES_DIR,
-                                                                         "datasets",
-                                                                         "dataset.yaml")],
-          "tracking-and-detection-lab.pre-processing": [PRE_PROCESSING, os.path.join(MODULES_DIR,
-                                                                                     "pre_processing",
-                                                                                     "pre_processing.yaml")],
-          "tracking-and-detection-lab.post-processing": [POST_PROCESSING, os.path.join(MODULES_DIR,
-                                                                                       "post_processing",
-                                                                                       "post_processing.yaml")]}
+GROUPS = [[MODELS, os.path.join(MODULES_DIR, "detector", "detector.yaml")],
+          [TRACKER, os.path.join(MODULES_DIR, "tracker", "tracker.yaml")],
+          [DATASETS, os.path.join(MODULES_DIR, "datasets", "dataset.yaml")],
+          [PRE_PROCESSING, os.path.join(MODULES_DIR, "pre_processing", "pre_processing.yaml")],
+          [POST_PROCESSING, os.path.join(MODULES_DIR, "post_processing", "post_processing.yaml")]]
 
 
 class PluginInstaller:
-    def load_plugin(self, config_path, registry, group):
-        plugins = entry_points(group=group)
-        registry = Registry(config_path)
+    def load_plugin(self, path, config_path, registry, group, name):
+        # How to make this safe?
+        subprocess.run(
+            [sys.executable, "-m", "pip", "install", path],
+            shell=False,
+            check=True,
+            timeout=120,
+        ) 
+        plugins = entry_points(group=group, name=name)
         for entry_point in plugins:
-            model_class = entry_point.load()
+            clazz = entry_point.load()
 
             registry.register(
-                entry_point.name,
-                model_class
+                clazz
             )
 
     def load_all_plugins(self):
@@ -63,9 +61,13 @@ class PluginInstaller:
 
         with Path(mainfest_path).open("rb") as f:
             mainfest = tomli.load(f)
-        plugin_type = mainfest["type"]
-        group = mainfest["project"]["entry-points"]["tracking-and-detection-lab"]
-        registry_meta = GROUPS.get(group + "." + plugin_type)
-        self.load_plugin(config_path=registry_meta[1],
+        group, entries = next(iter(mainfest["project"]["entry-points"].items()))
+        impl_name, target = next(iter(entries.items()))
+
+        plugin_type = PluginType[mainfest["tool"]["type"].upper()]
+        registry_meta = GROUPS[plugin_type.value]
+        self.load_plugin(path=os.path.join(PLUGIN_DIR, name),
+                         config_path=registry_meta[1],
                          registry=registry_meta[0],
-                         group=group)
+                         group=group,
+                         name=impl_name)

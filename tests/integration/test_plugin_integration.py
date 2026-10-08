@@ -19,5 +19,5 @@ class TestPluginIntegration(unittest.TestCase):
         PluginInstaller().install_plugin(name="dummy_plugin",
                                          source=path,
                                          git=False)
-        self.assertTrue(len(MODELS > 0))
+        self.assertTrue(len(MODELS.names()) > 0)
         clean_up_dummy_folder(path)
