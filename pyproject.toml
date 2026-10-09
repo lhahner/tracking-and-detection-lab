@@ -1,0 +1,6 @@
+[project]                         
+name = "tracking-and-detection-lab"               
+version = "0.0.1"                 
+                                  
+[project.scripts]                 
+tracking-and-detection-lab = "cli:main"

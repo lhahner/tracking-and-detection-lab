@@ -4,10 +4,11 @@ import os
 import tomli
 import sys 
 import subprocess
+import argparse
 
 from git.exc import GitCommandError
 from importlib.metadata import entry_points
-from src.registry import MODELS, TRACKER, PRE_PROCESSING, POST_PROCESSING, DATASETS, Registry
+from registry import MODELS, TRACKER, PRE_PROCESSING, POST_PROCESSING, DATASETS, Registry
 from definitions import PLUGIN_DIR, ROOT_DIR
 from pathlib import Path
 from plugin_loader.models.plugin_types import PluginType
@@ -71,3 +72,5 @@ class PluginInstaller:
                          registry=registry_meta[0],
                          group=group,
                          name=impl_name)
+
+
