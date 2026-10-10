@@ -10,40 +10,29 @@ import torch
 
 
 class CoordinateConverter:
-    def convert2DDetectionToBox(self, seq_dets, frame):
-        """Convert MOT detections for a frame from `xywh` to `xyxy`.
+    def convert_nuscenes_to_simpletrack(self):
+        translation_global = np.asarray([*detection["translation"], 1.0], dtype=np.float64)
+        translation_lidar = global_to_lidar @ translation_global
 
-        Args:
-            seq_dets: Detection array containing frame IDs and bounding boxes.
-            frame: Frame number to extract.
+        rotation_global = quaternion_rotation_matrix(detection["rotation"])
+        rotation_lidar = global_to_lidar[:3, :3] @ rotation_global
+        yaw_lidar = math.atan2(rotation_lidar[1, 0], rotation_lidar[0, 0])
 
-        Returns:
-            numpy.ndarray: Bounding boxes for the frame in `xyxy` format with
-            scores preserved in the last column.
-
-        Raises:
-            ValueError: If the detections array is empty.
-        """
-        if len(seq_dets) < 1:
-            raise ValueError("The sequence detections are empty")
-        dets = seq_dets[seq_dets[:,0]==frame, 2:7]
-        dets[:, 2:4] += dets[:, 0:2]
-        return dets
-
-    def convert_boxes_3d(
-            self,
-            boxes_3d,
-            src_mode,
-            dst_mode,
-            rt_mat):
-        if src_mode == dst_mode:
-            return boxes_3d.clone()
-        if src_mode == "camera" and dst_mode == "lidar":
-            return self.__camera_to_lidar_boxes(boxes_3d, rt_mat)
-        if src_mode == "lidar" and dst_mode == "camera":
-            return self.__lidar_to_camera_boxes(boxes_3d, rt_mat)
-        raise ValueError("Cannot convert")
-
+        width, length, height = (float(value) for value in detection["size"])
+        return {
+            "label": str(detection["detection_name"]).lower(),
+            "score": float(detection["detection_score"]),
+            "bbox_3d": [
+                float(translation_lidar[0]),
+                float(translation_lidar[1]),
+                float(translation_lidar[2]),
+                yaw_lidar,
+                length,
+                width,
+                height,
+                ],  
+            }
+    
     def boxes_3d_to_corners(self, boxes_3d, box_mode):
         """
         Args:
