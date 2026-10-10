@@ -1,12 +1,16 @@
+import os
+import torch
+
 from detector.detector import Detector
 from ultralytics import YOLO
-import os
+from entities.detection import Detection, FrameDetection, DetectionSequence
 from pathlib import Path
+from definitions import ROOT_DIR
 
-class YoloUltralyticsDetector(Detector):
+
+class YoloUltralytics(Detector):
     """Run YOLO-based person detection and export MOT-format detections."""
-
-    def __init__(self, input_path, output_path, model_path):
+    def __init__(self, input_path, model):
         """Initialize the YOLO detector.
 
         Args:
@@ -15,41 +19,34 @@ class YoloUltralyticsDetector(Detector):
             model_path: Path to the YOLO model weights.
         """
         self.input_path = input_path
-        self.output_path = output_path
-        self.output_file = Path(output_path) / "det.txt"
-        self.model = YOLO(model_path)
-        self.detections = []
+        self.model = YOLO(os.path.join(ROOT_DIR, "src", "detector", "yolo", "model", model + ".pt"))
      
     def detect(self):
-        """Run YOLO inference on every frame and persist MOT detections.
+        """
+        Run YOLO inference on every frame and persist MOT detections.
 
         Returns:
             list[list[str]] | list[str]: Collected detection lines, either read
             from an existing output file or generated during inference.
         """
-        concat_frames, frames = self.read_data()
+        concat_frames, frames = self.__read_data()
         frame_index = 1
-        self.output_file.parent.mkdir(parents=True, exist_ok=True)
-        self.output_file.touch(exist_ok=True)
-        with open(self.output_file, "r", encoding="utf-8") as file_obj:
-            first_char = file_obj.read(1)
-            if first_char:
-                print(f"file {self.output_file} not empty, don't rewrite")
-                for line in file_obj:
-                    self.detections.append(line)
-                return self.detections
-            else:
-                print(f"file empty running detection on given dataset.")
+        frame_detections = []
         for frame, concat_frame in zip(frames, concat_frames):
             detection_results = self.model(concat_frame)
+            formatted = []
+            max_confidence_score = 0
             for detection_result in detection_results:
-                formatted = self.format_detections(frame_index, detection_result)
-                self.detections.append(formatted)
-                self.write_output(formatted)
+                formatted, max_confidence_score = self.__format_detections(frame_index, 
+                                                                           detection_result,
+                                                                           max_confidence_score=max_confidence_score)
+            frame_detections = FrameDetection(highest_score_index=max_confidence_score,
+                                              frame=frame,
+                                              dets=formatted)
             frame_index += 1
-        return self.detections
+        return DetectionSequence(frames=frame_detections)
 
-    def format_detections(self, frame_index, results):
+    def __format_detections(self, frame_index, results, max_confidence_score):
         """Convert YOLO detections into MOT challenge text lines.
 
         Args:
@@ -70,35 +67,24 @@ class YoloUltralyticsDetector(Detector):
         xyxy = results.boxes.xyxy.cpu().numpy()   # (N,4) -> x1,y1,x2,y2 in original image space
         conf = results.boxes.conf.cpu().numpy()   # (N,)
         cls = results.boxes.cls.cpu().numpy()     # (N,) COCO class ids, person=0
-        
-        lines = []
+
+        detections = []
         for (x1, y1, x2, y2), c, class_id in zip(xyxy, conf, cls):
             if int(class_id) != 0:
                 continue
-            # MOT format expects top-left x,y plus width,height.
+                # MOT format expects top-left x,y plus width,height.
             w = x2 - x1
             h = y2 - y1
-            line = f"{frame_index},-1,{x1:.0f},{y1:.0f},{w:.3f},{h:.3f},{c:.6f},-1,-1,-1\n"
-            lines.append(line)
-        
-        return lines 
+            detection = Detection(score=conf[0],
+                                  label=cls,
+                                  box=torch.tensor([x1, y1, x2, y2, w, h])
+                                  )
+            detections.append(detection)
+            if conf[0] > max_confidence_score:
+                max_confidence_score = conf[0]
+        return detections, max_confidence_score
     
-    def write_output(self, lines):
-        """Append detection lines to the detector output file.
-
-        Args:
-            lines: MOT-format lines to append.
-
-        Raises:
-            ValueError: If the output directory does not exist.
-        """
-        if not self.output_file.parent.exists():
-            raise ValueError(f"Output directory does not exist: {self.output_file.parent}")
-
-        with open(self.output_file, "a", encoding="utf-8") as f:
-            f.writelines(lines)
-    
-    def read_data(self):
+    def __read_data(self):
         """Read and sort image frame paths from the input directory.
 
         Returns:
@@ -118,10 +104,3 @@ class YoloUltralyticsDetector(Detector):
         frames.sort()
         sorted_frames_concat = [os.path.join(str(self.input_path), frame) for frame in frames]
         return sorted_frames_concat, frames
-       
-    def get_model(self):
-        """Return the loaded YOLO model instance."""
-        return self.model
-        
-           
-       

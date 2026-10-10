@@ -4,6 +4,8 @@ import os
 import unittest
 import shutil
 
+from PIL import Image
+from io import BytesIO
 from definitions import ROOT_DIR
 from pathlib import Path
 
@@ -85,3 +87,14 @@ class MistralModel:
 
 def clean_up_dummy_folder(path):
     shutil.rmtree(path)
+    
+def create_in_memory_image():
+        in_memory_file = BytesIO()
+        image = Image.new('RGBA',
+                          size=(0, 0),
+                          color=(155, 0, 0))
+        image.save(in_memory_file,
+                   'png')
+        in_memory_file.name = 'tmp_testing_name.png'
+        in_memory_file.seek(0)
+        return in_memory_file
