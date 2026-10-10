@@ -1,13 +1,15 @@
 from transformers import AutoImageProcessor, DetrForObjectDetection
 from detector.detector import Detector
+from entities.detection import FrameDetection, Detection, DetectionSequence
+
 import os
 import torch
 from PIL import Image
 
-class DetrHuggingFaceDetector(Detector):
+class DetrHuggingFace(Detector):
     """Run DETR-based person detection and export MOT-format detections."""
 
-    def __init__(self, input_path, output_path, threshold=0.9):
+    def __init__(self, input_path, threshold=0.9):
         """Initialize the DETR detector.
 
         Args:
@@ -16,7 +18,6 @@ class DetrHuggingFaceDetector(Detector):
             threshold: Confidence threshold used during post-processing.
         """
         self.input_path = input_path
-        self.output_path = output_path
         self.threshold = threshold
         self.image_processor = AutoImageProcessor.from_pretrained("facebook/detr-resnet-50")
         self.model = DetrForObjectDetection.from_pretrained("facebook/detr-resnet-50")
@@ -25,7 +26,6 @@ class DetrHuggingFaceDetector(Detector):
             for label_id, label_name in self.model.config.id2label.items()
             if label_name.lower() == "person"
         }
-        self.detections = []
         
     def detect(self):
         """Run DETR inference on every frame and persist MOT detections.
@@ -35,19 +35,9 @@ class DetrHuggingFaceDetector(Detector):
             from an existing output file or generated during inference.
         """
         concat_frames, _ = self.read_data()
-        frame_index = 1
-        output_file = os.path.join(self.output_path, "det.txt")
-        with open(output_file, 'r') as file_obj:
-            first_char = file_obj.read(1)
-            if first_char:
-                print(f"file {output_file} not empty, don't rewrite")
-                for line in file_obj:
-                    self.detections.append(line)
-                return self.detections
-            else:
-                print(f"file empty running detection on given dataset.")
-        
-        for concat_frame in concat_frames:
+        max_confidence_score = 0
+        frames = []
+        for frame, concat_frame in enumerate(concat_frames):
             image = Image.open(concat_frame).convert("RGB")
             inputs = self.image_processor(images=image, return_tensors="pt")
             outputs = self.model(**inputs)
@@ -55,18 +45,22 @@ class DetrHuggingFaceDetector(Detector):
             detection_results = self.image_processor.post_process_object_detection(
                 outputs=outputs, threshold=self.threshold, target_sizes=target_sizes
             )[0]
-            lines = self.format_detections(frame_index, detection_results)
-            self.detections.append(lines)
-            self.write_output(lines)
-            frame_index += 1
-        return self.detections
-    
-    def format_detections(self, frame_index, results):
-        """Convert DETR detections into MOT challenge text lines.
+            
+            formatted_detection_results, max_confidence_score  = self.__format_detections(frame,
+                                                                                          detection_results, 
+                                                                                          max_confidence_score=max_confidence_score)
+            frames.append(FrameDetection(frame=frame,
+                                         highest_score_index=max_confidence_score,
+                                         dets=formatted_detection_results)
+                          )
+        return DetectionSequence(frames=frames)
+   
+    def __format_detections(self, frame_index, results, max_confidence_score):
+        """Convert YOLO detections into MOT challenge text lines.
 
         Args:
             frame_index: One-based frame index.
-            results: DETR post-processed prediction dictionary.
+            results: Ultralytics result object for a single frame.
 
         Returns:
             list[str]: MOT-format detection lines for person detections only.
@@ -78,37 +72,16 @@ class DetrHuggingFaceDetector(Detector):
             raise ValueError("The given results object is None.")
         if frame_index is None:
             raise ValueError("The given frame object is None")
-        
-        xyxy = results["boxes"].detach().cpu().numpy()  # (N,4) x1,y1,x2,y2
-        conf = results["scores"].detach().cpu().numpy()  # (N,)
-        labels = results["labels"].detach().cpu().numpy()  # (N,)
-        
-        lines = []
-        for (x1, y1, x2, y2), c, label_id in zip(xyxy, conf, labels):
-            if int(label_id) not in self.person_label_ids:
-                continue
-            w = x2 - x1
-            h = y2 - y1
-            line = f"{frame_index},-1,{x1:.0f},{y1:.0f},{w:.3f},{h:.3f},{c:.6f},-1,-1,-1\n"
-            lines.append(line)
-        
-        return lines
-    
-    def write_output(self, lines):
-        """Append detection lines to the detector output file.
-
-        Args:
-            lines: MOT-format lines to append.
-
-        Raises:
-            ValueError: If the output directory does not exist.
-        """
-        out_dir = os.path.dirname(self.output_path) or "."
-        if not os.path.exists(out_dir):
-            raise ValueError(f"Output directory does not exist: {out_dir}")
-
-        with open(os.path.join(self.output_path, "det.txt"), "a", encoding="utf-8") as f:
-            f.writelines(lines)
+        detections = []
+        for score, label, box in zip(results["scores"], results["labels"], results["boxes"]):
+            detections.append(
+                Detection(score=score,
+                          label=label,
+                          box=box)
+                )
+            if score > max_confidence_score:
+                max_confidence_score = score
+        return detections, max_confidence_score
     
     def read_data(self):
         """Read and sort image frame paths from the input directory.
@@ -130,7 +103,3 @@ class DetrHuggingFaceDetector(Detector):
         frames.sort()
         sorted_frames_concat = [os.path.join(str(self.input_path), frame) for frame in frames]
         return sorted_frames_concat, frames
-       
-    def get_model(self):
-        """Return the loaded DETR model instance."""
-        return self.model 
