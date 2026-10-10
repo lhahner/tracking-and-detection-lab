@@ -36,7 +36,7 @@ from AB3DMOT_libs.io import load_detection
 from AB3DMOT_libs.model import AB3DMOT as AB3DMOTModel
 from AB3DMOT_libs.utils import Config
 
-from util.quaternion import yaw_to_quaternion, normalize_quaternion, quaternion_multiply, quaternion_rotation_matrix
+from geometry.quaternion import yaw_to_quaternion, normalize_quaternion, quaternion_multiply, quaternion_rotation_matrix
 
 
 def __roty(angle: float):

@@ -388,6 +388,45 @@ class Evaluation:
         metric.update(recall=recall,
                       precision=precision)
         return metric.compute()
+    
+    def run_nuscenes_evaluation(*, nusc: Any, 
+                                eval_set: str, 
+                                result_path: Path, 
+                                output_dir: Path, 
+                                eval_config_name: str) -> None:
+        try:
+            from nuscenes.eval.detection.evaluate import NuScenesEval
+        except ImportError as exc:
+            raise ImportError(
+            "nuScenes evaluation requires nuscenes-devkit to be installed."
+            ) from exc
+
+        evaluator = NuScenesEval(
+            nusc=nusc,
+            config=load_detection_eval_config(eval_config_name),
+            result_path=str(result_path),
+            eval_set=eval_set,
+            output_dir=str(output_dir),
+            verbose=True,
+        )
+        evaluator.main(render_curves=False)
+
+    def run_tracking_eval(*, track_path: Path,
+                          dataroot: Path, version: str,
+                          eval_set: str, output_dir: Path):
+        from nuscenes.eval.common.config import config_factory
+        from nuscenes.eval.tracking.evaluate import TrackingEval
+
+        evaluator = TrackingEval(
+            config=config_factory("tracking_nips_2019"),
+            result_path=str(track_path),
+            eval_set=eval_set,
+            output_dir=str(output_dir),
+            nusc_dataroot=str(dataroot),
+            nusc_version=version,
+            verbose=True,
+            )
+        evaluator.main(render_curves=False)
 
     def compute_mAP_3D(self,
                        predicted_detections: torch.tensor,
