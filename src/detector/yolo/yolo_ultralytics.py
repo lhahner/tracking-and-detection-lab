@@ -6,8 +6,10 @@ from ultralytics import YOLO
 from entities.detection import Detection, FrameDetection, DetectionSequence
 from pathlib import Path
 from definitions import ROOT_DIR
+from registry import registry
 
 
+@MODELS.register("yolo_ultralytics")
 class YoloUltralytics(Detector):
     """Run YOLO-based person detection and export MOT-format detections."""
     def __init__(self, input_path, model):

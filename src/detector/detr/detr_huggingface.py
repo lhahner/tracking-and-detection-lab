@@ -1,11 +1,14 @@
 from transformers import AutoImageProcessor, DetrForObjectDetection
 from detector.detector import Detector
 from entities.detection import FrameDetection, Detection, DetectionSequence
+from registry import MODELS
 
 import os
 import torch
 from PIL import Image
 
+
+@MODELS.register("detr_huggingface")
 class DetrHuggingFace(Detector):
     """Run DETR-based person detection and export MOT-format detections."""
 

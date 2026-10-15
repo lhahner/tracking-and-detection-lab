@@ -17,7 +17,7 @@ if SRC_ROOT not in sys.path:
 
 class TestDetrHuggingface(unittest.TestCase):
     def test_detect_returns_correct_dto_object(self):
-        yolo = DetrHuggingFace(input_path=TESTS_DIR + "/data/kitti3d_dummy/training/image_2/")
-        detection_sequence = yolo.detect()
+        detr = DetrHuggingFace(input_path=TESTS_DIR + "/data/kitti3d_dummy/training/image_2/")
+        detection_sequence = detr.detect()
         self.assertTrue(isinstance(detection_sequence, DetectionSequence))
          
