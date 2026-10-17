@@ -4,10 +4,6 @@ import os
 import cv2
 import numpy as np
 import torch
-try:
-    from mmdet3d.apis import inference_detector, init_model
-except (ImportError, ModuleNotFoundError) as exc:
-    raise ImportError("PointPillarsMMDetections3D requires MMDetection3D. Install the OpenMMLab stack first.") from exc
 from torch.utils.data import DataLoader
 
 from detector.detector import Detector
