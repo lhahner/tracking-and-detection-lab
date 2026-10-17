@@ -362,7 +362,7 @@ class Evaluation:
 
             return box3d_overlap(predicted_detections, ground_truth)
         except ImportError as e:
-            logger.error("PyTorch3D not installed, either install or try to bypass", e)
+            self.log.error("PyTorch3D not installed, either install or try to bypass", e)
 
     def compute_precision_and_recall(self,
                                      predicted_detection_classes: torch.tensor,

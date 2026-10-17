@@ -64,7 +64,7 @@ class MeanAveragePrecision3D(Metric):
         self.__validate_detection_tensor(preds, "preds")
         self.__validate_detection_tensor(target, "target")
         if classes is None or classes.numel() == 0:
-            self.self.log.warning("Given class tensor is emtpy, can't update metric.")
+            self.log.warning("Given class tensor is emtpy, can't update metric.")
             return
 
         self.predictions.append(preds.detach())
