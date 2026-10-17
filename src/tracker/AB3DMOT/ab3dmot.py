@@ -248,7 +248,7 @@ class AB3DMOT:
                     sequence_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
                 else:
                     sequence_file.write_text("", encoding="utf-8")
-
+    
     def __track_sequences(self):
         """
         Wrapper to perform tracking and also flatten the results.

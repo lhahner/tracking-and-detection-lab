@@ -13,7 +13,7 @@ class Detection:
 @dataclass(frozen=True)
 class FrameDetection:
     frame: int
-    highest_score_index: int
+    highest_score_index: float 
     dets: list[Detection]
     targets: list = field(default_factory=list)
     metadata: Metadata | None = None
