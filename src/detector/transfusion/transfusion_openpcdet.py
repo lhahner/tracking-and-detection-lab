@@ -11,7 +11,7 @@ except ImportError as exc:
 from pathlib import Path
 from src.registry import MODELS
 from entities.detection import Detection, DetectionSequence, FrameDetection
-from config.logging_config import LoggingConfig
+from config.logging_config import LoggingConfig, logged
 from detector.detector import DetectorOpenPCDet
 
 PROJECT_DIR = Path(__file__).resolve().parent
@@ -20,8 +20,10 @@ logging_config = LoggingConfig()
 logger = logging_config.get_logger(__name__)
 
 
+@logged
 @MODELS.register("transfusion_openpcdet")
 class TransfusionOpenPCDet(DetectorOpenPCDet):
+
     def __init__(self,
                  dataset,
                  classes,

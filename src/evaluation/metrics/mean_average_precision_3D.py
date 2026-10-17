@@ -6,12 +6,10 @@ except (ImportError, OSError):
     box3d_overlap = None
 from geometry.coordinate_converter import CoordinateConverter
 from .average_precision_3D import AveragePrecision3D
-from config.logging_config import LoggingConfig
-
-logging_config = LoggingConfig()
-logger = logging_config.get_logger(__name__)
+from config.logging_config import LoggingConfig, logged
 
 
+@logged
 class MeanAveragePrecision3D(Metric):
     r"""Compute the `Mean-Average-Precision (mAP) for 3D object detection predictions.
 
@@ -48,6 +46,7 @@ class MeanAveragePrecision3D(Metric):
         >>>         classes=classes)
         >>> metric.compute()
     """
+
     def __init__(self, box_mode="camera", iou_threshold=0.5, **kwargs):
         super().__init__(**kwargs)
         # Keep per-update tensors instead of concatenating them immediately.  A
@@ -65,7 +64,7 @@ class MeanAveragePrecision3D(Metric):
         self.__validate_detection_tensor(preds, "preds")
         self.__validate_detection_tensor(target, "target")
         if classes is None or classes.numel() == 0:
-            logger.warning("Given class tensor is emtpy, can't update metric.")
+            self.self.log.warning("Given class tensor is emtpy, can't update metric.")
             return
 
         self.predictions.append(preds.detach())
@@ -78,7 +77,7 @@ class MeanAveragePrecision3D(Metric):
         class_batches = self.__state_as_batches(self.classes)
 
         if not prediction_batches or not ground_truth_batches or not class_batches:
-            logger.warning("One of the batch values is empty,"
+            self.log.warning("One of the batch values is empty,"
                            "can't compute metric, returning 0 tensor.")
             return torch.tensor(0.0)
 
@@ -89,16 +88,16 @@ class MeanAveragePrecision3D(Metric):
         ground_truth_batches = [batch.to(device) for batch in ground_truth_batches]
         class_batches = [batch.to(device) for batch in class_batches if batch.numel() > 0]
         if not any(predictions.numel() > 0 for predictions in prediction_batches):
-            logger.warning("Returning zero tensor since predictions are empty here.")
+            self.log.warning("Returning zero tensor since predictions are empty here.")
             return torch.tensor(0.0, device=device)
         if not any(ground_truths.numel() > 0 for ground_truths in ground_truth_batches):
-            logger.warning("Returning zero tensor since ground_truth are empty here.")
+            self.log.warning("Returning zero tensor since ground_truth are empty here.")
             return torch.tensor(0.0, device=device)
         if not class_batches:
             return torch.tensor(0.0, device=device)
         classes = torch.unique(torch.cat(class_batches))
         if classes.numel() == 0:
-            logger.warning("Returning zero tensor since classes are empty here.")
+            self.log.warning("Returning zero tensor since classes are empty here.")
             return torch.tensor(0.0, device=device)
 
         class_wise_average_precision = []
@@ -144,7 +143,7 @@ class MeanAveragePrecision3D(Metric):
                                                     dtype=ground_truths.dtype))
 
         if total_ground_truths == 0:
-            logger.warning("total ground truths is empty")
+            self.log.warning("total ground truths is empty")
             return torch.tensor(0.0, device=device)
 
         ranked_predictions = []
@@ -153,7 +152,7 @@ class MeanAveragePrecision3D(Metric):
                 ranked_predictions.append((prediction[7], frame_idx, prediction))
 
         if len(ranked_predictions) == 0:
-            logger.warning("ranked predictions is empty")
+            self.log.warning("ranked predictions is empty")
             return torch.tensor(0.0, device=device)
 
         ranked_predictions.sort(key=lambda item: item[0].item(), reverse=True)
@@ -168,12 +167,12 @@ class MeanAveragePrecision3D(Metric):
             frame_ground_truths = class_ground_truths_by_frame[frame_idx]
             if frame_ground_truths.numel() == 0:
                 fp_tensor[pred_idx] = 1
-                logger.warning("frame ground truths is empty")
+                self.log.warning("frame ground truths is empty")
                 continue
 
             iou_3d_class = self.__compute_iou_3d(
                     prediction[:7].unsqueeze(0),
-                    frame_ground_truths[:, :7],
+                    frame_ground_truths[:,:7],
                     )
             best_iou, best_gt_idx = torch.max(iou_3d_class.squeeze(0), dim=0)
             if best_iou >= self.iou_threshold and not matched_ground_truths[frame_idx][best_gt_idx]:
@@ -190,7 +189,7 @@ class MeanAveragePrecision3D(Metric):
 
     def __filter_class_values(self, values, req_class):
         if len(values) == 0:
-            logger.warning("values to filter are empty")
+            self.log.warning("values to filter are empty")
             return torch.empty((0, 9), device=values.device, dtype=values.dtype)
         if isinstance(values, list):
             values = [v for v in values if v.shape[0] != 0]  # filter empty tensor
@@ -201,7 +200,7 @@ class MeanAveragePrecision3D(Metric):
         if values is None:
             raise ValueError(f"{name} must not be None")
         if len(values) == 0:
-            logger.warning("values to validate are empty")
+            self.log.warning("values to validate are empty")
             return
         if isinstance(values, list) and all(v.shape[-1] != 9 for v in values):
             raise ValueError(f"{name} does not meet the required shape of (N, 9)")
@@ -212,7 +211,7 @@ class MeanAveragePrecision3D(Metric):
         if isinstance(state, list):
             return state
         if state.numel() == 0:
-            logger.warning("state is empty")
+            self.log.warning("state is empty")
             return []
         return [state]
 

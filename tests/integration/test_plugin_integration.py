@@ -9,7 +9,7 @@ SRC_ROOT = os.path.join(PROJECT_ROOT, "src")
 if SRC_ROOT not in sys.path:
     sys.path.insert(0, SRC_ROOT)
 
-from helpers.helpers import create_dummy_plugin, clean_up_dummy_folder
+from tests.helpers.helpers import create_dummy_plugin, clean_up_dummy_folder
 from plugin_loader.plugin_installer import PluginInstaller
 from src.registry import MODELS
 
@@ -18,6 +18,7 @@ class TestPluginIntegration(unittest.TestCase):
         path = create_dummy_plugin()
         PluginInstaller().install_plugin(name="dummy_plugin",
                                          source=path,
+                                         registry=MODELS,
                                          git=False)
         self.assertTrue(len(MODELS.names()) > 0)
         clean_up_dummy_folder(path)

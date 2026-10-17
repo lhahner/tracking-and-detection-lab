@@ -3,10 +3,12 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from skimage import io
 import numpy as np
-from config.logging_config import LoggingConfig
+from config.logging_config import LoggingConfig, logged
 
 
+@logged
 class Visualizer:
+
     def __init__(self, datatype):
         self.datatype = datatype
         self.fig = None
@@ -25,7 +27,7 @@ class Visualizer:
             x1, y1, x2, y2, track_id = row[:5]
             self.axis_one.add_patch(patches.Rectangle(
                 (x1, y1), x2 - x1, y2 - y1,
-                fill=False, lw=3, ec=colours[track_id % 32, :]
+                fill=False, lw=3, ec=colours[track_id % 32,:]
                 )
             )
 
@@ -156,8 +158,8 @@ class Visualizer:
         x, y, z, i = points.T
 
         mask = (
-          (x >= x_range[0]) & (x <= x_range[1]) &
-          (y >= y_range[0]) & (y <= y_range[1]) &
+          (x >= x_range[0]) & (x <= x_range[1]) & 
+          (y >= y_range[0]) & (y <= y_range[1]) & 
           (z >= z_range[0]) & (z <= z_range[1])
         )
 

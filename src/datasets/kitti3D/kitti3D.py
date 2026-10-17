@@ -13,7 +13,7 @@ from datasets.kitti_boxes import (
     proposal_iou_bev,
 )
 from datasets.kitti_calib import parse_kitti_calibration
-from config.logging_config import LoggingConfig
+from config.logging_config import LoggingConfig, logged
 from datasets.kitti_calib import extend_to_4x4
 from mmdet3d.structures.ops.box_np_ops import box_camera_to_lidar
 
@@ -32,12 +32,11 @@ for name in CLASSES:
 if len(SUPPORTED_OBJECT_TYPES) == 0:
     raise ValueError("Supported objects array is empty")
 
-logging_config = LoggingConfig()
-logger = logging_config.get_logger(__name__)
 
-
+@logged
 @DATASETS.register("kiiti3D")
 class Kitti3D(Dataset):
+
     def __init__(
         self,
         data_root,
@@ -341,11 +340,11 @@ class Kitti3D(Dataset):
         ground_truth = torch.stack(tmp_list)
         calib, _ = self._load_calib(frame)
         gt_lidar_boxes = box_camera_to_lidar(
-            ground_truth[:, :7].detach().cpu().numpy(),
+            ground_truth[:,:7].detach().cpu().numpy(),
             extend_to_4x4(calib["R0_rect"]),
             extend_to_4x4(calib["Tr_velo_to_cam"]),
         )
-        ground_truth[:, :7] = torch.from_numpy(gt_lidar_boxes)
+        ground_truth[:,:7] = torch.from_numpy(gt_lidar_boxes)
         return ground_truth
 
     def custom_collate(self, batch):

@@ -2,6 +2,8 @@
 # Install PyTorch and torchvision first for your platform, then install these packages.
 
 numpy<2
+pandas
+scipy
 filterpy
 scikit-image
 lap
@@ -29,3 +31,5 @@ nuscenes-devkit
 easydict
 glob2
 terminaltables
+GitPython
+tomli

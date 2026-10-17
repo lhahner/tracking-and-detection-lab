@@ -1,24 +1,21 @@
 from pathlib import Path
 
+import os
+import cv2
 import numpy as np
 import torch
-try:
-    from mmdet3d.apis import inference_detector, init_model
-except (ImportError, ModuleNotFoundError) as exc:
-    raise ImportError("PointPillarsMMDetections3D requires MMDetection3D. Install the OpenMMLab stack first.") from exc
 from torch.utils.data import DataLoader
 
 from detector.detector import Detector
 from src.registry import MODELS
 from entities.detection import Detection, DetectionSequence, FrameDetection
-from config.logging_config import LoggingConfig
+from config.logging_config import LoggingConfig, logged
 from definitions import ROOT_DIR
 
-logging_config = LoggingConfig()
-logger = logging_config.get_logger(__name__)
 
-
+@logged
 class DetectorDetectron2(Detector):
+
     def detect(self):
         """Run Faster R-CNN inference on every frame and persist detections.
 
@@ -34,8 +31,7 @@ class DetectorDetectron2(Detector):
             if image is None:
                 raise ValueError(f"Unable to read image from path: {concat_frame}")
             detection_results = self.model(image)["instances"].to("cpu")
-            breakpoint()
-            formatted_detection_results = self.format_detections(frame_index, detection_results)
+            formatted_detection_results = self.format_detections(frame, detection_results)
             frames.append(FrameDetection(frame=frame,
                                          highest_score_index=max_confidence_score,
                                          dets=formatted_detection_results,
@@ -70,9 +66,11 @@ class DetectorDetectron2(Detector):
             w = x2 - x1
             h = y2 - y1
             detections.append(Detection(score=conf,
+                                        label=pred_class,
+                                        box=torch.tensor([x1, y1, x2, y2, w, h])
                                         ))
         
-        return lines
+        return detections
     
     def read_data(self):
         """Read and sort image frame paths from the input directory.
