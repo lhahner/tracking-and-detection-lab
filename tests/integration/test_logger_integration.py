@@ -11,9 +11,7 @@ if SRC_ROOT not in sys.path:
 
 from config.logging_config import LoggingConfig
 
-
 class TestLoggerInt(unittest.TestCase):
-
     def test_basic_logging(self):
         logging_config = LoggingConfig(log_filename="app.log")
         logger = logging_config.get_logger(__name__)
@@ -29,4 +27,5 @@ class TestLoggerInt(unittest.TestCase):
         )
         # clean up 
         os.remove(file)
+
          

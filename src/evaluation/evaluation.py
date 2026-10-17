@@ -10,16 +10,17 @@ import torchmetrics
 try:
     import numpy as np
     if not hasattr(np, "asfarray"):
-        np.asfarray = lambda values, dtype = float: np.asarray(values, dtype=dtype)
+        np.asfarray = lambda values, dtype=float: np.asarray(values, dtype=dtype)
 except ImportError:  # pragma: no cover
     np = None
 
-from config.logging_config import LoggingConfig, logged
+from config.logging_config import LoggingConfig
+
+logging_config = LoggingConfig()
+logger = logging_config.get_logger(__name__)
 
 
-@logged
 class Evaluation:
-
     def __init__(self, iou_threshold=0.5):
         self.iou_threshold = iou_threshold
         self.metrics_handler = mm.metrics.create()
@@ -253,7 +254,7 @@ class Evaluation:
                                 dtype=float,
                                 )
                         distance_matrix = np.linalg.norm(
-                                ground_truth_centers[:, None,:] - prediction_centers[None,:,:],
+                                ground_truth_centers[:, None, :] - prediction_centers[None, :, :],
                                 axis=2,
                                 )
                         distance_matrix[distance_matrix >= cfg.dist_th_tp] = np.nan
@@ -388,10 +389,10 @@ class Evaluation:
                       precision=precision)
         return metric.compute()
     
-    def run_nuscenes_evaluation(*, nusc: Any,
-                                eval_set: str,
-                                result_path: Path,
-                                output_dir: Path,
+    def run_nuscenes_evaluation(*, nusc: Any, 
+                                eval_set: str, 
+                                result_path: Path, 
+                                output_dir: Path, 
                                 eval_config_name: str) -> None:
         try:
             from nuscenes.eval.detection.evaluate import NuScenesEval

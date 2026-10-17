@@ -36,7 +36,7 @@ class LoggingConfig:
 
           self._configure_handlers()
           self._configure_root_logger()
-        
+
       def _resolve_level(self, level):
           if isinstance(level, str):
               return getattr(logging, level.upper(), logging.INFO)
@@ -100,9 +100,3 @@ class LoggingConfig:
 
       def get_logger(self, name):
           return logging.getLogger(name)
-      
-@staticmethod
-def logged(cls):
-    logging.basicConfig(level=logging.INFO)
-    cls.log = logging.getLogger(f"{cls.__module__}.{cls.__qualname__}")
-    return cls
