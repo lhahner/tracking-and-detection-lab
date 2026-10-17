@@ -66,7 +66,7 @@ class DetectorDetectron2(Detector):
             w = x2 - x1
             h = y2 - y1
             detections.append(Detection(score=conf,
-                                        label=pred_class,
+                                        label=pred_class[0],
                                         box=torch.tensor([x1, y1, x2, y2, w, h])
                                         ))
         
