@@ -11,16 +11,17 @@ except ImportError as exc:
 from pathlib import Path
 from src.registry import MODELS
 from entities.detection import Detection, DetectionSequence, FrameDetection
-from config.logging_config import LoggingConfig, logged
+from config.logging_config import LoggingConfig
 from detector.detector_openpcdet import DetectorOpenPCDet
 
 PROJECT_DIR = Path(__file__).resolve().parent
 
+logging_config = LoggingConfig()
+logger = logging_config.get_logger(__name__)
 
-@logged
+
 @MODELS.register("second_openpcdet")
 class SecondOpenPCDet(DetectorOpenPCDet):
-
     def __init__(self,
                  dataset,
                  classes,
@@ -77,7 +78,7 @@ class SecondOpenPCDet(DetectorOpenPCDet):
                 self.openpcdet_annotations.extend(
                     self.dataset.generate_prediction_dicts(
                         {
-                         "frame_id": [sample_id],
+                         "frame_id": [sample_id], 
                          "metadata": [{"token": sample_id}]
                         },
                         instance_data,

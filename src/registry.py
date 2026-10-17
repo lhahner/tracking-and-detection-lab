@@ -30,6 +30,7 @@ class Registry:
         """
         if len(names) == 1 and isinstance(names[0], type):
             return self.__register_class(names[0])
+
         def decorator(cls: type) -> type:
             return self.__register_class(cls, *names)
 

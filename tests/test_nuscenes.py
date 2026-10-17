@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 import torch
 
-from datasets.nuScenes.nuScenes import NuScenesDataset
+from datasets.nuScenes import NuScenesDataset
 
 
 def test_transform_matrix_applies_translation_and_z_rotation():

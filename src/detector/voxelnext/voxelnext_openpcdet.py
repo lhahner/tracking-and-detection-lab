@@ -16,17 +16,18 @@ from detector.detector import Detector
 from src.registry import MODELS
 from entities.detection import Detection, DetectionSequence, FrameDetection
 from definitions import ROOT_DIR
-from config.logging_config import LoggingConfig, logged
+from config.logging_config import LoggingConfig
 from easydict import EasyDict
 from detector.detector_openpcdet import DetectorOpenPCDet
 
 PROJECT_DIR = Path(__file__).resolve().parent
 
+logging_config = LoggingConfig()
+logger = logging_config.get_logger(__name__)
 
-@logged
+
 @MODELS.register("voxelnext_openpcdet")
 class VoxelnextOpenPCDet(DetectorOpenPCDet):
-
     def __init__(self,
                  dataset,
                  classes,

@@ -6,7 +6,7 @@ from ultralytics import YOLO
 from entities.detection import Detection, FrameDetection, DetectionSequence
 from pathlib import Path
 from definitions import ROOT_DIR
-from registry import MODELS
+from registry import registry
 
 
 @MODELS.register("yolo_ultralytics")

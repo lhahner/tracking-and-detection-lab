@@ -11,7 +11,7 @@ import torch.nn.functional as Functional
 from torch.utils.data import DataLoader
 from detector.detector_mmdetection3d import DetectorMMDetection3D
 
-from config.logging_config import LoggingConfig, logged
+from config.logging_config import LoggingConfig
 from definitions import ROOT_DIR
 from detector.detector import Detector
 from src.registry import MODELS
@@ -37,11 +37,12 @@ DEFAULT_CHECKPOINT_FILE = (
     / "point_rcnn_2x8_kitti-3d-3classes_20211208_151344.pth"
 )
 
+logging_config = LoggingConfig()
+logger = logging_config.get_logger(__name__)
 
-@logged
+
 @MODELS.register("pointrcnn_mmdetection3d")
 class PointRCNNmmDetections3D(DetectorMMDetection3D):
-
     def __init__(
         self,
         dataset,
@@ -57,7 +58,7 @@ class PointRCNNmmDetections3D(DetectorMMDetection3D):
         self.batch_size = batch_size
         self.settings = settings
         self.model = init_model(
-                str(self.config_file),
+                str(self.config_file), 
                 str(self.checkpoint_file)
         )
         self.class_map = self.__build_class_map(self.classes)
@@ -136,7 +137,7 @@ class PointRCNNmmDetections3D(DetectorMMDetection3D):
         if bboxes.ndim != 2 or bboxes.shape[1] < 7:
             raise ValueError(f"Expected MMDetection3D boxes with shape [N, >=7], got {tuple(bboxes.shape)}")
 
-        bboxes = bboxes[:,:7].clone()
+        bboxes = bboxes[:, :7].clone()
         labels = self.__map_labels(labels_reference)
         highest_score_index = int(scores.argmax().item())
         return [
