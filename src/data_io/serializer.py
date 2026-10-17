@@ -7,7 +7,7 @@ import dataclasses, json, torch, functools, csv, io
 from entities.detection import Detection, FrameDetection, DetectionSequence
 from data_io.file_handler import write_output
 from pathlib import Path
-from datasets.nuScenes import DETECTION_CLASSES_BY_INDEX
+from datasets.nuScenes.nuScenes import DETECTION_CLASSES_BY_INDEX
 
 class Serializer:
     def __init__(self, settings=None, data_format="json", file_name=None):

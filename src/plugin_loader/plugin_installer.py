@@ -44,7 +44,7 @@ class PluginInstaller:
                              registry=GROUPS.get(group)[0],
                              group=group)
 
-    def install_plugin(self, name, source, git=False):
+    def install_plugin(self, name, source, registry, git=False):
         if git:
             try:
                 git.Git(PLUGIN_DIR).clone(source)
@@ -64,12 +64,11 @@ class PluginInstaller:
             mainfest = tomli.load(f)
         group, entries = next(iter(mainfest["project"]["entry-points"].items()))
         impl_name, target = next(iter(entries.items()))
-
         plugin_type = PluginType[mainfest["tool"]["type"].upper()]
         registry_meta = GROUPS[plugin_type.value]
         self.load_plugin(path=os.path.join(PLUGIN_DIR, name),
                          config_path=registry_meta[1],
-                         registry=registry_meta[0],
+                         registry=registry,
                          group=group,
                          name=impl_name)
 

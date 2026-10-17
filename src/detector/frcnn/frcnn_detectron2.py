@@ -22,7 +22,7 @@ from entities.detection import DetectionSequence, FrameDetection, Detection
 
 
 @MODELS.register("faster_rcnn_detectron2")
-class FasterRCNNDetectron2(DetectorDetecptron2):
+class FasterRCNNDetectron2(DetectorDetectron2):
     """Run Faster R-CNN detection and export MOT-format detections."""
 
     def __init__(self, input_path, threshold=0.9):

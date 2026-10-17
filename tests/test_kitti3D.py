@@ -2,7 +2,7 @@ import os
 import sys
 import unittest
 import torch
-from helpers.helpers import validate_mmdetection3d_integration_environment, load_model
+from tests.helpers.helpers import validate_mmdetection3d_integration_environment, load_model
 from unittest.mock import MagicMock, patch, Mock
 validate_mmdetection3d_integration_environment()
 
