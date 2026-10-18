@@ -58,15 +58,15 @@ class DetectorDetectron2(Detector):
             raise ValueError("The given frame object is None")
         
         xyxy = results.pred_boxes.tensor.numpy()  # (N,4): x1,y1,x2,y2
-        conf = results.scores.numpy()  # (N,)
-        pred_class = results.pred_classes.numpy()
+        conf_scores = results.scores.numpy()  # (N,)
+        pred_classes = results.pred_classes.numpy()
          
         detections = []
-        for (x1, y1, x2, y2), c in zip(xyxy, conf):
+        for (x1, y1, x2, y2), conf, pred_class in zip(xyxy, conf_scores, pred_classes):
             w = x2 - x1
             h = y2 - y1
             detections.append(Detection(score=conf,
-                                        label=pred_class[0],
+                                        label=pred_class,
                                         box=torch.tensor([x1, y1, x2, y2, w, h])
                                         ))
         
