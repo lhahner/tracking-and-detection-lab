@@ -43,7 +43,7 @@ class SecondOpenPCDet(DetectorOpenPCDet):
         checkpoint = torch.load(self.checkpoint_file, map_location="cpu")
         if isinstance(checkpoint, dict) and "model_state" in checkpoint:
             self.model.load_params_from_file(filename=self.checkpoint_file,
-                                             logger=logger,
+                                             logger=LoggingConfig.get_logger(__name__),
                                              to_cpu=True)
         else:
             load_result = self.model.load_state_dict(checkpoint.get("state_dict", checkpoint), strict=False)
@@ -64,7 +64,7 @@ class SecondOpenPCDet(DetectorOpenPCDet):
         with torch.no_grad():
             sample_count = getattr(self.dataset, "max_samples", None) or len(self.dataset)
             if sample_count > len(self.dataset):
-                logger.warning(f"The given upper bound max_samples {sample_count} exceeds dataset lengths, iterating over complete dataset.")
+                self.log.warning(f"The given upper bound max_samples {sample_count} exceeds dataset lengths, iterating over complete dataset.")
                 sample_count = len(self.dataset)
             for idx in range(sample_count):
                 sample = self.dataset[idx]

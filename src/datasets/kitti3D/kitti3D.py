@@ -52,7 +52,6 @@ class Kitti3D(Dataset):
         if split not in ["training", "testing", "val"]:
             raise ValueError("Split name has to be training or testing")
 
-        self.logger = logger
         self.data_root = data_root
         self.split = split
         self.version = version
@@ -170,16 +169,16 @@ class Kitti3D(Dataset):
             return object_index
 
         for sample_id in self.sample_ids:
-            self.logger.info("Building object index "
+            self.log.info("Building object index "
                              f"for sample {sample_id}")
 
             # Loads labels into object array.
             objects, _ = self._load_label(sample_id)
-            self.logger.info(f"Loaded objects {len(objects)}")
+            self.log.info(f"Loaded objects {len(objects)}")
 
             # Filters out dont care values
             filtered_objects = self.filter_supported_objects(objects)
-            self.logger.info("Loaded filtered objects"
+            self.log.info("Loaded filtered objects"
                              f"{len(filtered_objects)}")
 
             # Builds object_index map with the data for training
@@ -199,7 +198,7 @@ class Kitti3D(Dataset):
         all the points that are clustered and below our threshold
         so to consider as background points.
         """
-        self.logger.info(f"Building background index with sample {sample_id}")
+        self.log.info(f"Building background index with sample {sample_id}")
 
         frame = self.__get_frame_item(sample_id)
         if frame["points"] is None or frame["points"].size == 0:
@@ -224,7 +223,7 @@ class Kitti3D(Dataset):
             # whenever the IOU is below our threshold
             if max_iou < self.background_iou_threshold:
                 center_proposal = proposal["center"].astype(np.float32)
-                self.logger.debug(
+                self.log.debug(
                        f"background;sample_id={sample_id}",
                        f"center={center_proposal}"
                    )

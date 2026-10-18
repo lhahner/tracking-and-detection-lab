@@ -49,7 +49,7 @@ class VoxelnextOpenPCDet(DetectorOpenPCDet):
         checkpoint = torch.load(self.checkpoint_file, map_location="cpu")
         if isinstance(checkpoint, dict) and "model_state" in checkpoint:
             self.model.load_params_from_file(filename=self.checkpoint_file,
-                                             logger=logger,
+                                             logger=LoggingConfig.get_logger(__name__),
                                              to_cpu=True)
         else:
             load_result = self.model.load_state_dict(checkpoint.get("state_dict", checkpoint), strict=False)
