@@ -2,9 +2,14 @@ from fastapi import APIRouter
 from services.inference_service import InferenceService 
 from api.schemas.inference_request_schema import InferenceRequestSchema
 
-router = APIRouter()
+router = APIRouter(prefix="/inference")
 
-@router.post("/run-inference")
+
+@router.get("/available")
+def request_available_resources():
+    return InferenceService().get_available_resources()
+
+@router.post("/run")
 def request_inference_run(request: InferenceRequestSchema):
     InferenceService().parse_dto(request)
     return {"status": "success"} 

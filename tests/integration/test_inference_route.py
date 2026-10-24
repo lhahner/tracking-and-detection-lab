@@ -16,6 +16,6 @@ class TestInfereceRoute(unittest.TestCase):
             "dataset": ""
             }
         response_expected = {"status": "success"}
-        response = client.post("/run-inference/", json=payload)
+        response = client.post("/inference/run/", json=payload)
         data = response.json()
         self.assertEqual(response_expected, response)
