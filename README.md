@@ -92,8 +92,15 @@ If you want to install manually instead of using the script, follow the same ord
 3. Install `torch`, `torchvision`, and `torchaudio` from the official PyTorch index for your CPU/CUDA target.
 4. Install `numpy<2`.
 5. Install `-r requirements.txt`.
+   This includes FastAPI. To add it to an existing environment without reinstalling
+   the full project, run `python -m pip install fastapi`.
 6. Optional: install OpenPCDet import dependencies such as `SharedArray`, `tensorboardX`, and `pyquaternion`, then add `third_party/OpenPCDet` to Python with a `.pth` file or `PYTHONPATH`.
 7. Install `detectron2` from source with `--no-build-isolation` if you need the `frcnn` or `detectron2` backends.
+
+Check an existing environment with `python -m pip check` before changing packages.
+If it reports mismatched PyTorch, torchvision, or torchaudio versions, use a fresh
+environment created by `install.sh` so those three packages are installed as a
+matching set. FastAPI does not require any of those packages.
 
 After installation, activate the environment and run the project from the repository root:
 

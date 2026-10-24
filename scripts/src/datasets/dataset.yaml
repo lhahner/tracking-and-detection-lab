@@ -1,3 +1,0 @@
-datasets:
-  nuscenes: datasets.nuScnes.nuScenes
-  kitti3D: datasets.kitti3D.kitti3D
