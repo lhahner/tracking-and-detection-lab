@@ -7,11 +7,20 @@ import os
 
 
 class Registry:
+
     def __init__(self, config_path) -> None:
         self.config_path = config_path
         self.modules = {}
-        self.__classes: dict[str, type] = {}
+        self._classes: dict[str, type] = {}
         self.__loaded_modules: set[str] = set()
+        
+    def register_all(self, type):
+        config_path = Path(os.path.join(ROOT_DIR, self.config_path)).resolve()
+        with config_path.open("r", encoding="utf-8") as f:
+            data = yaml.safe_load(f) or {}
+            for key in data[type].keys():
+                self.__ensure_loaded(name=key)
+            breakpoint()
 
     def register(self, *names: str):
         """
@@ -21,7 +30,7 @@ class Registry:
         >>> @MODEL.register
         >>> class X ...
 
-        Class X will be registered in __classes. Example 2;
+        Class X will be registered in _classes. Example 2;
         put an alias instead;
         >>> @MODEL.register("X_2")
         >>> class X
@@ -30,6 +39,7 @@ class Registry:
         """
         if len(names) == 1 and isinstance(names[0], type):
             return self.__register_class(names[0])
+
         def decorator(cls: type) -> type:
             return self.__register_class(cls, *names)
 
@@ -41,10 +51,10 @@ class Registry:
         return cls
 
     def __register_name(self, name: str, cls: type) -> None:
-        existing = self.__classes.get(name)
+        existing = self._classes.get(name)
         if existing is not None and not self.__is_same_class(existing, cls):
             raise KeyError(f"Class {name!r} is already registered")
-        self.__classes[name] = cls
+        self._classes[name] = cls
 
     def __is_same_class(self, existing: type, cls: type) -> bool:
         return (
@@ -60,7 +70,7 @@ class Registry:
         Return all registered class names
         as strings.
         """
-        return list(self.__classes.keys())
+        return list(self._classes.keys())
 
     def get_class(self, name: str) -> type:
         """
@@ -69,11 +79,11 @@ class Registry:
         name.
         """
         self.__ensure_loaded(name)
-        if name not in self.__classes:
+        if name not in self._classes:
             raise KeyError(
                 f"Unknown class {name!r}. Available: {self.names()}"
             )
-        return self.__classes[name]
+        return self._classes[name]
 
     def create(self, name: str, *args: Any, **kwargs: Any) -> Any:
         """
@@ -89,14 +99,15 @@ class Registry:
         module_name = self.modules.get(name)
         if module_name is None or module_name in self.__loaded_modules:
             return
-        importlib.import_module(module_name)
+        module = importlib.import_module(module_name)
         self.__loaded_modules.add(module_name)
+        self._classes[module_name] = module.__name__
 
     def __load_from_config(self):
         config_path = Path(os.path.join(ROOT_DIR, self.config_path)).resolve()
         with config_path.open("r", encoding="utf-8") as f:
             data = yaml.safe_load(f) or {}
-            self.detector_modules = data.get("detectors", {})
+            self.modules = data.get("detector", {})
 
 
 DATASETS = Registry("src/datasets/dataset.yaml")
