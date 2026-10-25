@@ -11,14 +11,13 @@ if SRC_ROOT not in sys.path:
 
 from tests.helpers.helpers import create_dummy_plugin, clean_up_dummy_folder
 from plugin_loader.plugin_installer import PluginInstaller
-from src.registry import MODELS
+from registry import MODELS
 
 class TestPluginIntegration(unittest.TestCase):
     def test_dummy_plugin(self):
         path = create_dummy_plugin()
         PluginInstaller().install_plugin(name="dummy_plugin",
                                          source=path,
-                                         registry=MODELS,
                                          git=False)
         self.assertTrue(len(MODELS.names()) > 0)
         clean_up_dummy_folder(path)

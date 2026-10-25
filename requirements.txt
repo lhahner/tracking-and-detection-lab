@@ -2,9 +2,11 @@
 # Install PyTorch and torchvision first for your platform, then install these packages.
 
 numpy<2
+fastapi
 pandas
 scipy
 filterpy
+iopath>=0.1.7,<0.1.10
 scikit-image
 lap
 motmetrics
@@ -22,12 +24,9 @@ pytest
 coverage
 nuscenes-devkit
 numba
-tqdm==4.62.3
-opencv_python
-PyYAML
+tqdm~=4.65.0
 setuptools
 tensorboard
-nuscenes-devkit
 easydict
 glob2
 terminaltables
