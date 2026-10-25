@@ -7,7 +7,8 @@ router = APIRouter(prefix="/inference")
 
 @router.get("/available")
 def request_available_resources():
-    return InferenceService().get_available_resources()
+    response = InferenceService().get_available_resources()
+    return response
 
 @router.post("/run")
 def request_inference_run(request: InferenceRequestSchema):

@@ -4,7 +4,7 @@ import math
 
 import numpy as np
 
-from datasets.kitti_calib import camera_to_lidar
+from datasets.kitti3D.kitti_calib import camera_to_lidar
 
 
 def rotation_matrix_z(yaw: float) -> np.ndarray:

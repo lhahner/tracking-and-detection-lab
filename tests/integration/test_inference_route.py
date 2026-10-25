@@ -5,7 +5,7 @@ from api.app import app
 
 client = TestClient(app)
 
-class TestInfereceRoute(unittest.TestCase):
+class TestInferenceRoute(unittest.TestCase):
     def test_create_model(self):
         payload = {
             "detector": "yolo",
@@ -19,3 +19,7 @@ class TestInfereceRoute(unittest.TestCase):
         response = client.post("/inference/run/", json=payload)
         data = response.json()
         self.assertEqual(response_expected, response)
+        
+    def test_available_resources_endpoint(self):
+        response = client.get("/inference/available")
+        
